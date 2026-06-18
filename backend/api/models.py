@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import FileExtensionValidator
+import hashlib
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from decimal import Decimal
@@ -340,3 +342,51 @@ class EmployeePayrollAuditTrail(models.Model):
 
     def __str__(self):
         return f"Audit Trail: {self.salary_payment.employee.user.username} - {self.action} at {self.timestamp}"
+
+
+class OTAUpdateBundle(models.Model):
+    version = models.CharField(
+        max_length=32, 
+        unique=True, 
+        help_text="Web asset version (e.g., 1.0.1)"
+    )
+    native_version_required = models.CharField(
+        max_length=32, 
+        help_text="Minimum native APK version required to run this bundle (e.g., 1.0.0)"
+    )
+    zip_file = models.FileField(
+        upload_to="ota_updates/",
+        validators=[FileExtensionValidator(allowed_extensions=['zip'])],
+        help_text="ZIP file containing Vite build assets (index.html, assets/, etc.)"
+    )
+    checksum = models.CharField(
+        max_length=64, 
+        blank=True, 
+        editable=False,
+        help_text="SHA-256 checksum generated automatically on save"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this update bundle is active and downloadable"
+    )
+    is_mandatory = models.BooleanField(
+        default=False,
+        help_text="Forces the client app to apply the update immediately without confirmation"
+    )
+    release_notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        if self.zip_file and not self.checksum:
+            sha256 = hashlib.sha256()
+            for chunk in self.zip_file.chunks():
+                sha256.update(chunk)
+            self.checksum = sha256.hexdigest()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"OTA Update v{self.version} (Native Req: >=v{self.native_version_required})"
+

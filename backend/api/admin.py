@@ -21,7 +21,8 @@ from .models import (
     CustomerPayment,
     EmployeeAttendance,
     PurchaseReturn,
-    PurchaseReturnItem
+    PurchaseReturnItem,
+    OTAUpdateBundle
 )
 
 # --- Inlines ---
@@ -181,3 +182,11 @@ class PurchaseReturnAdmin(admin.ModelAdmin):
 @admin.register(PurchaseReturnItem)
 class PurchaseReturnItemAdmin(admin.ModelAdmin):
     list_display = ('purchase_return', 'product', 'quantity', 'purchase_cost')
+
+
+@admin.register(OTAUpdateBundle)
+class OTAUpdateBundleAdmin(admin.ModelAdmin):
+    list_display = ('version', 'native_version_required', 'is_active', 'is_mandatory', 'created_at')
+    list_filter = ('is_active', 'is_mandatory', 'created_at')
+    search_fields = ('version', 'native_version_required')
+

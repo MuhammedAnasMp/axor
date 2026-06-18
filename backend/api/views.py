@@ -1,3 +1,4 @@
+from django.http import request
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -75,6 +76,15 @@ class AuthViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def me(self, request):
+
+        print("Method:", request.method)
+        print("Path:", request.path)
+        print("GET params:", request.GET)
+        print("POST data:", request.POST)
+        print("Headers:", request.headers)
+        print("Cookies:", request.COOKIES)
+        print("User:", request.user)
+        print("Body:", request.body)
         if request.user.is_authenticated:
             try:
                 employee = request.user.employee
@@ -1583,3 +1593,79 @@ class EmployeeAttendanceViewSet(viewsets.ModelViewSet):
                 return Response({"message": "Attendance marked successfully"})
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def parse_version_tuple(version_str):
+    try:
+        return tuple(int(x) for x in version_str.strip().split('.'))
+    except ValueError:
+        parts = []
+        for x in version_str.strip().split('.'):
+            digits = []
+            for char in x:
+                if char.isdigit():
+                    digits.append(char)
+                else:
+                    break
+            parts.append(int("".join(digits)) if digits else 0)
+        return tuple(parts)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def check_ota_update(request):
+    """
+    Checks if a newer web asset bundle or APK reinstallation is available.
+    """
+    from .models import OTAUpdateBundle
+
+    platform = request.data.get("platform", "android")
+    native_version_str = request.data.get("native_version")
+    web_version_str = request.data.get("web_version")
+
+    if not native_version_str or not web_version_str:
+        return Response(
+            {"error": "Missing native_version or web_version in request body."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    latest_update = OTAUpdateBundle.objects.filter(is_active=True).first()
+    if not latest_update:
+        return Response({"update_available": False})
+
+    try:
+        client_native = parse_version_tuple(native_version_str)
+        client_web = parse_version_tuple(web_version_str)
+        req_native = parse_version_tuple(latest_update.native_version_required)
+        target_web = parse_version_tuple(latest_update.version)
+    except Exception as e:
+        return Response(
+            {"error": f"Invalid version format supplied: {str(e)}"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # If user's APK native wrapper is too old for this bundle
+    if client_native < req_native:
+        apk_download_url = request.build_absolute_uri("/media/apks/latest-axon.apk")
+        return Response({
+            "update_available": True,
+            "update_type": "APK_REINSTALL",
+            "message": "A major native app update is required. Please download the new APK.",
+            "download_url": apk_download_url
+        })
+
+    # If a newer web asset version is available
+    if client_web < target_web:
+        bundle_url = request.build_absolute_uri(latest_update.zip_file.url)
+        return Response({
+            "update_available": True,
+            "update_type": "OTA_UPDATE",
+            "version": latest_update.version,
+            "download_url": bundle_url,
+            "checksum": latest_update.checksum,
+            "is_mandatory": latest_update.is_mandatory,
+            "release_notes": latest_update.release_notes
+        })
+
+    return Response({"update_available": False})
+

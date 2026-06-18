@@ -28,19 +28,19 @@ export default function MoneyAccounts() {
   const loadDropdowns = () => {
     setDropdownsLoading(true);
     api.bankAccounts.list()
-    .then((b) => {
-      setAccounts(b);
+      .then((b) => {
+        setAccounts(b);
 
-      if (b.length > 0) {
-        setTransferSource(b[0].id.toString());
-        setTransferDest(b.length > 1 ? b[1].id.toString() : b[0].id.toString());
-      }
-      setDropdownsLoading(false);
-    })
-    .catch((err) => {
-      console.error(err);
-      setDropdownsLoading(false);
-    });
+        if (b.length > 0) {
+          setTransferSource(b[0].id.toString());
+          setTransferDest(b.length > 1 ? b[1].id.toString() : b[0].id.toString());
+        }
+        setDropdownsLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setDropdownsLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -71,13 +71,13 @@ export default function MoneyAccounts() {
       dest_account_id: parseInt(transferDest),
       amount: parseFloat(transferAmount)
     })
-    .then(() => {
-      setTransferAmount('');
-      alert('Money Transferred Successfully!');
-      transferPag.refresh();
-      loadDropdowns();
-    })
-    .catch((err) => alert(err.message));
+      .then(() => {
+        setTransferAmount('');
+        alert('Money Transferred Successfully!');
+        transferPag.refresh();
+        loadDropdowns();
+      })
+      .catch((err) => alert(err.message));
   };
 
   const formatCurrency = (val) => {
@@ -91,7 +91,7 @@ export default function MoneyAccounts() {
     const isSorted = pag.ordering === field || pag.ordering === `-${field}`;
     const isDesc = pag.ordering === `-${field}`;
     return (
-      <th 
+      <th
         onClick={() => pag.handleSort(field)}
         className="px-4 py-2 cursor-pointer hover:bg-surface-low select-none transition-colors"
       >
@@ -105,9 +105,9 @@ export default function MoneyAccounts() {
     );
   };
 
-  const activeLoading = 
+  const activeLoading =
     currentTab === 'transfers' ? transferPag.loading :
-    dropdownsLoading;
+      dropdownsLoading;
 
   return (
     <div className="space-y-6">
@@ -119,14 +119,14 @@ export default function MoneyAccounts() {
 
       {/* Tabs Menu */}
       <div className="flex border-b border-surface-low space-x-6 text-sm font-medium">
-        <a 
-          href="/erp/accounts" 
+        <a
+          href="/erp/accounts"
           className={`pb-2 ${currentTab === 'accounts' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
         >
           Cash & Banks
         </a>
-        <a 
-          href="/erp/accounts?tab=transfers" 
+        <a
+          href="/erp/accounts?tab=transfers"
           className={`pb-2 ${currentTab === 'transfers' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
         >
           Transfers Log
@@ -139,7 +139,7 @@ export default function MoneyAccounts() {
           {/* Bank Accounts Grid */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-text-primary">Financial Account Balances</h3>
+              <h3 className="text-sm font-semibold text-text-primary">Financial Account Balances .</h3>
               <button
                 onClick={() => setShowBankForm(!showBankForm)}
                 className="rounded bg-brand-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-cobalt"

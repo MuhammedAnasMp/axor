@@ -16,6 +16,8 @@ import Employees from './pages/Employees';
 import VisualReports from './pages/VisualReports';
 import Sales from './pages/Sales';
 import POS from './pages/POS';
+import { useOTAUpdate } from './utils/useOTAUpdate';
+
 
 function ERPLayout() {
   return (
@@ -45,50 +47,100 @@ function ERPLayout() {
 }
 
 export default function App() {
+  const { status, downloadProgress, updateInfo, applyUpdate } = useOTAUpdate();
+
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Landing Page (E-Commerce Coming Soon) */}
-        <Route path="/" element={<ComingSoon />} />
+    <>
+      {/* OTA Status Banners */}
+      {status === 'downloading' && (
+        <div className="fixed bottom-4 right-4 z-50 bg-white p-4 rounded-lg shadow-lg border border-surface-low max-w-sm">
+          <p className="text-xs font-semibold text-text-primary">Downloading assets...</p>
+          <div className="w-full bg-surface-low h-2 rounded-full mt-2 overflow-hidden">
+            <div 
+              className="bg-brand-blue h-full transition-all duration-300" 
+              style={{ width: `${downloadProgress}%` }}
+            ></div>
+          </div>
+          <span className="text-[10px] text-text-secondary mt-1 block">{downloadProgress}% completed</span>
+        </div>
+      )}
 
-        {/* Authentication */}
-        <Route path="/login" element={<Auth />} />
+      {status === 'ready-to-reload' && (
+        <div className="fixed bottom-4 right-4 z-50 bg-white p-4 rounded-lg shadow-lg border border-primary-container max-w-sm animate-bounce">
+          <p className="text-xs font-bold text-brand-blue">Update Ready!</p>
+          <p className="text-[11px] text-text-secondary mt-1">
+            Version {updateInfo?.version} was downloaded. Apply to reload the system.
+          </p>
+          <button 
+            onClick={applyUpdate}
+            className="mt-3 bg-brand-blue text-white text-xs px-3 py-1.5 rounded font-medium shadow hover:bg-brand-blue/90 cursor-pointer"
+          >
+            Restart Application
+          </button>
+        </div>
+      )}
 
-        {/* Mobile POS System */}
-        <Route 
-          path="/pos" 
-          element={
-            <Protected>
-              <POS />
-            </Protected>
-          } 
-        />
+      {status === 'reinstall-required' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full shadow-2xl mx-4">
+            <h3 className="text-base font-bold text-error">Critical Update Required</h3>
+            <p className="text-xs text-text-secondary mt-2">
+              This version of the app requires native components that are not present in your current installation.
+            </p>
+            <a 
+              href={updateInfo?.download_url}
+              className="mt-4 block text-center bg-brand-blue text-white text-xs py-2 rounded font-medium shadow cursor-pointer"
+            >
+              Download APK Installer (.apk)
+            </a>
+          </div>
+        </div>
+      )}
 
-        {/* ERP System Routing */}
-        <Route 
-          path="/erp" 
-          element={
-            <Protected>
-              <ERPLayout />
-            </Protected>
-          }
-        >
-          <Route index element={<Dashboard />} />
-          <Route path="products" element={<Products />} />
-          <Route path="stock" element={<Stock />} />
-          <Route path="suppliers" element={<Suppliers />} />
-          <Route path="customers" element={<Customers />} />
-          <Route path="purchases" element={<Purchases />} />
-          <Route path="accounts" element={<MoneyAccounts />} />
-          <Route path="expenses" element={<Expenses />} />
-          <Route path="employees" element={<Employees />} />
-          <Route path="reports" element={<VisualReports />} />
-          <Route path="sales" element={<Sales />} />
-        </Route>
+      <BrowserRouter>
+        <Routes>
+          {/* Landing Page (E-Commerce Coming Soon) */}
+          <Route path="/" element={<ComingSoon />} />
 
-        {/* Catch-all Redirect */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Authentication */}
+          <Route path="/login" element={<Auth />} />
+
+          {/* Mobile POS System */}
+          <Route 
+            path="/pos" 
+            element={
+              <Protected>
+                <POS />
+              </Protected>
+            } 
+          />
+
+          {/* ERP System Routing */}
+          <Route 
+            path="/erp" 
+            element={
+              <Protected>
+                <ERPLayout />
+              </Protected>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="products" element={<Products />} />
+            <Route path="stock" element={<Stock />} />
+            <Route path="suppliers" element={<Suppliers />} />
+            <Route path="customers" element={<Customers />} />
+            <Route path="purchases" element={<Purchases />} />
+            <Route path="accounts" element={<MoneyAccounts />} />
+            <Route path="expenses" element={<Expenses />} />
+            <Route path="employees" element={<Employees />} />
+            <Route path="reports" element={<VisualReports />} />
+            <Route path="sales" element={<Sales />} />
+          </Route>
+
+          {/* Catch-all Redirect */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </>
   );
 }
