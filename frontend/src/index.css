@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  
+  --color-surface: #f8f9fa;
+  --color-surface-dim: #d9dadb;
+  --color-surface-bright: #f8f9fa;
+  --color-surface-lowest: #ffffff;
+  --color-surface-low: #f3f4f5;
+  --color-surface-container: #ffffff;
+  --color-surface-high: #e7e8e9;
+  --color-surface-highest: #e1e3e4;
+  
+  --color-primary: #005bbf;
+  --color-primary-container: #1a73e8;
+  
+  --color-secondary: #3f6377;
+  --color-secondary-container: #c0e5fd;
+  
+  --color-tertiary: #9e4300;
+  --color-tertiary-container: #c55500;
+  
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  
+  --color-brand-blue: #1a73e8;
+  --color-brand-cobalt: #0b57d0;
+  
+  --color-text-primary: #202124;
+  --color-text-secondary: #444746;
+  
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-surface);
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+}
+
+* {
+  box-sizing: border-box;
+}
