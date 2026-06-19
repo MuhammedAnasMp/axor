@@ -58,6 +58,18 @@ CSRF_TRUSTED_ORIGINS = [
     ).split(',') if origin.strip()
 ]
 
+# Auto-trust CORS origins and ALLOWED_HOSTS for CSRF to prevent 403 Forbidden errors
+for origin in CORS_ALLOWED_ORIGINS:
+    if origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(origin)
+
+for host in ALLOWED_HOSTS:
+    if host and host != '*':
+        for proto in ['https', 'http']:
+            url = f"{proto}://{host}"
+            if url not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(url)
+
 import sys
 
 # Share cookies between subdomains in production
