@@ -40,9 +40,9 @@ def main():
         from dotenv import load_dotenv
         base_dir = Path(__file__).resolve().parent
         load_dotenv(base_dir / '.env.production', override=True)
-        print("🔌 Connecting to PRODUCTION Neon database...")
+        print("Connecting to PRODUCTION Neon database...")
     else:
-        print("🔌 Connecting to LOCAL database...")
+        print("Connecting to LOCAL database...")
 
     import django
     django.setup()
@@ -87,7 +87,7 @@ def main():
         bundle.save()
         
     mode = "TESTING ONLY" if is_testing else "ALL USERS"
-    print(f"🎉 Successfully registered OTA Update Bundle v{version} (Native Req: >=v{native_version})")
+    print(f"Successfully registered OTA Update Bundle v{version} (Native Req: >=v{native_version})")
     print(f"Mode: {mode}")
     print(f"Checksum: {checksum}")
 
