@@ -359,6 +359,11 @@ class OTAUpdateBundle(models.Model):
         validators=[FileExtensionValidator(allowed_extensions=['zip'])],
         help_text="ZIP file containing Vite build assets (index.html, assets/, etc.)"
     )
+    zip_data = models.BinaryField(
+        null=True, 
+        blank=True,
+        help_text="Binary contents of the ZIP file stored in the database for Render persistent serving"
+    )
     checksum = models.CharField(
         max_length=64, 
         blank=True, 
@@ -368,6 +373,10 @@ class OTAUpdateBundle(models.Model):
     is_active = models.BooleanField(
         default=True,
         help_text="Whether this update bundle is active and downloadable"
+    )
+    is_testing = models.BooleanField(
+        default=True,
+        help_text="If true, this update is only visible to registered test devices"
     )
     is_mandatory = models.BooleanField(
         default=False,
@@ -382,11 +391,27 @@ class OTAUpdateBundle(models.Model):
     def save(self, *args, **kwargs):
         if self.zip_file and not self.checksum:
             sha256 = hashlib.sha256()
+            file_content = b''
             for chunk in self.zip_file.chunks():
                 sha256.update(chunk)
+                file_content += chunk
             self.checksum = sha256.hexdigest()
+            self.zip_data = file_content
+            
         super().save(*args, **kwargs)
+        
+        # Keep only the latest 2 bundles (current one and the previous one)
+        all_bundles = type(self).objects.order_by('-created_at')
+        if all_bundles.count() > 2:
+            bundles_to_delete = all_bundles[2:]
+            for old_bundle in bundles_to_delete:
+                if old_bundle.zip_file:
+                    try:
+                        old_bundle.zip_file.delete(save=False)
+                    except Exception:
+                        pass
+                old_bundle.delete()
 
     def __str__(self):
-        return f"OTA Update v{self.version} (Native Req: >=v{self.native_version_required})"
+        return f"OTA Update v{self.version} (Native Req: >=v{self.native_version_required}, Testing: {self.is_testing})"
 

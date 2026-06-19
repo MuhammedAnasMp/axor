@@ -15,6 +15,29 @@ export default function Auth() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  const [logoClicks, setLogoClicks] = useState(0);
+  const [logoClickTimer, setLogoClickTimer] = useState(null);
+
+  const handleLogoClick = () => {
+    if (logoClickTimer) {
+      clearTimeout(logoClickTimer);
+    }
+    const nextClicks = logoClicks + 1;
+    setLogoClicks(nextClicks);
+    if (nextClicks >= 5) {
+      const isCurrentlyTest = localStorage.getItem('is_test_device') === 'true';
+      localStorage.setItem('is_test_device', !isCurrentlyTest ? 'true' : 'false');
+      alert(`Test Device Mode: ${!isCurrentlyTest ? 'ENABLED 🧪' : 'DISABLED ❌'}`);
+      setLogoClicks(0);
+      window.location.reload();
+    } else {
+      const timer = setTimeout(() => {
+        setLogoClicks(0);
+      }, 2000);
+      setLogoClickTimer(timer);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
@@ -51,7 +74,10 @@ export default function Auth() {
         style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}
       >
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-brand-blue text-white font-bold text-xl">
+          <div 
+            onClick={handleLogoClick}
+            className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-brand-blue text-white font-bold text-xl cursor-pointer select-none"
+          >
             A
           </div>
           <h2 className="text-2xl font-semibold tracking-tight text-text-primary">

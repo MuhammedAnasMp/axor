@@ -50,12 +50,14 @@ export function useOTAUpdate() {
       const nativeVersion = info.version; // e.g. "1.0.0"
 
       // Request update metadata from backend via the existing request utility
+      const isTestDevice = localStorage.getItem('is_test_device') === 'true';
       const data = await request('/ota/check/', {
         method: 'POST',
         body: {
           platform: Capacitor.getPlatform(),
           native_version: nativeVersion,
           web_version: CURRENT_WEB_VERSION,
+          is_test_device: isTestDevice,
         },
       });
 

@@ -77,12 +77,13 @@ IS_DEVELOPMENT = any(arg in sys.argv for arg in ['runserver', 'test']) and not o
 
 if not IS_DEVELOPMENT:
     cookie_domain = os.getenv('COOKIE_DOMAIN')
-    if cookie_domain:
+    # Safeguard: Do not set cookie domains if hosting on public suffixes like onrender.com
+    if cookie_domain and 'onrender.com' not in cookie_domain:
         CSRF_COOKIE_DOMAIN = cookie_domain
         SESSION_COOKIE_DOMAIN = cookie_domain
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SAMESITE = 'None'
+    CSRF_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SAMESITE = 'None'
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 

@@ -19,10 +19,10 @@ export default function ComingSoon() {
         </div>
 
         <h1 className="mb-2 text-3xl font-semibold tracking-tight text-text-primary">
-          Axon E-Commerce
+          Axor E-Commerce Hub
         </h1>
         <p className="mb-6 text-sm text-text-secondary">
-          Our online storefront is currently under construction. Get ready for an enterprise-grade digital shopping experience coming soon!
+          Our online storefront is under construction. Exciting updates are on the way!
         </p>
 
         <div className="inline-flex rounded-full bg-accent-blue/20 px-3 py-1 text-xs font-semibold text-brand-blue">

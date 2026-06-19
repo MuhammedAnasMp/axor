@@ -5,7 +5,7 @@ from .views import (
     SupplierViewSet, CustomerViewSet, BankAccountViewSet, MoneyTransferViewSet, IncomeViewSet,
     ExpenseCategoryViewSet, ExpenseViewSet, PurchaseViewSet, SupplierPaymentViewSet, SaleViewSet,
     CustomerPaymentViewSet, SupplierProductViewSet, SupplierCostHistoryViewSet, dashboard_metrics, reports_data,
-    EmployeeSalaryPaymentViewSet, EmployeeAdvanceViewSet, EmployeeAttendanceViewSet, check_ota_update
+    EmployeeSalaryPaymentViewSet, EmployeeAdvanceViewSet, EmployeeAttendanceViewSet, check_ota_update, serve_ota_download
 )
 
 router = DefaultRouter()
@@ -38,4 +38,5 @@ urlpatterns = [
     path('dashboard/metrics/', dashboard_metrics, name='dashboard-metrics'),
     path('dashboard/reports/', reports_data, name='dashboard-reports'),
     path('ota/check/', check_ota_update, name='ota-check'),
+    path('ota/download/<str:version>/', serve_ota_download, name='ota-download'),
 ]

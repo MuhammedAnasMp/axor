@@ -186,7 +186,7 @@ class PurchaseReturnItemAdmin(admin.ModelAdmin):
 
 @admin.register(OTAUpdateBundle)
 class OTAUpdateBundleAdmin(admin.ModelAdmin):
-    list_display = ('version', 'native_version_required', 'is_active', 'is_mandatory', 'created_at')
-    list_filter = ('is_active', 'is_mandatory', 'created_at')
+    list_display = ('version', 'native_version_required', 'is_testing', 'is_active', 'is_mandatory', 'created_at')
+    list_filter = ('is_testing', 'is_active', 'is_mandatory', 'created_at')
     search_fields = ('version', 'native_version_required')
 
