@@ -1,5 +1,4 @@
-// const BASE_URL = 'http://localhost:8000/api';
-const BASE_URL = 'https://api.zoyee.in/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api';
 
 // Helper to get CSRF token from cookies (if needed)
 function getCookie(name) {

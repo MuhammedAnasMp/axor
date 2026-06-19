@@ -11,21 +11,22 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+# Load environment variables
+load_dotenv(BASE_DIR / '.env')
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-q)3566#vpae3n(@$eizhxhyyauoo&td6hb^$c#k#+p3sk4=stu'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-q)3566#vpae3n(@$eizhxhyyauoo&td6hb^$c#k#+p3sk4=stu')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',') if h.strip()]
 
 
 # Application definition
@@ -44,27 +45,29 @@ INSTALLED_APPS = [
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "https://localhost:5173",
-    "http://localhost:3000",
-    "https://app.zoyee.in",
+    origin.strip() for origin in os.getenv(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:3000'
+    ).split(',') if origin.strip()
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://localhost:5173",
-    "http://localhost:3000",
-    "https://app.zoyee.in",
-    "https://api.zoyee.in",
+    origin.strip() for origin in os.getenv(
+        'CSRF_TRUSTED_ORIGINS',
+        'http://localhost:3000'
+    ).split(',') if origin.strip()
 ]
 
 import sys
-import os
 
-# Share cookies between subdomains in production (e.g. app.zoyee.in and api.zoyee.in)
+# Share cookies between subdomains in production
 IS_DEVELOPMENT = any(arg in sys.argv for arg in ['runserver', 'test']) and not os.getenv('DJANGO_PRODUCTION')
 
 if not IS_DEVELOPMENT:
-    CSRF_COOKIE_DOMAIN = '.zoyee.in'
-    SESSION_COOKIE_DOMAIN = '.zoyee.in'
+    cookie_domain = os.getenv('COOKIE_DOMAIN')
+    if cookie_domain:
+        CSRF_COOKIE_DOMAIN = cookie_domain
+        SESSION_COOKIE_DOMAIN = cookie_domain
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SAMESITE = 'Lax'
@@ -104,12 +107,20 @@ WSGI_APPLICATION = 'axon_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default='postgresql://neondb_owner:npg_kdAN8sV6PlEU@ep-wispy-frog-aogju90l.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
+
+if DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
+    db_name = DATABASES['default']['NAME']
+    if isinstance(db_name, str) and not os.path.isabs(db_name):
+        DATABASES['default']['NAME'] = BASE_DIR / db_name
 
 
 # Password validation

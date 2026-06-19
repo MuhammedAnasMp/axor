@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
+import FloatingActionButton from '../components/FloatingActionButton';
+import MobileBottomSheet from '../components/MobileBottomSheet';
 
 export default function Products() {
   const [searchParams] = useSearchParams();
@@ -302,6 +304,118 @@ export default function Products() {
           currentTab === 'mappings' ? mappingPag.loading :
             costHistoryPag.loading;
 
+  const renderProductForm = (isMobile = false) => (
+    <form onSubmit={handleProductSubmit} className={isMobile ? "space-y-4" : "rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4"}>
+      {!isMobile && (
+        <h3 className="text-sm font-semibold text-text-primary">{editingProduct ? `Edit Product: ${editingProduct.name}` : 'Add New Product'}</h3>
+      )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Product Name</label>
+          <input
+            type="text"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Barcode / SKU</label>
+          <input
+            type="text"
+            required
+            value={barcode}
+            onChange={(e) => setBarcode(e.target.value)}
+            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Category</label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+          >
+            <option value="">Select Category</option>
+            {categoriesDropdown.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Brand</label>
+          <select
+            value={brand}
+            onChange={(e) => setBrand(e.target.value)}
+            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+          >
+            <option value="">Select Brand</option>
+            {brandsDropdown.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Default Selling Price (RRP)</label>
+          <input
+            type="number"
+            step="0.01"
+            required
+            value={sellingPrice}
+            onChange={(e) => setSellingPrice(e.target.value)}
+            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Product Images</label>
+          <div className="space-y-3">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              className="text-xs text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-accent-blue/10 file:text-brand-blue hover:file:bg-accent-blue/20"
+            />
+            {uploading && <span className="text-xs text-brand-blue animate-pulse">Uploading to Cloudinary...</span>}
+
+            {imageUrls.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-2">
+                {imageUrls.map((url, idx) => (
+                  <div key={idx} className="relative group h-16 w-16 rounded border border-surface-dim overflow-hidden bg-white shadow-sm">
+                    <img src={url} alt={`preview ${idx}`} className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setImageUrls(prev => prev.filter((_, i) => i !== idx))}
+                      className="absolute top-0.5 right-0.5 bg-red-600 text-white rounded-full p-0.5 text-[8px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-4 w-4"
+                      title="Remove image"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <button
+        type="submit"
+        className="w-full sm:w-auto rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition cursor-pointer"
+      >
+        Save Product
+      </button>
+    </form>
+  );
+
   return (
     <div className="space-y-6">
       {/* Title */}
@@ -325,7 +439,7 @@ export default function Products() {
               }
               setShowForm(!showForm);
             }}
-            className="rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
+            className="hidden md:inline-block rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
           >
             {showForm ? 'Cancel' : 'Add Product'}
           </button>
@@ -371,113 +485,9 @@ export default function Products() {
         <div className="space-y-6">
           {/* Add Product Form */}
           {showForm && (
-            <form onSubmit={handleProductSubmit} className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4">
-              <h3 className="text-sm font-semibold text-text-primary">{editingProduct ? `Edit Product: ${editingProduct.name}` : 'Add New Product'}</h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary mb-1">Product Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary mb-1">Barcode / SKU</label>
-                  <input
-                    type="text"
-                    required
-                    value={barcode}
-                    onChange={(e) => setBarcode(e.target.value)}
-                    className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary mb-1">Category</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-                  >
-                    <option value="">Select Category</option>
-                    {categoriesDropdown.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary mb-1">Brand</label>
-                  <select
-                    value={brand}
-                    onChange={(e) => setBrand(e.target.value)}
-                    className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-                  >
-                    <option value="">Select Brand</option>
-                    {brandsDropdown.map((b) => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary mb-1">Default Selling Price (RRP)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={sellingPrice}
-                    onChange={(e) => setSellingPrice(e.target.value)}
-                    className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-text-secondary mb-1">Description</label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-text-secondary mb-1">Product Images</label>
-                  <div className="space-y-3">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleImageUpload}
-                      className="text-xs text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-accent-blue/10 file:text-brand-blue hover:file:bg-accent-blue/20"
-                    />
-                    {uploading && <span className="text-xs text-brand-blue animate-pulse">Uploading to Cloudinary...</span>}
-
-                    {imageUrls.length > 0 && (
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        {imageUrls.map((url, idx) => (
-                          <div key={idx} className="relative group h-16 w-16 rounded border border-surface-dim overflow-hidden bg-white shadow-sm">
-                            <img src={url} alt={`preview ${idx}`} className="h-full w-full object-cover" />
-                            <button
-                              type="button"
-                              onClick={() => setImageUrls(prev => prev.filter((_, i) => i !== idx))}
-                              className="absolute top-0.5 right-0.5 bg-red-600 text-white rounded-full p-0.5 text-[8px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-4 w-4"
-                              title="Remove image"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <button
-                type="submit"
-                className="rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
-              >
-                Save Product
-              </button>
-            </form>
+            <div className="hidden md:block">
+              {renderProductForm(false)}
+            </div>
           )}
 
           {/* Search bar */}
@@ -1028,6 +1038,34 @@ export default function Products() {
             />
           </div>
         </div>
+      )}
+      {/* Mobile Bottom Sheet for adding/editing products */}
+      <MobileBottomSheet
+        isOpen={showForm}
+        onClose={() => {
+          setShowForm(false);
+          setEditingProduct(null);
+        }}
+        title={editingProduct ? `Edit Product: ${editingProduct.name}` : 'Add New Product'}
+      >
+        {renderProductForm(true)}
+      </MobileBottomSheet>
+
+      {/* Floating Action Button for products tab */}
+      {currentTab === 'products' && !showForm && (
+        <FloatingActionButton
+          onClick={() => {
+            setEditingProduct(null);
+            setName('');
+            setBarcode('');
+            setDescription('');
+            setCategory('');
+            setBrand('');
+            setSellingPrice('0');
+            setImageUrls([]);
+            setShowForm(true);
+          }}
+        />
       )}
     </div>
   );

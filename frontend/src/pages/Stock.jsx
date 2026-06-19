@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
+import MobileBottomSheet from '../components/MobileBottomSheet';
 
 export default function Stock() {
   const [searchParams] = useSearchParams();
@@ -140,6 +141,149 @@ export default function Stock() {
   };
 
   const activeLoading = currentTab === 'current' ? stockPag.loading : historyPag.loading;
+
+  const renderAdjustForm = (isMobile = false) => (
+    <form onSubmit={handleAdjustSubmit} className="space-y-4">
+      <div>
+        <label className="block text-xs font-semibold text-text-secondary mb-1">New Physical Stock Quantity</label>
+        <input
+          type="number"
+          required
+          value={adjustQty}
+          onChange={(e) => setAdjustQty(e.target.value)}
+          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue text-text-primary"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-text-secondary mb-1">Adjustment Reason</label>
+        <input
+          type="text"
+          required
+          value={adjustReason}
+          onChange={(e) => setAdjustReason(e.target.value)}
+          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue text-text-primary"
+        />
+      </div>
+      <div className={isMobile ? "flex flex-col space-y-2 pt-2" : "flex justify-end space-x-2 pt-2"}>
+        <button
+          type="button"
+          onClick={() => setShowAdjustModal(false)}
+          className={`rounded border border-surface-dim px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-low ${isMobile ? 'w-full py-2.5 font-semibold' : ''}`}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className={`rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
+        >
+          Save Count
+        </button>
+      </div>
+    </form>
+  );
+
+  const renderTransferForm = (isMobile = false) => (
+    <form onSubmit={handleTransferSubmit} className="space-y-4">
+      <div>
+        <label className="block text-xs font-semibold text-text-secondary mb-1">Transfer Qty</label>
+        <input
+          type="number"
+          required
+          value={transferQty}
+          onChange={(e) => setTransferQty(e.target.value)}
+          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue text-text-primary"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-text-secondary mb-1">Source Location</label>
+        <input
+          type="text"
+          required
+          value={transferFrom}
+          onChange={(e) => setTransferFrom(e.target.value)}
+          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue text-text-primary"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-text-secondary mb-1">Destination Location</label>
+        <input
+          type="text"
+          required
+          value={transferTo}
+          onChange={(e) => setTransferTo(e.target.value)}
+          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue text-text-primary"
+        />
+      </div>
+      <div className={isMobile ? "flex flex-col space-y-2 pt-2" : "flex justify-end space-x-2 pt-2"}>
+        <button
+          type="button"
+          onClick={() => setShowTransferModal(false)}
+          className={`rounded border border-surface-dim px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-low ${isMobile ? 'w-full py-2.5 font-semibold' : ''}`}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className={`rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
+        >
+          Confirm Transfer
+        </button>
+      </div>
+    </form>
+  );
+
+  const renderDamageForm = (isMobile = false) => (
+    <form onSubmit={handleDamageSubmit} className="space-y-4">
+      <div>
+        <label className="block text-xs font-semibold text-text-secondary mb-1">Quantity Damaged</label>
+        <input
+          type="number"
+          required
+          value={damageQty}
+          onChange={(e) => setDamageQty(e.target.value)}
+          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue text-text-primary"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-text-secondary mb-1">Damage Reason / Notes</label>
+        <input
+          type="text"
+          required
+          value={damageReason}
+          onChange={(e) => setDamageReason(e.target.value)}
+          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue text-text-primary"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-text-secondary mb-1">Deduct Cost From Account</label>
+        <select
+          required
+          value={damageBank}
+          onChange={(e) => setDamageBank(e.target.value)}
+          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+        >
+          {bankAccounts.map((b) => (
+            <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
+          ))}
+        </select>
+      </div>
+      <div className={isMobile ? "flex flex-col space-y-2 pt-2" : "flex justify-end space-x-2 pt-2"}>
+        <button
+          type="button"
+          onClick={() => setShowDamageModal(false)}
+          className={`rounded border border-surface-dim px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-low ${isMobile ? 'w-full py-2.5 font-semibold' : ''}`}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className={`rounded bg-error px-3 py-1.5 text-xs text-white hover:bg-error-container ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
+        >
+          Write Off Stock
+        </button>
+      </div>
+    </form>
+  );
 
   return (
     <div className="space-y-6">
@@ -334,169 +478,59 @@ export default function Stock() {
         </div>
       )}
 
-      {/* Adjust Stock Modal */}
+      {/* Adjust Stock Controls */}
       {showAdjustModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="hidden md:flex fixed inset-0 z-50 items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg">
             <h3 className="text-sm font-semibold text-text-primary mb-4">Adjust Stock Count: {selectedStock?.product_name}</h3>
-            <form onSubmit={handleAdjustSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1">New Physical Stock Quantity</label>
-                <input
-                  type="number"
-                  required
-                  value={adjustQty}
-                  onChange={(e) => setAdjustQty(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1">Adjustment Reason</label>
-                <input
-                  type="text"
-                  required
-                  value={adjustReason}
-                  onChange={(e) => setAdjustReason(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-                />
-              </div>
-              <div className="flex justify-end space-x-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAdjustModal(false)}
-                  className="rounded border border-surface-dim px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-low"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt"
-                >
-                  Save Count
-                </button>
-              </div>
-            </form>
+            {renderAdjustForm(false)}
           </div>
         </div>
       )}
+      <MobileBottomSheet
+        isOpen={showAdjustModal}
+        onClose={() => setShowAdjustModal(false)}
+        title={`Adjust Stock: ${selectedStock?.product_name}`}
+      >
+        {renderAdjustForm(true)}
+      </MobileBottomSheet>
 
-      {/* Transfer Stock Modal */}
+      {/* Transfer Stock Controls */}
       {showTransferModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="hidden md:flex fixed inset-0 z-50 items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg">
             <h3 className="text-sm font-semibold text-text-primary mb-4">Stock Location Transfer: {selectedStock?.product_name}</h3>
-            <form onSubmit={handleTransferSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1">Transfer Qty</label>
-                <input
-                  type="number"
-                  required
-                  value={transferQty}
-                  onChange={(e) => setTransferQty(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1">Source Location</label>
-                <input
-                  type="text"
-                  required
-                  value={transferFrom}
-                  onChange={(e) => setTransferFrom(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1">Destination Location</label>
-                <input
-                  type="text"
-                  required
-                  value={transferTo}
-                  onChange={(e) => setTransferTo(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-                />
-              </div>
-              <div className="flex justify-end space-x-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowTransferModal(false)}
-                  className="rounded border border-surface-dim px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-low"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt"
-                >
-                  Confirm Transfer
-                </button>
-              </div>
-            </form>
+            {renderTransferForm(false)}
           </div>
         </div>
       )}
+      <MobileBottomSheet
+        isOpen={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
+        title={`Stock Transfer: ${selectedStock?.product_name}`}
+      >
+        {renderTransferForm(true)}
+      </MobileBottomSheet>
 
-      {/* Log Damage Modal */}
+      {/* Log Damage Controls */}
       {showDamageModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="hidden md:flex fixed inset-0 z-50 items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg">
             <h3 className="text-sm font-semibold text-text-primary mb-2">Record Damage & Expense: {selectedStock?.product_name}</h3>
             <p className="text-[11px] text-text-secondary mb-4">
               Marks stock as lost and automatically writes off a corresponding expense from the selected account (cost = WAC per item).
             </p>
-            <form onSubmit={handleDamageSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1">Quantity Damaged</label>
-                <input
-                  type="number"
-                  required
-                  value={damageQty}
-                  onChange={(e) => setDamageQty(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1">Damage Reason / Notes</label>
-                <input
-                  type="text"
-                  required
-                  value={damageReason}
-                  onChange={(e) => setDamageReason(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1">Deduct Cost From Account</label>
-                <select
-                  required
-                  value={damageBank}
-                  onChange={(e) => setDamageBank(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-                >
-                  {bankAccounts.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex justify-end space-x-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDamageModal(false)}
-                  className="rounded border border-surface-dim px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-low"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded bg-error px-3 py-1.5 text-xs text-white hover:bg-error-container"
-                >
-                  Write Off Stock
-                </button>
-              </div>
-            </form>
+            {renderDamageForm(false)}
           </div>
         </div>
       )}
+      <MobileBottomSheet
+        isOpen={showDamageModal}
+        onClose={() => setShowDamageModal(false)}
+        title={`Log Damage: ${selectedStock?.product_name}`}
+      >
+        {renderDamageForm(true)}
+      </MobileBottomSheet>
     </div>
   );
 }

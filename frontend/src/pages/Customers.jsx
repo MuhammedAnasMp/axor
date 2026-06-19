@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
+import FloatingActionButton from '../components/FloatingActionButton';
+import MobileBottomSheet from '../components/MobileBottomSheet';
 import { FaWhatsapp, FaPhoneAlt } from 'react-icons/fa';
 import { FiCopy, FiCheck } from 'react-icons/fi';
 
@@ -184,6 +186,121 @@ export default function Customers() {
     );
   };
 
+  const renderCustomerForm = (isMobile = false) => (
+    <form onSubmit={handleCustomerSubmit} className={isMobile ? "space-y-4" : "rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4"}>
+      {!isMobile && <h3 className="text-sm font-semibold text-text-primary">Add New Customer</h3>}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Customer Name</label>
+          <input
+            type="text"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Contact Details / Address</label>
+          <input
+            type="text"
+            required
+            value={contactInfo}
+            onChange={(e) => setContactInfo(e.target.value)}
+            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Credit Limit (INR)</label>
+          <input
+            type="number"
+            required
+            value={creditLimit}
+            onChange={(e) => setCreditLimit(e.target.value)}
+            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Contact Number</label>
+          <input
+            type="text"
+            value={contactNumber}
+            onChange={(e) => setContactNumber(e.target.value)}
+            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-text-secondary mb-1">WhatsApp Number</label>
+          <input
+            type="text"
+            value={whatsappNumber}
+            onChange={(e) => setWhatsappNumber(e.target.value)}
+            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Place</label>
+          <input
+            type="text"
+            value={place}
+            onChange={(e) => setPlace(e.target.value)}
+            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+          />
+        </div>
+      </div>
+      <button
+        type="submit"
+        className="w-full sm:w-auto rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition cursor-pointer"
+      >
+        Save Customer
+      </button>
+    </form>
+  );
+
+  const renderPayForm = (isMobile = false) => (
+    <form onSubmit={handlePaymentSubmit} className="space-y-4">
+      <div>
+        <label className="block text-xs font-semibold text-text-secondary mb-1">Payment Received Amount (INR)</label>
+        <input
+          type="number"
+          step="0.01"
+          required
+          value={payAmount}
+          onChange={(e) => setPayAmount(e.target.value)}
+          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue text-text-primary"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-text-secondary mb-1">Deposit To Bank Account</label>
+        <select
+          required
+          value={payBank}
+          onChange={(e) => setPayBank(e.target.value)}
+          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue text-text-primary"
+        >
+          {bankAccounts.map((b) => (
+            <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
+          ))}
+        </select>
+      </div>
+      <div className={isMobile ? "flex flex-col space-y-2 pt-2" : "flex justify-end space-x-2 pt-2"}>
+        <button
+          type="button"
+          onClick={() => setShowPayModal(false)}
+          className={`rounded border border-surface-dim px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-low ${isMobile ? 'w-full py-2.5 font-semibold' : ''}`}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className={`rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
+        >
+          Post Payment
+        </button>
+      </div>
+    </form>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -193,81 +310,16 @@ export default function Customers() {
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
+          className="hidden md:inline-block rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
         >
           {showForm ? 'Cancel' : 'Add Customer'}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleCustomerSubmit} className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4">
-          <h3 className="text-sm font-semibold text-text-primary">Add New Customer</h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">Customer Name</label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">Contact Details / Address</label>
-              <input
-                type="text"
-                required
-                value={contactInfo}
-                onChange={(e) => setContactInfo(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">Credit Limit (INR)</label>
-              <input
-                type="number"
-                required
-                value={creditLimit}
-                onChange={(e) => setCreditLimit(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">Contact Number</label>
-              <input
-                type="text"
-                value={contactNumber}
-                onChange={(e) => setContactNumber(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">WhatsApp Number</label>
-              <input
-                type="text"
-                value={whatsappNumber}
-                onChange={(e) => setWhatsappNumber(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">Place</label>
-              <input
-                type="text"
-                value={place}
-                onChange={(e) => setPlace(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-              />
-            </div>
-          </div>
-          <button
-            type="submit"
-            className="rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
-          >
-            Save Customer
-          </button>
-        </form>
+        <div className="hidden md:block">
+          {renderCustomerForm(false)}
+        </div>
       )}
 
       {/* Directory Table Wrapper */}
@@ -364,52 +416,44 @@ export default function Customers() {
 
       {/* Record Payment Modal */}
       {showPayModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="hidden md:flex fixed inset-0 z-50 items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg">
             <h3 className="text-sm font-semibold text-text-primary mb-4">Record Customer Payment: {selectedCustomer?.name}</h3>
-            <form onSubmit={handlePaymentSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1">Payment Received Amount (INR)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={payAmount}
-                  onChange={(e) => setPayAmount(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1">Deposit To Bank Account</label>
-                <select
-                  required
-                  value={payBank}
-                  onChange={(e) => setPayBank(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-                >
-                  {bankAccounts.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex justify-end space-x-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowPayModal(false)}
-                  className="rounded border border-surface-dim px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-low"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt"
-                >
-                  Post Payment
-                </button>
-              </div>
-            </form>
+            {renderPayForm(false)}
           </div>
         </div>
+      )}
+
+      {/* Mobile Bottom Sheets */}
+      <MobileBottomSheet
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        title="Add New Customer"
+      >
+        {renderCustomerForm(true)}
+      </MobileBottomSheet>
+
+      <MobileBottomSheet
+        isOpen={showPayModal}
+        onClose={() => setShowPayModal(false)}
+        title={`Customer Payment: ${selectedCustomer?.name}`}
+      >
+        {renderPayForm(true)}
+      </MobileBottomSheet>
+
+      {/* Mobile Floating Action Button */}
+      {!showForm && !showPayModal && (
+        <FloatingActionButton
+          onClick={() => {
+            setName('');
+            setContactInfo('');
+            setWhatsappNumber('');
+            setContactNumber('');
+            setPlace('');
+            setCreditLimit('10000');
+            setShowForm(true);
+          }}
+        />
       )}
     </div>
   );

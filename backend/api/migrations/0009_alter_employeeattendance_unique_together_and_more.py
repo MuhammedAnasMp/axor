@@ -11,10 +11,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterUniqueTogether(
-            name='employeeattendance',
-            unique_together={('employee', 'month')},
-        ),
         migrations.AddField(
             model_name='employeeattendance',
             name='absent_days',
@@ -29,6 +25,10 @@ class Migration(migrations.Migration):
             model_name='employeeattendance',
             name='month',
             field=models.CharField(default='2026-06', max_length=7),
+        ),
+        migrations.AlterUniqueTogether(
+            name='employeeattendance',
+            unique_together={('employee', 'month')},
         ),
         migrations.AddField(
             model_name='employeeattendance',

@@ -1,6 +1,5 @@
-@import "tailwindcss";
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
 
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -44,8 +43,51 @@ html, body, #root {
   background-color: var(--color-surface);
   font-family: var(--font-sans);
   color: var(--color-text-primary);
+  overflow: hidden;
 }
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
+
+/* Native App Feel - Selection Prevention */
+body, button, a, select, nav, svg {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Hide scrollbars for navigation elements */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Safe Area Inset Helper Utilities */
+.safe-pt {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-mb {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-mt {
+  margin-top: env(safe-area-inset-top, 0px);
+}
+
+/* Soft transition active state */
+.btn-touch-active:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+

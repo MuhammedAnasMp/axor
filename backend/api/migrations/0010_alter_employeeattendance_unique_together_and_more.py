@@ -11,14 +11,14 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterUniqueTogether(
-            name='employeeattendance',
-            unique_together={('employee', 'date')},
-        ),
         migrations.AddField(
             model_name='employeeattendance',
             name='date',
             field=models.DateField(default=django.utils.timezone.now),
+        ),
+        migrations.AlterUniqueTogether(
+            name='employeeattendance',
+            unique_together={('employee', 'date')},
         ),
         migrations.AddField(
             model_name='employeeattendance',

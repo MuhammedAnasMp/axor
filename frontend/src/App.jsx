@@ -21,14 +21,14 @@ import { useOTAUpdate } from './utils/useOTAUpdate';
 
 function ERPLayout() {
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-surface">
-      {/* Collapsible Sidebar */}
+    <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-surface">
+      {/* Collapsible Sidebar / Responsive Navigation Layout */}
       <Sidebar />
 
       {/* Main Fluid Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Header */}
-        <header className="flex h-16 items-center justify-between px-6 bg-white border-b border-surface-low shadow-sm">
+        {/* Desktop-only Top Header */}
+        <header className="hidden md:flex h-16 items-center justify-between px-6 bg-white border-b border-surface-low shadow-sm">
           <span className="text-xs font-semibold text-text-secondary">Axon Management Platform</span>
           <div className="flex items-center space-x-2">
             <span className="text-xs font-bold text-brand-blue bg-accent-blue/15 px-2.5 py-1 rounded-full">
@@ -38,7 +38,7 @@ function ERPLayout() {
         </header>
 
         {/* Content Outlet */}
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8 bg-surface">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 pb-24 md:pb-8 bg-surface">
           <Outlet />
         </main>
       </div>

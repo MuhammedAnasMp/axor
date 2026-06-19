@@ -2,7 +2,7 @@ Here is the updated ERP structure incorporating the logic for purchasing-based p
 
 
 
-### ERP System Structure (`:8000/epr`)
+### ERP System Structure (`:8001/epr`)
 
 #### 1. /Dashboard
 * Today's Sales
