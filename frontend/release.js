@@ -75,6 +75,12 @@ function main() {
     process.exit(1);
   }
 
+  const uiOnly = process.argv.includes('--ui-only');
+  if (uiOnly) {
+    console.log(`\n🎉 Success! UI update zip created at: ${zipPath}\n`);
+    return;
+  }
+
   // 6. Run Django database registration script
   console.log('💾 Registering bundle in Django backend...');
   let pythonCmd = 'python';
