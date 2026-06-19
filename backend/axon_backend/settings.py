@@ -70,8 +70,8 @@ if not IS_DEVELOPMENT:
         SESSION_COOKIE_DOMAIN = cookie_domain
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SAMESITE = 'Lax'
-    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'None'
+    SESSION_COOKIE_SAMESITE = 'None'
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
