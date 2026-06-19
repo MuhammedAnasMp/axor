@@ -65,10 +65,10 @@ function main() {
     fs.unlinkSync(zipPath);
   }
 
-  const zipSuccess = runCommand(
-    `powershell -Command "Compress-Archive -Path dist\\* -DestinationPath ota_update.zip -Force"`,
-    { cwd: __dirname }
-  );
+  const isWindows = process.platform === 'win32';
+  const zipSuccess = isWindows
+    ? runCommand(`powershell -Command "Compress-Archive -Path dist\\* -DestinationPath ota_update.zip -Force"`, { cwd: __dirname })
+    : runCommand(`zip -r ../ota_update.zip .`, { cwd: path.join(__dirname, 'dist') });
 
   if (!zipSuccess || !fs.existsSync(zipPath)) {
     console.error('❌ Failed to zip dist/ contents.');

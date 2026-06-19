@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node release.js",
+    "build": "vite build",
     "build-ui": "node release.js --ui-only",
-    "build-only": "vite build",
+    "release": "node release.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
