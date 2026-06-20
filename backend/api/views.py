@@ -291,12 +291,18 @@ class StockViewSet(viewsets.ModelViewSet):
             return Response({"error": "Bank account not found"}, status=status.HTTP_400_BAD_REQUEST)
 
 class StockHistoryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = StockHistory.objects.all().order_by('-timestamp')
     serializer_class = StockHistorySerializer
     pagination_class = OptionalPageNumberPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['product__name', 'action_type', 'description']
     ordering_fields = ['id', 'product__name', 'quantity_changed', 'action_type', 'timestamp']
+
+    def get_queryset(self):
+        queryset = StockHistory.objects.all().order_by('-timestamp')
+        action_type = self.request.query_params.get('action_type')
+        if action_type:
+            queryset = queryset.filter(action_type=action_type)
+        return queryset
 
 class SupplierViewSet(viewsets.ModelViewSet):
     queryset = Supplier.objects.all().order_by('name')
@@ -1597,7 +1603,7 @@ class EmployeeAttendanceViewSet(viewsets.ModelViewSet):
 
 def parse_version_tuple(version_str):
     try:
-        return tuple(int(x) for x in version_str.strip().split('.'))
+        parts = [int(x) for x in version_str.strip().split('.')]
     except ValueError:
         parts = []
         for x in version_str.strip().split('.'):
@@ -1608,7 +1614,11 @@ def parse_version_tuple(version_str):
                 else:
                     break
             parts.append(int("".join(digits)) if digits else 0)
-        return tuple(parts)
+    
+    # Pad to at least 3 parts (e.g. 1.0 -> 1.0.0) to ensure accurate semantic comparison
+    while len(parts) < 3:
+        parts.append(0)
+    return tuple(parts)
 
 
 @api_view(['POST'])

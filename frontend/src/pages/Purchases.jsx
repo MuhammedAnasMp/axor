@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
+import { SkeletonTable, Spinner } from '../components/Skeleton';
 
 export default function Purchases() {
   const [searchParams] = useSearchParams();
@@ -12,6 +13,13 @@ export default function Purchases() {
   const [suppliers, setSuppliers] = useState([]);
   const [bankAccounts, setBankAccounts] = useState([]);
   const [dropdownsLoading, setDropdownsLoading] = useState(true);
+
+  // Action loading states
+  const [isSavingPO, setIsSavingPO] = useState(false);
+  const [postingSupplierId, setPostingSupplierId] = useState('');
+  const [isReceivingPO, setIsReceivingPO] = useState(false);
+  const [isReturningPO, setIsReturningPO] = useState(false);
+  const [isCancellingPO, setIsCancellingPO] = useState(false);
 
   // Pagination hooks for each list tab
   const receivePag = usePagination(api.purchases.list, 10, currentTab === 'receive', { is_received: 'false' });
@@ -538,6 +546,7 @@ export default function Purchases() {
         items: items
       };
 
+      setIsSavingPO(true);
       api.purchases.create(payload)
         .then(() => {
           setItems([]);
@@ -552,7 +561,8 @@ export default function Purchases() {
           loadDropdowns();
           setPoMode(null);
         })
-        .catch((err) => alert(err.message));
+        .catch((err) => alert(err.message))
+        .finally(() => setIsSavingPO(false));
     } else {
       // Group items by supplier
       const groups = {};
@@ -633,6 +643,7 @@ export default function Purchases() {
         return api.purchases.create(payload);
       });
 
+      setIsSavingPO(true);
       Promise.all(promises)
         .then((results) => {
           setItems([]);
@@ -645,7 +656,8 @@ export default function Purchases() {
           loadDropdowns();
           setPoMode(null);
         })
-        .catch((err) => alert(`Error creating some POs: ${err.message}`));
+        .catch((err) => alert(`Error creating some POs: ${err.message}`))
+        .finally(() => setIsSavingPO(false));
     }
   };
 
@@ -700,6 +712,7 @@ export default function Purchases() {
       }))
     };
 
+    setPostingSupplierId(supId.toString());
     api.purchases.create(payload)
       .then(() => {
         setItems(prevItems => prevItems.filter(item => item.supplier_id.toString() !== supId.toString()));
@@ -713,7 +726,8 @@ export default function Purchases() {
         historyPag.refresh();
         loadDropdowns();
       })
-      .catch((err) => alert(`Error posting PO: ${err.message}`));
+      .catch((err) => alert(`Error posting PO: ${err.message}`))
+      .finally(() => setPostingSupplierId(''));
   };
 
   const handleOpenReceiveModal = (po) => {
@@ -750,6 +764,7 @@ export default function Purchases() {
 
   const handleCancelPO = (id) => {
     if (confirm("Are you sure you want to completely CANCEL and delete this Purchase Order? This action cannot be undone.")) {
+      setIsCancellingPO(true);
       api.purchases.delete(id)
         .then(() => {
           alert("Purchase Order has been cancelled and deleted.");
@@ -759,7 +774,8 @@ export default function Purchases() {
           historyPag.refresh();
           loadDropdowns();
         })
-        .catch((err) => alert(err.message));
+        .catch((err) => alert(err.message))
+        .finally(() => setIsCancellingPO(false));
     }
   };
 
@@ -862,6 +878,7 @@ export default function Purchases() {
       deducted_credit: recDeductSupplierCredit ? parseFloat(recDeductAmount || 0) : 0
     };
 
+    setIsReceivingPO(true);
     api.purchases.receive(receivingPO.id, payload)
       .then((res) => {
         alert(res.message);
@@ -871,7 +888,8 @@ export default function Purchases() {
         historyPag.refresh();
         loadDropdowns();
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => alert(err.message))
+      .finally(() => setIsReceivingPO(false));
   };
 
   const handleOpenReturnModal = (po) => {
@@ -936,6 +954,7 @@ export default function Purchases() {
     }
 
     if (confirm('Are you sure you want to perform this purchase return? This will decrement stock levels and adjust financials.')) {
+      setIsReturningPO(true);
       api.purchases.return(returningPO.id, {
         items: itemsToReturn,
         adjustment: parseFloat(returnAdjustment || 0),
@@ -949,7 +968,8 @@ export default function Purchases() {
           historyPag.refresh();
           loadDropdowns();
         })
-        .catch((err) => alert(err.message));
+        .catch((err) => alert(err.message))
+        .finally(() => setIsReturningPO(false));
     }
   };
 
@@ -1571,9 +1591,11 @@ export default function Purchases() {
 
                 <button
                   type="submit"
-                  className="w-full rounded bg-brand-blue py-2.5 text-sm font-semibold text-white hover:bg-brand-cobalt transition"
+                  disabled={isSavingPO}
+                  className="w-full flex items-center justify-center space-x-2 rounded bg-brand-blue py-2.5 text-sm font-semibold text-white hover:bg-brand-cobalt transition disabled:opacity-50"
                 >
-                  Post Purchase Order
+                  {isSavingPO && <Spinner size="sm" />}
+                  <span>Post Purchase Order</span>
                 </button>
               </form>
             ) : (
@@ -1781,10 +1803,12 @@ export default function Purchases() {
                         </div>
                         <button
                           type="button"
+                          disabled={postingSupplierId === supId.toString()}
                           onClick={() => handlePostSingleSupplierPO(supId)}
-                          className="w-full rounded bg-brand-blue py-2 text-xs font-semibold text-white hover:bg-brand-cobalt transition mt-3"
+                          className="w-full flex items-center justify-center space-x-2 rounded bg-brand-blue py-2 text-xs font-semibold text-white hover:bg-brand-cobalt transition mt-3 disabled:opacity-50"
                         >
-                          Post Purchase Order
+                          {postingSupplierId === supId.toString() && <Spinner size="sm" />}
+                          <span>Post Purchase Order</span>
                         </button>
                       </div>
                     );
@@ -1843,24 +1867,28 @@ export default function Purchases() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-low">
-                {receivePag.data.map((p) => (
-                  <tr key={p.id} className="hover:bg-surface-bright">
-                    <td className="px-4 py-3 font-semibold text-brand-blue cursor-pointer hover:underline" onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}>PO-{p.id}</td>
-                    <td className="px-4 py-3 text-text-primary">{p.supplier_name}</td>
-                    <td className="px-4 py-3 text-text-secondary font-mono">{p.invoice_number || '-'}</td>
-                    <td className="px-4 py-3 text-text-secondary">{p.payment_type}</td>
-                    <td className="px-4 py-3 text-right text-text-secondary">{formatCurrency(p.additional_costs)}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-text-primary">{formatCurrency(p.total_amount)}</td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => handleOpenReceiveModal(p)}
-                        className="rounded bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 transition"
-                      >
-                        Receive PO
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {receivePag.loading ? (
+                  <SkeletonTable rows={5} columns={7} />
+                ) : (
+                  receivePag.data.map((p) => (
+                    <tr key={p.id} className="hover:bg-surface-bright">
+                      <td className="px-4 py-3 font-semibold text-brand-blue cursor-pointer hover:underline" onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}>PO-{p.id}</td>
+                      <td className="px-4 py-3 text-text-primary">{p.supplier_name}</td>
+                      <td className="px-4 py-3 text-text-secondary font-mono">{p.invoice_number || '-'}</td>
+                      <td className="px-4 py-3 text-text-secondary">{p.payment_type}</td>
+                      <td className="px-4 py-3 text-right text-text-secondary">{formatCurrency(p.additional_costs)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-text-primary">{formatCurrency(p.total_amount)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => handleOpenReceiveModal(p)}
+                          className="rounded bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 transition"
+                        >
+                          Receive PO
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
                 {receivePag.data.length === 0 && !receivePag.loading && (
                   <tr>
                     <td colSpan="7" className="px-4 py-8 text-center text-text-secondary">No pending purchase orders found.</td>
@@ -1872,49 +1900,67 @@ export default function Purchases() {
 
           {/* Mobile Card list */}
           <div className="block md:hidden space-y-4">
-            {receivePag.data.map((p) => (
-              <div key={p.id} className="border border-surface-low rounded-lg p-4 bg-white space-y-3 shadow-sm">
-                <div className="flex justify-between items-start border-b border-surface-low pb-2">
-                  <div>
-                    <span
-                      onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}
-                      className="font-bold text-sm text-brand-blue cursor-pointer hover:underline"
+            {receivePag.loading ? (
+              Array.from({ length: 3 }).map((_, idx) => (
+                <div key={idx} className="border border-surface-low rounded-lg p-4 bg-white space-y-3 shadow-sm animate-pulse">
+                  <div className="flex justify-between items-start border-b border-surface-low pb-2">
+                    <div className="space-y-2">
+                      <div className="h-4 w-20 bg-surface-dim/50 rounded" />
+                      <div className="h-4 w-32 bg-surface-dim/50 rounded" />
+                    </div>
+                    <div className="h-6 w-16 bg-surface-dim/50 rounded" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="h-4 w-24 bg-surface-dim/50 rounded" />
+                    <div className="h-4 w-24 bg-surface-dim/50 rounded" />
+                  </div>
+                </div>
+              ))
+            ) : (
+              receivePag.data.map((p) => (
+                <div key={p.id} className="border border-surface-low rounded-lg p-4 bg-white space-y-3 shadow-sm">
+                  <div className="flex justify-between items-start border-b border-surface-low pb-2">
+                    <div>
+                      <span
+                        onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}
+                        className="font-bold text-sm text-brand-blue cursor-pointer hover:underline"
+                      >
+                        PO-{p.id}
+                      </span>
+                      <span className="text-text-primary font-semibold block mt-1">{p.supplier_name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-text-secondary uppercase block">Total</span>
+                      <span className="font-semibold text-sm text-brand-blue">{formatCurrency(p.total_amount)}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs text-text-secondary">
+                    <div>
+                      <span className="block font-semibold">Ref Invoice #</span>
+                      <span className="text-text-primary font-mono">{p.invoice_number || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold">Payment Type</span>
+                      <span className="text-text-primary font-medium">{p.payment_type}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="block font-semibold">Landed Cost</span>
+                      <span className="text-text-primary">{formatCurrency(p.additional_costs)}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-surface-lowest flex justify-end">
+                    <button
+                      onClick={() => handleOpenReceiveModal(p)}
+                      className="rounded bg-green-600 px-4 py-2 text-xs font-bold text-white hover:bg-green-700 transition w-full sm:w-auto"
                     >
-                      PO-{p.id}
-                    </span>
-                    <span className="text-text-primary font-semibold block mt-1">{p.supplier_name}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold text-text-secondary uppercase block">Total</span>
-                    <span className="font-semibold text-sm text-brand-blue">{formatCurrency(p.total_amount)}</span>
+                      Receive PO
+                    </button>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs text-text-secondary">
-                  <div>
-                    <span className="block font-semibold">Ref Invoice #</span>
-                    <span className="text-text-primary font-mono">{p.invoice_number || '-'}</span>
-                  </div>
-                  <div>
-                    <span className="block font-semibold">Payment Type</span>
-                    <span className="text-text-primary font-medium">{p.payment_type}</span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="block font-semibold">Landed Cost</span>
-                    <span className="text-text-primary">{formatCurrency(p.additional_costs)}</span>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-surface-lowest flex justify-end">
-                  <button
-                    onClick={() => handleOpenReceiveModal(p)}
-                    className="rounded bg-green-600 px-4 py-2 text-xs font-bold text-white hover:bg-green-700 transition w-full sm:w-auto"
-                  >
-                    Receive PO
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
             {receivePag.data.length === 0 && !receivePag.loading && (
               <div className="text-center py-8 text-text-secondary text-xs bg-white rounded-lg border border-surface-low">No pending purchase orders found.</div>
             )}
@@ -1971,34 +2017,38 @@ export default function Purchases() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-low">
-                {historyPag.data.map((p) => (
-                  <tr key={p.id} className="hover:bg-surface-bright">
-                    <td className="px-4 py-3 font-semibold text-brand-blue cursor-pointer hover:underline" onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}>PO-{p.id}</td>
-                    <td className="px-4 py-3 text-text-secondary">{new Date(p.timestamp).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-text-primary">{p.supplier_name}</td>
-                    <td className="px-4 py-3 text-right text-text-secondary">{formatCurrency(p.additional_costs)}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-text-primary">{formatCurrency(p.total_amount)}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold ${
-                        p.status === 'Returned' ? 'bg-red-100 text-red-800' :
-                        p.status === 'Partially Returned' ? 'bg-orange-100 text-orange-800' :
-                        p.status === 'Received' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {p.status || (p.is_received ? 'Received' : 'Pending')}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {p.is_received && (
-                        <button
-                          onClick={() => handleOpenReturnModal(p)}
-                          className="rounded bg-error-container/10 px-2 py-1 text-[11px] font-semibold text-error hover:bg-error-container/20"
-                        >
-                          Return Purchase
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {historyPag.loading ? (
+                  <SkeletonTable rows={5} columns={7} />
+                ) : (
+                  historyPag.data.map((p) => (
+                    <tr key={p.id} className="hover:bg-surface-bright">
+                      <td className="px-4 py-3 font-semibold text-brand-blue cursor-pointer hover:underline" onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}>PO-{p.id}</td>
+                      <td className="px-4 py-3 text-text-secondary">{new Date(p.timestamp).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-text-primary">{p.supplier_name}</td>
+                      <td className="px-4 py-3 text-right text-text-secondary">{formatCurrency(p.additional_costs)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-text-primary">{formatCurrency(p.total_amount)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold ${
+                          p.status === 'Returned' ? 'bg-red-100 text-red-800' :
+                          p.status === 'Partially Returned' ? 'bg-orange-100 text-orange-800' :
+                          p.status === 'Received' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {p.status || (p.is_received ? 'Received' : 'Pending')}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {p.is_received && (
+                          <button
+                            onClick={() => handleOpenReturnModal(p)}
+                            className="rounded bg-error-container/10 px-2 py-1 text-[11px] font-semibold text-error hover:bg-error-container/20"
+                          >
+                            Return Purchase
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
                 {historyPag.data.length === 0 && !historyPag.loading && (
                   <tr>
                     <td colSpan="7" className="px-4 py-8 text-center text-text-secondary">No purchase orders found.</td>
@@ -2010,56 +2060,74 @@ export default function Purchases() {
 
           {/* Mobile Card list */}
           <div className="block md:hidden space-y-4">
-            {historyPag.data.map((p) => (
-              <div key={p.id} className="border border-surface-low rounded-lg p-4 bg-white space-y-3 shadow-sm">
-                <div className="flex justify-between items-start border-b border-surface-low pb-2">
-                  <div>
-                    <span
-                      onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}
-                      className="font-bold text-sm text-brand-blue cursor-pointer hover:underline"
-                    >
-                      PO-{p.id}
-                    </span>
-                    <span className="text-text-secondary text-[10px] block font-mono mt-0.5">
-                      {new Date(p.timestamp).toLocaleString()}
-                    </span>
-                    <span className="text-text-primary font-semibold block mt-1">{p.supplier_name}</span>
+            {historyPag.loading ? (
+              Array.from({ length: 3 }).map((_, idx) => (
+                <div key={idx} className="border border-surface-low rounded-lg p-4 bg-white space-y-3 shadow-sm animate-pulse">
+                  <div className="flex justify-between items-start border-b border-surface-low pb-2">
+                    <div className="space-y-2">
+                      <div className="h-4 w-20 bg-surface-dim/50 rounded" />
+                      <div className="h-4 w-32 bg-surface-dim/50 rounded" />
+                    </div>
+                    <div className="h-6 w-16 bg-surface-dim/50 rounded" />
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold text-text-secondary uppercase block">Total</span>
-                    <span className="font-semibold text-sm text-brand-blue">{formatCurrency(p.total_amount)}</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="h-4 w-24 bg-surface-dim/50 rounded" />
+                    <div className="h-4 w-24 bg-surface-dim/50 rounded" />
                   </div>
                 </div>
+              ))
+            ) : (
+              historyPag.data.map((p) => (
+                <div key={p.id} className="border border-surface-low rounded-lg p-4 bg-white space-y-3 shadow-sm">
+                  <div className="flex justify-between items-start border-b border-surface-low pb-2">
+                    <div>
+                      <span
+                        onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}
+                        className="font-bold text-sm text-brand-blue cursor-pointer hover:underline"
+                      >
+                        PO-{p.id}
+                      </span>
+                      <span className="text-text-secondary text-[10px] block font-mono mt-0.5">
+                        {new Date(p.timestamp).toLocaleString()}
+                      </span>
+                      <span className="text-text-primary font-semibold block mt-1">{p.supplier_name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-text-secondary uppercase block">Total</span>
+                      <span className="font-semibold text-sm text-brand-blue">{formatCurrency(p.total_amount)}</span>
+                    </div>
+                  </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs text-text-secondary">
-                  <div>
-                    <span className="block font-semibold">Landed Cost</span>
-                    <span className="text-text-primary">{formatCurrency(p.additional_costs)}</span>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-text-secondary">
+                    <div>
+                      <span className="block font-semibold">Landed Cost</span>
+                      <span className="text-text-primary">{formatCurrency(p.additional_costs)}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold">Status</span>
+                      <span className={`inline-block rounded px-1.5 py-0.5 text-[9px] font-bold mt-0.5 ${
+                        p.status === 'Returned' ? 'bg-red-100 text-red-800' :
+                        p.status === 'Partially Returned' ? 'bg-orange-100 text-orange-800' :
+                        p.status === 'Received' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {p.status || (p.is_received ? 'Received' : 'Pending')}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="block font-semibold">Status</span>
-                    <span className={`inline-block rounded px-1.5 py-0.5 text-[9px] font-bold mt-0.5 ${
-                      p.status === 'Returned' ? 'bg-red-100 text-red-800' :
-                      p.status === 'Partially Returned' ? 'bg-orange-100 text-orange-800' :
-                      p.status === 'Received' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                    }`}>
-                      {p.status || (p.is_received ? 'Received' : 'Pending')}
-                    </span>
-                  </div>
+
+                  {p.is_received && (
+                    <div className="pt-2 border-t border-surface-lowest flex justify-end">
+                      <button
+                        onClick={() => handleOpenReturnModal(p)}
+                        className="rounded bg-error-container/10 px-3 py-1.5 text-xs font-semibold text-error hover:bg-error-container/20 w-full sm:w-auto"
+                      >
+                        Return Purchase
+                      </button>
+                    </div>
+                  )}
                 </div>
-
-                {p.is_received && (
-                  <div className="pt-2 border-t border-surface-lowest flex justify-end">
-                    <button
-                      onClick={() => handleOpenReturnModal(p)}
-                      className="rounded bg-error-container/10 px-3 py-1.5 text-xs font-semibold text-error hover:bg-error-container/20 w-full sm:w-auto"
-                    >
-                      Return Purchase
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+              ))
+            )}
             {historyPag.data.length === 0 && !historyPag.loading && (
               <div className="text-center py-8 text-text-secondary text-xs bg-white rounded-lg border border-surface-low">No purchase orders found.</div>
             )}
@@ -2863,15 +2931,18 @@ export default function Purchases() {
             <div className="p-4 border-t border-surface-low bg-surface-lowest flex justify-between items-center">
               <button
                 type="button"
+                disabled={isCancellingPO || isReceivingPO}
                 onClick={() => handleCancelPO(receivingPO.id)}
-                className="rounded bg-error text-white px-4 py-2 text-xs font-bold hover:bg-red-700 transition-colors"
+                className="rounded bg-error text-white px-4 py-2 text-xs font-bold hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center space-x-1"
               >
-                Cancel Order
+                {isCancellingPO && <Spinner size="xs" />}
+                <span>Cancel Order</span>
               </button>
 
               <div className="flex space-x-2">
                 <button
                   type="button"
+                  disabled={isReceivingPO || isCancellingPO}
                   onClick={() => {
                     setShowReceiveModal(false);
                     setReceivingPO(null);
@@ -2882,10 +2953,12 @@ export default function Purchases() {
                 </button>
                 <button
                   type="button"
+                  disabled={isReceivingPO || isCancellingPO}
                   onClick={handleReceiveSubmit}
-                  className="rounded bg-green-600 px-4 py-2 text-xs font-bold text-white hover:bg-green-700 transition-colors"
+                  className="rounded bg-green-600 px-4 py-2 text-xs font-bold text-white hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center space-x-1"
                 >
-                  Receive PO
+                  {isReceivingPO && <Spinner size="xs" />}
+                  <span>Receive PO</span>
                 </button>
               </div>
             </div>
@@ -3254,6 +3327,7 @@ export default function Purchases() {
             <div className="p-4 border-t border-surface-low bg-surface-lowest flex justify-end space-x-2">
               <button
                 type="button"
+                disabled={isReturningPO}
                 onClick={() => {
                   setShowReturnModal(false);
                   setReturningPO(null);
@@ -3264,10 +3338,12 @@ export default function Purchases() {
               </button>
               <button
                 type="button"
+                disabled={isReturningPO}
                 onClick={handleReturnSubmit}
-                className="rounded bg-error px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition-colors"
+                className="rounded bg-error px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center space-x-1"
               >
-                Submit Return
+                {isReturningPO && <Spinner size="xs" />}
+                <span>Submit Return</span>
               </button>
             </div>
           </div>

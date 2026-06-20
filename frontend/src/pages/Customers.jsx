@@ -6,6 +6,7 @@ import FloatingActionButton from '../components/FloatingActionButton';
 import MobileBottomSheet from '../components/MobileBottomSheet';
 import { FaWhatsapp, FaPhoneAlt } from 'react-icons/fa';
 import { FiCopy, FiCheck } from 'react-icons/fi';
+import { SkeletonTable, Spinner } from '../components/Skeleton';
 
 function ContactNumber({ number, isWhatsapp }) {
   const [copied, setCopied] = useState(false);
@@ -95,6 +96,8 @@ export default function Customers() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [payAmount, setPayAmount] = useState('');
   const [payBank, setPayBank] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
 
   const loadDropdowns = () => {
     setDropdownsLoading(true);
@@ -116,6 +119,7 @@ export default function Customers() {
 
   const handleCustomerSubmit = (e) => {
     e.preventDefault();
+    setIsSaving(true);
     api.customers.create({
       name,
       contact_info: contactInfo,
@@ -133,14 +137,19 @@ export default function Customers() {
       setPlace('');
       setCreditLimit('10000');
       pag.refresh();
+      setIsSaving(false);
     })
-    .catch((err) => alert(err.message));
+    .catch((err) => {
+      alert(err.message);
+      setIsSaving(false);
+    });
   };
 
   const handlePaymentSubmit = (e) => {
     e.preventDefault();
     if (!selectedCustomer || payAmount === '' || payBank === '') return;
 
+    setIsPosting(true);
     api.customerPayments.create({
       customer: selectedCustomer.id,
       payment_to: parseInt(payBank),
@@ -151,8 +160,12 @@ export default function Customers() {
       setPayAmount('');
       pag.refresh();
       loadDropdowns();
+      setIsPosting(false);
     })
-    .catch((err) => alert(err.message));
+    .catch((err) => {
+      alert(err.message);
+      setIsPosting(false);
+    });
   };
 
   const openPayModal = (customer) => {
@@ -250,9 +263,11 @@ export default function Customers() {
       </div>
       <button
         type="submit"
-        className="w-full sm:w-auto rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition cursor-pointer"
+        disabled={isSaving}
+        className="w-full sm:w-auto flex items-center justify-center space-x-2 rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
       >
-        Save Customer
+        {isSaving && <Spinner size="sm" />}
+        <span>{isSaving ? 'Saving...' : 'Save Customer'}</span>
       </button>
     </form>
   );
@@ -293,9 +308,11 @@ export default function Customers() {
         </button>
         <button
           type="submit"
-          className={`rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
+          disabled={isPosting}
+          className={`rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
         >
-          Post Payment
+          {isPosting && <Spinner size="xs" />}
+          <span>{isPosting ? 'Posting...' : 'Post Payment'}</span>
         </button>
       </div>
     </form>
@@ -359,42 +376,46 @@ export default function Customers() {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-low">
-              {pag.data.map((c) => (
-                <tr key={c.id} className="hover:bg-surface-bright">
-                  <td className="px-4 py-3 font-semibold text-text-primary">{c.name}</td>
-                  <td className="px-4 py-3 text-text-secondary">
-                    <div className="space-y-1">
-                      <div>{c.contact_info}</div>
-                      {(c.contact_number || c.whatsapp_number) && (
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {c.contact_number && (
-                            <ContactNumber number={c.contact_number} isWhatsapp={false} />
-                          )}
-                          {c.whatsapp_number && (
-                            <ContactNumber number={c.whatsapp_number} isWhatsapp={true} />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary font-medium">{c.place || '-'}</td>
-                  <td className="px-4 py-3 text-right text-text-secondary">{formatCurrency(c.credit_limit)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <span className={`font-semibold ${parseFloat(c.outstanding_balance) > 0 ? 'text-amber-600 font-bold' : 'text-text-primary'}`}>
-                      {formatCurrency(c.outstanding_balance)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      disabled={parseFloat(c.outstanding_balance) <= 0}
-                      onClick={() => openPayModal(c)}
-                      className="rounded bg-brand-blue/10 px-3 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-blue/20 disabled:opacity-50 disabled:pointer-events-none transition"
-                    >
-                      Post Payment
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {pag.loading ? (
+                <SkeletonTable rows={pag.pageSize || 5} columns={6} />
+              ) : (
+                pag.data.map((c) => (
+                  <tr key={c.id} className="hover:bg-surface-bright">
+                    <td className="px-4 py-3 font-semibold text-text-primary">{c.name}</td>
+                    <td className="px-4 py-3 text-text-secondary">
+                      <div className="space-y-1">
+                        <div>{c.contact_info}</div>
+                        {(c.contact_number || c.whatsapp_number) && (
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {c.contact_number && (
+                              <ContactNumber number={c.contact_number} isWhatsapp={false} />
+                            )}
+                            {c.whatsapp_number && (
+                              <ContactNumber number={c.whatsapp_number} isWhatsapp={true} />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-text-secondary font-medium">{c.place || '-'}</td>
+                    <td className="px-4 py-3 text-right text-text-secondary">{formatCurrency(c.credit_limit)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className={`font-semibold ${parseFloat(c.outstanding_balance) > 0 ? 'text-amber-600 font-bold' : 'text-text-primary'}`}>
+                        {formatCurrency(c.outstanding_balance)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        disabled={parseFloat(c.outstanding_balance) <= 0}
+                        onClick={() => openPayModal(c)}
+                        className="rounded bg-brand-blue/10 px-3 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-blue/20 disabled:opacity-50 disabled:pointer-events-none transition"
+                      >
+                        Post Payment
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
               {pag.data.length === 0 && !pag.loading && (
                 <tr>
                   <td colSpan="6" className="px-4 py-8 text-center text-text-secondary">No customers found.</td>

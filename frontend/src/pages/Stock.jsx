@@ -4,6 +4,7 @@ import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
 import MobileBottomSheet from '../components/MobileBottomSheet';
+import { SkeletonTable, Spinner } from '../components/Skeleton';
 
 export default function Stock() {
   const [searchParams] = useSearchParams();
@@ -16,6 +17,7 @@ export default function Stock() {
   // Pagination hooks for each tab
   const stockPag = usePagination(api.stocks.list, 10, currentTab === 'current');
   const historyPag = usePagination(api.stockHistory.list, 10, currentTab === 'history');
+  const damagedPag = usePagination(api.stockHistory.list, 10, currentTab === 'damaged', { action_type: 'Damage' });
 
   // Modals / Actions
   const [showAdjustModal, setShowAdjustModal] = useState(false);
@@ -26,6 +28,10 @@ export default function Stock() {
   // Form states
   const [adjustQty, setAdjustQty] = useState('');
   const [adjustReason, setAdjustReason] = useState('Stock Count Verification');
+
+  const [isSavingAdjust, setIsSavingAdjust] = useState(false);
+  const [isSavingTransfer, setIsSavingTransfer] = useState(false);
+  const [isSavingDamage, setIsSavingDamage] = useState(false);
 
   const [transferQty, setTransferQty] = useState('');
   const [transferFrom, setTransferFrom] = useState('Main Store');
@@ -56,7 +62,7 @@ export default function Stock() {
   const handleAdjustSubmit = (e) => {
     e.preventDefault();
     if (!selectedStock || adjustQty === '') return;
-    
+    setIsSavingAdjust(true);
     api.stocks.adjust({
       product_id: selectedStock.product,
       quantity: parseInt(adjustQty),
@@ -67,14 +73,18 @@ export default function Stock() {
       setAdjustQty('');
       stockPag.refresh();
       historyPag.refresh();
+      setIsSavingAdjust(false);
     })
-    .catch((err) => alert(err.message));
+    .catch((err) => {
+      alert(err.message);
+      setIsSavingAdjust(false);
+    });
   };
 
   const handleTransferSubmit = (e) => {
     e.preventDefault();
     if (!selectedStock || transferQty === '') return;
-
+    setIsSavingTransfer(true);
     api.stocks.transfer({
       product_id: selectedStock.product,
       quantity: parseInt(transferQty),
@@ -86,14 +96,18 @@ export default function Stock() {
       setTransferQty('');
       stockPag.refresh();
       historyPag.refresh();
+      setIsSavingTransfer(false);
     })
-    .catch((err) => alert(err.message));
+    .catch((err) => {
+      alert(err.message);
+      setIsSavingTransfer(false);
+    });
   };
 
   const handleDamageSubmit = (e) => {
     e.preventDefault();
     if (!selectedStock || damageQty === '') return;
-
+    setIsSavingDamage(true);
     api.stocks.damage({
       product_id: selectedStock.product,
       quantity: parseInt(damageQty),
@@ -106,8 +120,12 @@ export default function Stock() {
       stockPag.refresh();
       historyPag.refresh();
       loadDropdowns();
+      setIsSavingDamage(false);
     })
-    .catch((err) => alert(err.message));
+    .catch((err) => {
+      alert(err.message);
+      setIsSavingDamage(false);
+    });
   };
 
   const openModal = (stock, type) => {
@@ -140,7 +158,12 @@ export default function Stock() {
     );
   };
 
-  const activeLoading = currentTab === 'current' ? stockPag.loading : historyPag.loading;
+  const activeLoading = 
+    currentTab === 'current' 
+      ? stockPag.loading 
+      : currentTab === 'damaged' 
+      ? damagedPag.loading 
+      : historyPag.loading;
 
   const renderAdjustForm = (isMobile = false) => (
     <form onSubmit={handleAdjustSubmit} className="space-y-4">
@@ -174,9 +197,11 @@ export default function Stock() {
         </button>
         <button
           type="submit"
-          className={`rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
+          disabled={isSavingAdjust}
+          className={`rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
         >
-          Save Count
+          {isSavingAdjust && <Spinner size="xs" />}
+          <span>{isSavingAdjust ? 'Saving...' : 'Save Count'}</span>
         </button>
       </div>
     </form>
@@ -224,9 +249,11 @@ export default function Stock() {
         </button>
         <button
           type="submit"
-          className={`rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
+          disabled={isSavingTransfer}
+          className={`rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
         >
-          Confirm Transfer
+          {isSavingTransfer && <Spinner size="xs" />}
+          <span>{isSavingTransfer ? 'Transferring...' : 'Confirm Transfer'}</span>
         </button>
       </div>
     </form>
@@ -277,9 +304,11 @@ export default function Stock() {
         </button>
         <button
           type="submit"
-          className={`rounded bg-error px-3 py-1.5 text-xs text-white hover:bg-error-container ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
+          disabled={isSavingDamage}
+          className={`rounded bg-error px-3 py-1.5 text-xs text-white hover:bg-error-container flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
         >
-          Write Off Stock
+          {isSavingDamage && <Spinner size="xs" />}
+          <span>{isSavingDamage ? 'Writing Off...' : 'Write Off Stock'}</span>
         </button>
       </div>
     </form>
@@ -306,6 +335,12 @@ export default function Stock() {
           className={`pb-2 ${currentTab === 'history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
         >
           Stock History Log
+        </a>
+        <a 
+          href="/erp/stock?tab=damaged" 
+          className={`pb-2 ${currentTab === 'damaged' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+        >
+          Damaged Items
         </a>
       </div>
 
@@ -351,37 +386,41 @@ export default function Stock() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-low">
-                {stockPag.data.map((s) => (
-                  <tr key={s.id} className="hover:bg-surface-bright">
-                    <td className="px-4 py-3 font-mono text-text-secondary">{s.barcode}</td>
-                    <td className="px-4 py-3 font-semibold text-text-primary">{s.product_name}</td>
-                    <td className="px-4 py-3 text-right">
-                      <span className={`font-semibold ${s.quantity < 10 ? 'text-error font-bold' : 'text-text-primary'}`}>
-                        {s.quantity}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center space-x-2">
-                      <button
-                        onClick={() => openModal(s, 'adjust')}
-                        className="rounded border border-surface-dim bg-white px-2 py-1 text-[11px] font-semibold text-text-secondary hover:bg-surface-low hover:text-text-primary"
-                      >
-                        Adjust
-                      </button>
-                      <button
-                        onClick={() => openModal(s, 'transfer')}
-                        className="rounded border border-surface-dim bg-white px-2 py-1 text-[11px] font-semibold text-text-secondary hover:bg-surface-low hover:text-text-primary"
-                      >
-                        Transfer
-                      </button>
-                      <button
-                        onClick={() => openModal(s, 'damage')}
-                        className="rounded bg-error-container/10 px-2 py-1 text-[11px] font-semibold text-error hover:bg-error-container/20"
-                      >
-                        Log Damage
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {stockPag.loading ? (
+                  <SkeletonTable rows={stockPag.pageSize || 5} columns={4} />
+                ) : (
+                  stockPag.data.map((s) => (
+                    <tr key={s.id} className="hover:bg-surface-bright">
+                      <td className="px-4 py-3 font-mono text-text-secondary">{s.barcode}</td>
+                      <td className="px-4 py-3 font-semibold text-text-primary">{s.product_name}</td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={`font-semibold ${s.quantity < 10 ? 'text-error font-bold' : 'text-text-primary'}`}>
+                          {s.quantity}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center space-x-2">
+                        <button
+                          onClick={() => openModal(s, 'adjust')}
+                          className="rounded border border-surface-dim bg-white px-2 py-1 text-[11px] font-semibold text-text-secondary hover:bg-surface-low hover:text-text-primary"
+                        >
+                          Adjust
+                        </button>
+                        <button
+                          onClick={() => openModal(s, 'transfer')}
+                          className="rounded border border-surface-dim bg-white px-2 py-1 text-[11px] font-semibold text-text-secondary hover:bg-surface-low hover:text-text-primary"
+                        >
+                          Transfer
+                        </button>
+                        <button
+                          onClick={() => openModal(s, 'damage')}
+                          className="rounded bg-error-container/10 px-2 py-1 text-[11px] font-semibold text-error hover:bg-error-container/20"
+                        >
+                          Log Damage
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
                 {stockPag.data.length === 0 && !stockPag.loading && (
                   <tr>
                     <td colSpan="4" className="px-4 py-8 text-center text-text-secondary">No stock entries found.</td>
@@ -438,26 +477,30 @@ export default function Stock() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-low">
-                {historyPag.data.map((h) => (
-                  <tr key={h.id} className="hover:bg-surface-bright">
-                    <td className="px-4 py-3 text-text-secondary">{new Date(h.timestamp).toLocaleString()}</td>
-                    <td className="px-4 py-3 font-semibold text-text-primary">{h.product_name}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold ${
-                        h.action_type === 'Add' ? 'bg-green-100 text-green-800' :
-                        h.action_type === 'Damage' ? 'bg-red-100 text-red-800' :
-                        h.action_type === 'Adjustment' ? 'bg-amber-100 text-amber-800' :
-                        'bg-blue-100 text-brand-blue'
-                      }`}>
-                        {h.action_type}
-                      </span>
-                    </td>
-                    <td className={`px-4 py-3 text-right font-semibold ${h.quantity_changed > 0 ? 'text-green-600' : 'text-error'}`}>
-                      {h.quantity_changed > 0 ? `+${h.quantity_changed}` : h.quantity_changed}
-                    </td>
-                    <td className="px-4 py-3 text-text-secondary">{h.description}</td>
-                  </tr>
-                ))}
+                {historyPag.loading ? (
+                  <SkeletonTable rows={historyPag.pageSize || 5} columns={5} />
+                ) : (
+                  historyPag.data.map((h) => (
+                    <tr key={h.id} className="hover:bg-surface-bright">
+                      <td className="px-4 py-3 text-text-secondary">{new Date(h.timestamp).toLocaleString()}</td>
+                      <td className="px-4 py-3 font-semibold text-text-primary">{h.product_name}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold ${
+                          h.action_type === 'Add' ? 'bg-green-100 text-green-800' :
+                          h.action_type === 'Damage' ? 'bg-red-100 text-red-800' :
+                          h.action_type === 'Adjustment' ? 'bg-amber-100 text-amber-800' :
+                          'bg-blue-100 text-brand-blue'
+                        }`}>
+                          {h.action_type}
+                        </span>
+                      </td>
+                      <td className={`px-4 py-3 text-right font-semibold ${h.quantity_changed > 0 ? 'text-green-600' : 'text-error'}`}>
+                        {h.quantity_changed > 0 ? `+${h.quantity_changed}` : h.quantity_changed}
+                      </td>
+                      <td className="px-4 py-3 text-text-secondary">{h.description}</td>
+                    </tr>
+                  ))
+                )}
                 {historyPag.data.length === 0 && !historyPag.loading && (
                   <tr>
                     <td colSpan="5" className="px-4 py-8 text-center text-text-secondary">No history logs found.</td>
@@ -473,6 +516,77 @@ export default function Stock() {
               setPageSize={historyPag.setPageSize}
               totalCount={historyPag.totalCount}
               totalPages={historyPag.totalPages}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Damaged Stock Tab */}
+      {currentTab === 'damaged' && (
+        <div className="space-y-6">
+          {/* Search bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-t-lg border-t border-x border-surface-low">
+            <div className="relative w-full sm:w-72">
+              <input
+                type="text"
+                value={damagedPag.search}
+                onChange={(e) => damagedPag.setSearch(e.target.value)}
+                placeholder="Search damages by product/details..."
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+              />
+              <span className="absolute left-3 top-2.5 text-text-secondary">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+            </div>
+            {activeLoading && (
+              <span className="text-xs text-brand-blue animate-pulse">Loading...</span>
+            )}
+          </div>
+
+          <div className="rounded-b-lg bg-white border-x border-b border-surface-low overflow-x-auto">
+            <table className="min-w-full text-left text-xs">
+              <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
+                <tr>
+                  {renderSortHeader('Timestamp', 'timestamp', damagedPag)}
+                  {renderSortHeader('Product', 'product__name', damagedPag)}
+                  {renderSortHeader('Qty Damaged', 'quantity_changed', damagedPag)}
+                  <th className="px-4 py-2">Damage Reason / Notes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-low">
+                {damagedPag.loading ? (
+                  <SkeletonTable rows={damagedPag.pageSize || 5} columns={4} />
+                ) : (
+                  <>
+                    {damagedPag.data.map((h) => (
+                      <tr key={h.id} className="hover:bg-surface-bright">
+                        <td className="px-4 py-3 text-text-secondary">{new Date(h.timestamp).toLocaleString()}</td>
+                        <td className="px-4 py-3 font-semibold text-text-primary">{h.product_name}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-error">
+                          {h.quantity_changed}
+                        </td>
+                        <td className="px-4 py-3 text-text-secondary">{h.description}</td>
+                      </tr>
+                    ))}
+                    {damagedPag.data.length === 0 && (
+                      <tr>
+                        <td colSpan="4" className="px-4 py-8 text-center text-text-secondary">No damage logs found.</td>
+                      </tr>
+                    )}
+                  </>
+                )}
+              </tbody>
+            </table>
+
+            <PaginationControls
+              page={damagedPag.page}
+              setPage={damagedPag.setPage}
+              pageSize={damagedPag.pageSize}
+              setPageSize={damagedPag.setPageSize}
+              totalCount={damagedPag.totalCount}
+              totalPages={damagedPag.totalPages}
             />
           </div>
         </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../utils/api';
+import { SkeletonCard, SkeletonTable } from '../components/Skeleton';
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState(null);
@@ -27,8 +28,59 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-blue border-t-transparent"></div>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Dashboard</h2>
+          <p className="text-xs text-text-secondary">Overview of today's key performance indicators and operations.</p>
+        </div>
+
+        {/* Skeleton Cards Grid */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 7 }).map((_, idx) => (
+            <SkeletonCard key={idx} />
+          ))}
+        </div>
+
+        {/* Skeleton Recents Tables Grid */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="rounded-lg bg-white p-6 shadow-sm" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+            <h3 className="text-sm font-semibold text-text-primary mb-4 text-left">Recent Sales Transactions</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-xs">
+                <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
+                  <tr>
+                    <th className="px-4 py-2">Invoice #</th>
+                    <th className="px-4 py-2">Customer</th>
+                    <th className="px-4 py-2">Payment</th>
+                    <th className="px-4 py-2">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-low">
+                  <SkeletonTable rows={5} columns={4} />
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-white p-6 shadow-sm" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+            <h3 className="text-sm font-semibold text-text-primary mb-4 text-left">Recent Purchase Orders</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-xs">
+                <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
+                  <tr>
+                    <th className="px-4 py-2">PO #</th>
+                    <th className="px-4 py-2">Supplier</th>
+                    <th className="px-4 py-2">Status</th>
+                    <th className="px-4 py-2">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-low">
+                  <SkeletonTable rows={5} columns={4} />
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

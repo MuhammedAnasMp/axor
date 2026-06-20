@@ -2,12 +2,28 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../utils/api';
+import { Spinner } from '../components/Skeleton';
+
+function POSProductSkeleton() {
+  return (
+    <div className="animate-pulse flex flex-col bg-white rounded-lg border border-surface-low p-3 shadow-sm text-left">
+      <div className="h-20 w-full rounded bg-surface-dim/50 border border-surface-low mb-2" />
+      <div className="h-3.5 w-3/4 bg-surface-dim/40 rounded mb-1.5" />
+      <div className="h-2.5 w-1/2 bg-surface-dim/30 rounded mb-2" />
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-surface-low">
+        <div className="h-3.5 w-12 bg-surface-dim/40 rounded" />
+        <div className="h-3.5 w-16 bg-surface-dim/30 rounded" />
+      </div>
+    </div>
+  );
+}
 
 export default function POS() {
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [bankAccounts, setBankAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmittingCheckout, setIsSubmittingCheckout] = useState(false);
 
   // POS State
   const [cart, setCart] = useState([]);
@@ -165,6 +181,7 @@ export default function POS() {
       }))
     };
 
+    setIsSubmittingCheckout(true);
     api.sales.create(payload)
       .then((res) => {
         setReceiptSale({
@@ -179,7 +196,8 @@ export default function POS() {
         setShowReceipt(true);
         loadData();
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => alert(err.message))
+      .finally(() => setIsSubmittingCheckout(false));
   };
 
   const formatCurrency = (val) => {
@@ -193,14 +211,6 @@ export default function POS() {
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.barcode.includes(searchQuery)
   );
-
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-surface">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-blue border-t-transparent"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-screen bg-surface md:flex-row overflow-hidden text-text-primary">
@@ -229,9 +239,10 @@ export default function POS() {
                 placeholder="Scan / Type Barcode"
                 value={barcodeQuery}
                 onChange={(e) => setBarcodeQuery(e.target.value)}
-                className="rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue"
+                disabled={loading || isSubmittingCheckout}
+                className="rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue disabled:opacity-50"
               />
-              <button type="submit" className="rounded bg-brand-blue px-2 py-1 text-xs text-white">Scan</button>
+              <button type="submit" disabled={loading || isSubmittingCheckout} className="rounded bg-brand-blue px-2 py-1 text-xs text-white disabled:opacity-50">Scan</button>
             </form>
           </div>
 
@@ -240,33 +251,43 @@ export default function POS() {
             placeholder="Search products by name or barcode..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded border border-surface-dim bg-surface-lowest px-3 py-2 text-xs outline-none focus:border-brand-blue"
+            disabled={loading || isSubmittingCheckout}
+            className="w-full rounded border border-surface-dim bg-surface-lowest px-3 py-2 text-xs outline-none focus:border-brand-blue disabled:opacity-50"
           />
         </div>
 
         {/* Product Grid */}
         <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {filteredProducts.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => addToCart(p)}
-              className="flex flex-col bg-white rounded-lg border border-surface-low p-3 hover:-translate-y-0.5 transition shadow-sm hover:shadow text-left"
-            >
-              <div className="h-20 w-full rounded bg-surface border border-surface-low overflow-hidden mb-2">
-                {p.image_url ? (
-                  <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="h-full w-full flex items-center justify-center text-[10px] text-text-secondary">No image</div>
-                )}
-              </div>
-              <span className="text-xs font-semibold text-text-primary line-clamp-2 leading-tight flex-1">{p.name}</span>
-              <span className="text-[10px] text-text-secondary font-mono mt-0.5">{p.barcode}</span>
-              <div className="flex items-center justify-between mt-2 pt-1 border-t border-surface-low">
-                <span className="text-xs font-bold text-brand-blue">{formatCurrency(p.selling_price)}</span>
-                <span className="text-[10px] text-text-secondary bg-surface px-1.5 py-0.5 rounded">Stock: {p.stock_qty}</span>
-              </div>
-            </button>
-          ))}
+          {loading ? (
+            Array.from({ length: 8 }).map((_, idx) => (
+              <POSProductSkeleton key={idx} />
+            ))
+          ) : filteredProducts.length === 0 ? (
+            <div className="col-span-full py-8 text-center text-xs text-text-secondary">No products found.</div>
+          ) : (
+            filteredProducts.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => addToCart(p)}
+                disabled={isSubmittingCheckout}
+                className="flex flex-col bg-white rounded-lg border border-surface-low p-3 hover:-translate-y-0.5 transition shadow-sm hover:shadow text-left disabled:opacity-50 disabled:pointer-events-none"
+              >
+                <div className="h-20 w-full rounded bg-surface border border-surface-low overflow-hidden mb-2">
+                  {p.image_url ? (
+                    <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-[10px] text-text-secondary">No image</div>
+                  )}
+                </div>
+                <span className="text-xs font-semibold text-text-primary line-clamp-2 leading-tight flex-1">{p.name}</span>
+                <span className="text-[10px] text-text-secondary font-mono mt-0.5">{p.barcode}</span>
+                <div className="flex items-center justify-between mt-2 pt-1 border-t border-surface-low">
+                  <span className="text-xs font-bold text-brand-blue">{formatCurrency(p.selling_price)}</span>
+                  <span className="text-[10px] text-text-secondary bg-surface px-1.5 py-0.5 rounded">Stock: {p.stock_qty}</span>
+                </div>
+              </button>
+            ))
+          )}
         </div>
       </div>
 
@@ -278,7 +299,8 @@ export default function POS() {
           <span className="text-xs font-bold uppercase tracking-wider text-text-secondary">Checkout Cart ({cart.reduce((a,c) => a+c.quantity, 0)} items)</span>
           <button 
             onClick={() => setCart([])}
-            className="text-[10px] font-semibold text-error hover:underline"
+            disabled={loading || isSubmittingCheckout || cart.length === 0}
+            className="text-[10px] font-semibold text-error hover:underline disabled:opacity-50 disabled:pointer-events-none"
           >
             Clear Cart
           </button>
@@ -293,7 +315,8 @@ export default function POS() {
                 {/* Price display with tap override trigger */}
                 <button
                   onClick={() => openOverridePrice(idx)}
-                  className="text-[10px] text-brand-blue font-bold hover:underline flex items-center space-x-1 mt-0.5"
+                  disabled={loading || isSubmittingCheckout}
+                  className="text-[10px] text-brand-blue font-bold hover:underline flex items-center space-x-1 mt-0.5 disabled:opacity-50"
                 >
                   <span>Rate: {formatCurrency(item.selling_price)}</span>
                   {item.selling_price !== item.original_price && (
@@ -309,14 +332,16 @@ export default function POS() {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => updateQty(idx, -1)}
-                  className="h-6 w-6 flex items-center justify-center rounded-full bg-surface border border-surface-dim hover:bg-surface-dim transition font-bold text-xs"
+                  disabled={loading || isSubmittingCheckout}
+                  className="h-6 w-6 flex items-center justify-center rounded-full bg-surface border border-surface-dim hover:bg-surface-dim transition font-bold text-xs disabled:opacity-50"
                 >
                   -
                 </button>
                 <span className="text-xs font-bold w-4 text-center">{item.quantity}</span>
                 <button
                   onClick={() => updateQty(idx, 1)}
-                  className="h-6 w-6 flex items-center justify-center rounded-full bg-surface border border-surface-dim hover:bg-surface-dim transition font-bold text-xs"
+                  disabled={loading || isSubmittingCheckout}
+                  className="h-6 w-6 flex items-center justify-center rounded-full bg-surface border border-surface-dim hover:bg-surface-dim transition font-bold text-xs disabled:opacity-50"
                 >
                   +
                 </button>
@@ -343,7 +368,8 @@ export default function POS() {
               <select
                 value={selectedCustomer}
                 onChange={(e) => setSelectedCustomer(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none"
+                disabled={loading || isSubmittingCheckout}
+                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none disabled:opacity-50"
               >
                 <option value="">-- Walk-In Customer --</option>
                 {customers.map(c => (
@@ -356,7 +382,8 @@ export default function POS() {
               <select
                 value={paymentType}
                 onChange={(e) => setPaymentType(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none"
+                disabled={loading || isSubmittingCheckout}
+                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none disabled:opacity-50"
               >
                 <option value="Cash">Cash</option>
                 <option value="Bank">Bank</option>
@@ -372,7 +399,8 @@ export default function POS() {
                 type="number"
                 value={discount}
                 onChange={(e) => setDiscount(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none"
+                disabled={loading || isSubmittingCheckout}
+                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none disabled:opacity-50"
               />
             </div>
             <div>
@@ -381,7 +409,8 @@ export default function POS() {
                 type="number"
                 value={tax}
                 onChange={(e) => setTax(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none"
+                disabled={loading || isSubmittingCheckout}
+                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none disabled:opacity-50"
               />
             </div>
           </div>
@@ -392,7 +421,8 @@ export default function POS() {
               <select
                 value={paidTo}
                 onChange={(e) => setPaidTo(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none"
+                disabled={loading || isSubmittingCheckout}
+                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none disabled:opacity-50"
               >
                 {bankAccounts.map(b => (
                   <option key={b.id} value={b.id}>{b.name}</option>
@@ -415,10 +445,11 @@ export default function POS() {
 
           <button
             onClick={handleCheckout}
-            disabled={cart.length === 0}
-            className="w-full rounded bg-brand-blue py-3 text-sm font-bold text-white hover:bg-brand-cobalt disabled:opacity-50 disabled:pointer-events-none transition"
+            disabled={loading || isSubmittingCheckout || cart.length === 0}
+            className="w-full flex items-center justify-center space-x-2 rounded bg-brand-blue py-3 text-sm font-bold text-white hover:bg-brand-cobalt disabled:opacity-50 disabled:pointer-events-none transition"
           >
-            Post Checkout Terminal
+            {isSubmittingCheckout && <Spinner size="sm" />}
+            <span>Post Checkout Terminal</span>
           </button>
         </div>
       </div>

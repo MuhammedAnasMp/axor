@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
+import { SkeletonTable, Spinner, SkeletonForm, SkeletonText } from '../components/Skeleton';
 
 export default function Employees() {
   // Unpaginated full list state for Leaderboard
@@ -20,6 +21,12 @@ export default function Employees() {
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('Cashier');
+
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingAdvance, setIsSavingAdvance] = useState(false);
+  const [isSavingPayroll, setIsSavingPayroll] = useState(false);
+  const [isSavingEditPayroll, setIsSavingEditPayroll] = useState(false);
 
   // Selected Employee & Detail summary states
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -137,6 +144,7 @@ export default function Employees() {
 
   const handleSaveProfile = (e) => {
     e.preventDefault();
+    setIsSavingProfile(true);
     const updateData = {
       first_name: profileFirstName,
       last_name: profileLastName,
@@ -169,8 +177,12 @@ export default function Employees() {
         loadSummary(data.id);
         pag.refresh();
         loadLeaderboard();
+        setIsSavingProfile(false);
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => {
+        alert(err.message);
+        setIsSavingProfile(false);
+      });
   };
 
   const handleCloudinaryUpload = async (file, onStart, onEnd, onSuccess) => {
@@ -221,6 +233,7 @@ export default function Employees() {
 
   const handleRegister = (e) => {
     e.preventDefault();
+    setIsRegistering(true);
     api.auth.register({
       username,
       password,
@@ -244,8 +257,12 @@ export default function Employees() {
       alert('Employee Registered Successfully!');
       pag.refresh();
       loadLeaderboard();
+      setIsRegistering(false);
     })
-    .catch((err) => alert(err.message));
+    .catch((err) => {
+      alert(err.message);
+      setIsRegistering(false);
+    });
   };
 
   const toggleStatus = (emp) => {
@@ -290,6 +307,7 @@ export default function Employees() {
       alert('Please enter a valid advance amount.');
       return;
     }
+    setIsSavingAdvance(true);
     api.employeeAdvances.create({
       employee: selectedEmployee.id,
       amount: parseFloat(advanceAmount),
@@ -302,8 +320,12 @@ export default function Employees() {
       setAdvanceDescription('');
       loadSummary(selectedEmployee.id);
       loadBankAccounts();
+      setIsSavingAdvance(false);
     })
-    .catch((err) => alert(err.message));
+    .catch((err) => {
+      alert(err.message);
+      setIsSavingAdvance(false);
+    });
   };
 
   const handleReverseAdvance = (advId) => {
@@ -323,6 +345,7 @@ export default function Employees() {
       alert('Please select a bank account to pay from.');
       return;
     }
+    setIsSavingPayroll(true);
     api.employeeSalaryPayments.create({
       employee: selectedEmployee.id,
       basic_salary: parseFloat(selectedEmployee.basic_salary),
@@ -336,8 +359,12 @@ export default function Employees() {
       setPayrollDescription('');
       loadSummary(selectedEmployee.id);
       loadBankAccounts();
+      setIsSavingPayroll(false);
     })
-    .catch((err) => alert(err.message));
+    .catch((err) => {
+      alert(err.message);
+      setIsSavingPayroll(false);
+    });
   };
 
   const handleReversePayroll = (payId) => {
@@ -361,6 +388,7 @@ export default function Employees() {
 
   const handleEditPayrollSubmit = (e) => {
     e.preventDefault();
+    setIsSavingEditPayroll(true);
     api.employeeSalaryPayments.edit(editingPayroll.id, {
       basic_salary: parseFloat(editBasicSalary),
       allowance: parseFloat(editAllowance),
@@ -372,8 +400,12 @@ export default function Employees() {
       setEditingPayroll(null);
       loadSummary(selectedEmployee.id);
       loadBankAccounts();
+      setIsSavingEditPayroll(false);
     })
-    .catch((err) => alert(err.message));
+    .catch((err) => {
+      alert(err.message);
+      setIsSavingEditPayroll(false);
+    });
   };
 
   const handleViewAuditTrail = (payId) => {
@@ -595,8 +627,15 @@ export default function Employees() {
         </div>
 
         {summaryLoading ? (
-          <div className="rounded-lg border border-surface-low bg-white p-12 text-center text-xs text-text-secondary animate-pulse">
-            Loading employee payroll records...
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-2 rounded-lg bg-white p-6 border border-surface-low space-y-6">
+                <SkeletonForm fields={4} />
+              </div>
+              <div className="rounded-lg bg-white p-6 border border-surface-low space-y-4">
+                <SkeletonText lines={6} />
+              </div>
+            </div>
           </div>
         ) : (
           summary && (
@@ -723,9 +762,11 @@ export default function Employees() {
                       <div className="border-t border-surface-low pt-4 flex justify-end">
                         <button
                           type="submit"
-                          className="rounded bg-brand-blue px-4 py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition"
+                          disabled={isSavingProfile}
+                          className="rounded bg-brand-blue px-4 py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition flex items-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
                         >
-                          Save Profile & Salary Settings
+                          {isSavingProfile && <Spinner size="xs" />}
+                          <span>{isSavingProfile ? 'Saving...' : 'Save Profile & Salary Settings'}</span>
                         </button>
                       </div>
                     </form>
@@ -793,9 +834,11 @@ export default function Employees() {
                         </div>
                         <button
                           type="submit"
-                          className="w-full rounded bg-brand-blue py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition"
+                          disabled={isSavingAdvance}
+                          className="w-full rounded bg-brand-blue py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
                         >
-                          Issue Advance Salary
+                          {isSavingAdvance && <Spinner size="xs" />}
+                          <span>{isSavingAdvance ? 'Issuing...' : 'Issue Advance Salary'}</span>
                         </button>
                       </form>
                     </div>
@@ -944,9 +987,11 @@ export default function Employees() {
                       <div className="sm:col-span-3">
                         <button
                           type="submit"
-                          className="rounded bg-brand-blue px-4 py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition"
+                          disabled={isSavingPayroll}
+                          className="rounded bg-brand-blue px-4 py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition flex items-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
                         >
-                          Approve & Process Payroll
+                          {isSavingPayroll && <Spinner size="xs" />}
+                          <span>{isSavingPayroll ? 'Processing...' : 'Approve & Process Payroll'}</span>
                         </button>
                       </div>
                     </form>
@@ -1005,9 +1050,11 @@ export default function Employees() {
                       <div className="flex space-x-2">
                         <button
                           type="submit"
-                          className="rounded bg-yellow-600 px-4 py-2 text-xs font-bold text-white hover:bg-yellow-700 transition"
+                          disabled={isSavingEditPayroll}
+                          className="rounded bg-yellow-600 px-4 py-2 text-xs font-bold text-white hover:bg-yellow-700 transition flex items-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
                         >
-                          Recalculate & Save
+                          {isSavingEditPayroll && <Spinner size="xs" />}
+                          <span>{isSavingEditPayroll ? 'Recalculating...' : 'Recalculate & Save'}</span>
                         </button>
                         <button
                           type="button"
@@ -1246,8 +1293,13 @@ export default function Employees() {
               )}
             </div>
           </div>
-          <button type="submit" className="rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt">
-            Save Employee
+          <button
+            type="submit"
+            disabled={isRegistering}
+            className="rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition flex items-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {isRegistering && <Spinner size="sm" />}
+            <span>{isRegistering ? 'Saving...' : 'Save Employee'}</span>
           </button>
         </form>
       )}
@@ -1290,59 +1342,63 @@ export default function Employees() {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-low">
-              {pag.data.map((emp) => (
-                <tr 
-                  key={emp.id} 
-                  onClick={() => handleSelectEmployee(emp)}
-                  className="hover:bg-surface-bright cursor-pointer"
-                >
-                  <td className="px-4 py-3 text-text-primary">
-                    <div className="flex items-center space-x-3">
-                      {emp.image_url ? (
-                        <img 
-                          src={emp.image_url} 
-                          alt="" 
-                          className="h-8 w-8 rounded-full object-cover border border-surface-dim"
-                        />
-                      ) : (
-                        <div className="h-8 w-8 rounded-full bg-brand-blue/10 border border-brand-blue/20 flex items-center justify-center font-bold text-brand-blue text-xs uppercase">
-                          {(emp.user?.first_name?.[0] || '') + (emp.user?.last_name?.[0] || '') || emp.user?.username?.[0] || '?'}
+              {pag.loading ? (
+                <SkeletonTable rows={pag.pageSize || 5} columns={7} />
+              ) : (
+                pag.data.map((emp) => (
+                  <tr 
+                    key={emp.id} 
+                    onClick={() => handleSelectEmployee(emp)}
+                    className="hover:bg-surface-bright cursor-pointer"
+                  >
+                    <td className="px-4 py-3 text-text-primary">
+                      <div className="flex items-center space-x-3">
+                        {emp.image_url ? (
+                          <img 
+                            src={emp.image_url} 
+                            alt="" 
+                            className="h-8 w-8 rounded-full object-cover border border-surface-dim"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-full bg-brand-blue/10 border border-brand-blue/20 flex items-center justify-center font-bold text-brand-blue text-xs uppercase">
+                            {(emp.user?.first_name?.[0] || '') + (emp.user?.last_name?.[0] || '') || emp.user?.username?.[0] || '?'}
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-semibold text-brand-blue">{emp.user?.first_name} {emp.user?.last_name}</div>
+                          <div className="text-[10px] text-text-secondary">@{emp.user?.username}</div>
                         </div>
-                      )}
-                      <div>
-                        <div className="font-semibold text-brand-blue">{emp.user?.first_name} {emp.user?.last_name}</div>
-                        <div className="text-[10px] text-text-secondary">@{emp.user?.username}</div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-text-primary font-medium">
-                    {emp.role}
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-text-primary">
-                    {formatCurrency(emp.basic_salary)}
-                  </td>
-                  <td className="px-4 py-3 text-green-700 font-semibold">
-                    {formatCurrency(emp.total_salary_paid)}
-                  </td>
-                  <td className="px-4 py-3 text-error font-semibold">
-                    {formatCurrency(emp.outstanding_advance)}
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-text-primary">
-                    {emp.monthly_attendance}
-                  </td>
-                  <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                    <label className="relative inline-flex items-center cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={emp.is_active}
-                        onChange={() => toggleStatus(emp)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
-                    </label>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-4 py-3 text-text-primary font-medium">
+                      {emp.role}
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-text-primary">
+                      {formatCurrency(emp.basic_salary)}
+                    </td>
+                    <td className="px-4 py-3 text-green-700 font-semibold">
+                      {formatCurrency(emp.total_salary_paid)}
+                    </td>
+                    <td className="px-4 py-3 text-error font-semibold">
+                      {formatCurrency(emp.outstanding_advance)}
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-text-primary">
+                      {emp.monthly_attendance}
+                    </td>
+                    <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <label className="relative inline-flex items-center cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={emp.is_active}
+                          onChange={() => toggleStatus(emp)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
+                      </label>
+                    </td>
+                  </tr>
+                ))
+              )}
               {pag.data.length === 0 && !pag.loading && (
                 <tr>
                   <td colSpan="7" className="px-4 py-8 text-center text-text-secondary">No staff members found.</td>

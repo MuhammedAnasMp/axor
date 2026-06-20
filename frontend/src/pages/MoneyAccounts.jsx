@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
+import { SkeletonTable, Spinner } from '../components/Skeleton';
 
 export default function MoneyAccounts() {
   const [searchParams] = useSearchParams();
@@ -11,6 +12,10 @@ export default function MoneyAccounts() {
   // Dropdown/Card states (unpaginated list)
   const [accounts, setAccounts] = useState([]);
   const [dropdownsLoading, setDropdownsLoading] = useState(true);
+
+  // Action loading states
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
 
   // Pagination hooks for each tab's table
   const transferPag = usePagination(api.transfers.list, 10, currentTab === 'transfers');
@@ -49,6 +54,7 @@ export default function MoneyAccounts() {
 
   const handleBankSubmit = (e) => {
     e.preventDefault();
+    setIsCreatingAccount(true);
     api.bankAccounts.create({ name: bankName, balance: parseFloat(bankBalance) })
       .then(() => {
         setShowBankForm(false);
@@ -56,7 +62,8 @@ export default function MoneyAccounts() {
         setBankBalance('0');
         loadDropdowns();
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => alert(err.message))
+      .finally(() => setIsCreatingAccount(false));
   };
 
   const handleTransferSubmit = (e) => {
@@ -66,6 +73,7 @@ export default function MoneyAccounts() {
       return;
     }
 
+    setIsTransferring(true);
     api.bankAccounts.transfer({
       source_account_id: parseInt(transferSource),
       dest_account_id: parseInt(transferDest),
@@ -77,7 +85,8 @@ export default function MoneyAccounts() {
         transferPag.refresh();
         loadDropdowns();
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => alert(err.message))
+      .finally(() => setIsTransferring(false));
   };
 
   const formatCurrency = (val) => {
@@ -174,26 +183,43 @@ export default function MoneyAccounts() {
                     />
                   </div>
                 </div>
-                <button type="submit" className="rounded bg-brand-blue px-4 py-2 text-xs font-semibold text-white hover:bg-brand-cobalt">
-                  Create Account
+                <button
+                  type="submit"
+                  disabled={isCreatingAccount}
+                  className="rounded bg-brand-blue px-4 py-2 text-xs font-semibold text-white hover:bg-brand-cobalt disabled:opacity-50 flex items-center space-x-1"
+                >
+                  {isCreatingAccount && <Spinner size="xs" />}
+                  <span>Create Account</span>
                 </button>
               </form>
             )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {accounts.map((b) => (
-                <div key={b.id} className="rounded bg-white p-5 shadow-sm border border-surface-low flex items-center justify-between">
-                  <div>
-                    <span className="text-xs text-text-secondary uppercase tracking-wider font-semibold">{b.name}</span>
-                    <div className="text-xl font-bold text-text-primary mt-1">{formatCurrency(b.balance)}</div>
+              {dropdownsLoading ? (
+                Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} className="rounded bg-white p-5 shadow-sm border border-surface-low flex items-center justify-between animate-pulse">
+                    <div className="space-y-2">
+                      <div className="h-3.5 w-24 bg-surface-dim/50 rounded" />
+                      <div className="h-6 w-32 bg-surface-dim/50 rounded" />
+                    </div>
+                    <div className="h-10 w-10 bg-surface-dim/50 rounded-full" />
                   </div>
-                  <div className="rounded-full bg-accent-blue/15 p-2 text-brand-blue">
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
+                ))
+              ) : (
+                accounts.map((b) => (
+                  <div key={b.id} className="rounded bg-white p-5 shadow-sm border border-surface-low flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-text-secondary uppercase tracking-wider font-semibold">{b.name}</span>
+                      <div className="text-xl font-bold text-text-primary mt-1">{formatCurrency(b.balance)}</div>
+                    </div>
+                    <div className="rounded-full bg-accent-blue/15 p-2 text-brand-blue">
+                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -207,6 +233,7 @@ export default function MoneyAccounts() {
                   value={transferSource}
                   onChange={(e) => setTransferSource(e.target.value)}
                   className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+                  disabled={dropdownsLoading || isTransferring}
                 >
                   {accounts.map((b) => (
                     <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
@@ -219,6 +246,7 @@ export default function MoneyAccounts() {
                   value={transferDest}
                   onChange={(e) => setTransferDest(e.target.value)}
                   className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+                  disabled={dropdownsLoading || isTransferring}
                 >
                   {accounts.map((b) => (
                     <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
@@ -234,20 +262,21 @@ export default function MoneyAccounts() {
                   value={transferAmount}
                   onChange={(e) => setTransferAmount(e.target.value)}
                   className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+                  disabled={isTransferring}
                 />
               </div>
               <button
                 type="submit"
-                className="w-full rounded bg-brand-blue py-2 text-sm font-semibold text-white hover:bg-brand-cobalt transition"
+                disabled={isTransferring || dropdownsLoading}
+                className="w-full flex items-center justify-center space-x-2 rounded bg-brand-blue py-2 text-sm font-semibold text-white hover:bg-brand-cobalt transition disabled:opacity-50"
               >
-                Post Transfer
+                {isTransferring && <Spinner size="sm" />}
+                <span>Post Transfer</span>
               </button>
             </form>
           </div>
         </div>
       )}
-
-
 
       {/* Money Transfers Tab */}
       {currentTab === 'transfers' && (
@@ -284,14 +313,18 @@ export default function MoneyAccounts() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-low">
-                {transferPag.data.map((t) => (
-                  <tr key={t.id} className="hover:bg-surface-bright">
-                    <td className="px-4 py-3 text-text-secondary">{new Date(t.timestamp).toLocaleString()}</td>
-                    <td className="px-4 py-3 font-medium text-text-primary">{t.source_name}</td>
-                    <td className="px-4 py-3 font-medium text-text-primary">{t.dest_name}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-text-primary">{formatCurrency(t.amount)}</td>
-                  </tr>
-                ))}
+                {transferPag.loading ? (
+                  <SkeletonTable rows={5} columns={4} />
+                ) : (
+                  transferPag.data.map((t) => (
+                    <tr key={t.id} className="hover:bg-surface-bright">
+                      <td className="px-4 py-3 text-text-secondary">{new Date(t.timestamp).toLocaleString()}</td>
+                      <td className="px-4 py-3 font-medium text-text-primary">{t.source_name}</td>
+                      <td className="px-4 py-3 font-medium text-text-primary">{t.dest_name}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-text-primary">{formatCurrency(t.amount)}</td>
+                    </tr>
+                  ))
+                )}
                 {transferPag.data.length === 0 && !transferPag.loading && (
                   <tr>
                     <td colSpan="4" className="px-4 py-8 text-center text-text-secondary">No transfer history found.</td>

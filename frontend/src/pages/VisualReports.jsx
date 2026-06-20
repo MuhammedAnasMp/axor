@@ -27,8 +27,79 @@ export default function VisualReports() {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-blue border-t-transparent"></div>
+      <div className="space-y-6">
+        {/* Title skeleton */}
+        <div className="space-y-2">
+          <div className="h-7 w-48 bg-surface-dim/50 rounded animate-pulse" />
+          <div className="h-4 w-96 bg-surface-dim/50 rounded animate-pulse" />
+        </div>
+
+        {/* Grid: Main Sales Chart & Best Sellers */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Sales Chart Card Skeleton */}
+          <div className="lg:col-span-2 rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-6 animate-pulse" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+            <div className="h-4 w-64 bg-surface-dim/50 rounded" />
+            <div className="flex h-64 items-end justify-between px-2 pt-4 border-b border-surface-low space-x-2">
+              {Array.from({ length: 7 }).map((_, idx) => (
+                <div key={idx} className="flex-1 flex flex-col items-center space-y-2">
+                  <div className="w-full flex justify-center space-x-1 items-end h-48">
+                    <div className="w-3 sm:w-5 bg-surface-dim/30 rounded-t h-24" />
+                    <div className="w-3 sm:w-5 bg-surface-dim/20 rounded-t h-16" />
+                  </div>
+                  <div className="h-3 w-8 bg-surface-dim/40 rounded" />
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-start space-x-6 text-[11px] font-semibold text-text-secondary pt-3 px-2">
+              <div className="flex items-center space-x-2">
+                <span className="h-3 w-3 bg-surface-dim/40 rounded-sm"></span>
+                <span className="h-3 w-16 bg-surface-dim/30 rounded"></span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="h-3 w-3 bg-surface-dim/40 rounded-sm"></span>
+                <span className="h-3 w-16 bg-surface-dim/30 rounded"></span>
+              </div>
+            </div>
+          </div>
+
+          {/* Best Sellers Skeleton */}
+          <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-6 animate-pulse" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+            <div className="h-4 w-40 bg-surface-dim/50 rounded" />
+            <div className="space-y-4">
+              {Array.from({ length: 5 }).map((_, idx) => (
+                <div key={idx} className="flex items-center justify-between border-b border-surface-low pb-2.5">
+                  <div className="space-y-2">
+                    <div className="h-3.5 w-32 bg-surface-dim/50 rounded" />
+                    <div className="h-3 w-20 bg-surface-dim/30 rounded" />
+                  </div>
+                  <div className="h-4 w-16 bg-surface-dim/40 rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Grid: Expense Breakdown, Customer & Supplier Balances Skeletons */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, colIdx) => (
+            <div key={colIdx} className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-6 animate-pulse" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+              <div className="h-4 w-48 bg-surface-dim/50 rounded" />
+              <div className="space-y-4">
+                {Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} className="space-y-2 border-b border-surface-low pb-2">
+                    <div className="flex justify-between">
+                      <div className="h-3.5 w-24 bg-surface-dim/50 rounded" />
+                      <div className="h-3.5 w-16 bg-surface-dim/40 rounded" />
+                    </div>
+                    {colIdx === 0 && (
+                      <div className="h-1.5 w-full bg-surface-dim/20 rounded-full" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

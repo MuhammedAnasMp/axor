@@ -5,6 +5,7 @@ import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
 import FloatingActionButton from '../components/FloatingActionButton';
 import MobileBottomSheet from '../components/MobileBottomSheet';
+import { SkeletonTable, Spinner } from '../components/Skeleton';
 
 export default function Products() {
   const [searchParams] = useSearchParams();
@@ -47,6 +48,10 @@ export default function Products() {
   const [imageUrls, setImageUrls] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [isSavingMapping, setIsSavingMapping] = useState(false);
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
+  const [isSavingBrand, setIsSavingBrand] = useState(false);
 
   const handleStartEdit = (p) => {
     setEditingProduct(p);
@@ -179,6 +184,7 @@ export default function Products() {
 
   const handleProductSubmit = (e) => {
     e.preventDefault();
+    setIsSavingProduct(true);
     const data = {
       name,
       barcode,
@@ -206,14 +212,19 @@ export default function Products() {
         setImageUrls([]);
         prodPag.refresh();
         loadDropdowns();
+        setIsSavingProduct(false);
         alert(editingProduct ? 'Product updated successfully!' : 'Product created successfully!');
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => {
+        alert(err.message);
+        setIsSavingProduct(false);
+      });
   };
 
   const handleMappingSubmit = (e) => {
     e.preventDefault();
     if (!mapProduct || !mapSupplier) return;
+    setIsSavingMapping(true);
     const payload = {
       product: parseInt(mapProduct),
       supplier: parseInt(mapSupplier),
@@ -227,9 +238,13 @@ export default function Products() {
         setMapSupplierSearch('');
         setMapCost('0');
         mappingPag.refresh();
+        setIsSavingMapping(false);
         alert('Supplier mapping saved successfully!');
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => {
+        alert(err.message);
+        setIsSavingMapping(false);
+      });
   };
 
   const deleteMapping = (id) => {
@@ -243,25 +258,35 @@ export default function Products() {
   const handleCategorySubmit = (e) => {
     e.preventDefault();
     if (!catName) return;
+    setIsSavingCategory(true);
     api.categories.create({ name: catName })
       .then(() => {
         setCatName('');
         catPag.refresh();
         loadDropdowns();
+        setIsSavingCategory(false);
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => {
+        alert(err.message);
+        setIsSavingCategory(false);
+      });
   };
 
   const handleBrandSubmit = (e) => {
     e.preventDefault();
     if (!brandName) return;
+    setIsSavingBrand(true);
     api.brands.create({ name: brandName })
       .then(() => {
         setBrandName('');
         brandPag.refresh();
         loadDropdowns();
+        setIsSavingBrand(false);
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => {
+        alert(err.message);
+        setIsSavingBrand(false);
+      });
   };
 
   const deleteProduct = (id) => {
@@ -409,9 +434,11 @@ export default function Products() {
       </div>
       <button
         type="submit"
-        className="w-full sm:w-auto rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition cursor-pointer"
+        disabled={isSavingProduct}
+        className="w-full sm:w-auto flex items-center justify-center space-x-2 rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
       >
-        Save Product
+        {isSavingProduct && <Spinner size="sm" />}
+        <span>{isSavingProduct ? 'Saving...' : 'Save Product'}</span>
       </button>
     </form>
   );
@@ -528,58 +555,62 @@ export default function Products() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-low">
-                {prodPag.data.map((p) => (
-                  <tr key={p.id} className="hover:bg-surface-bright">
-                    <td className="px-4 py-3">
-                      <div className="h-10 w-10 rounded bg-surface border border-surface-low overflow-hidden">
-                        {p.image_url ? (
-                          (() => {
-                            const urls = p.image_url.split(',');
-                            return (
-                              <div className="relative h-full w-full">
-                                <img src={urls[0]} alt={p.name} className="h-full w-full object-cover" />
-                                {urls.length > 1 && (
-                                  <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-[8px] px-1 rounded-sm font-bold">
-                                    +{urls.length - 1}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })()
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center text-[10px] text-text-secondary">No img</div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 font-mono font-medium">{p.barcode}</td>
-                    <td className="px-4 py-3 font-semibold text-text-primary">{p.name}</td>
-                    <td className="px-4 py-3 text-text-secondary">
-                      {p.category_name || '-'} / {p.brand_name || '-'}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-text-primary">{formatCurrency(p.selling_price)}</td>
-                    <td className="px-4 py-3 text-right text-text-secondary">{formatCurrency(p.average_cost)}</td>
-                    <td className="px-4 py-3 text-right text-text-secondary">{formatCurrency(p.last_landed_cost)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <span className={`font-semibold ${p.stock_qty < 10 ? 'text-error' : 'text-text-primary'}`}>
-                        {p.stock_qty}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center space-x-2">
-                      <button
-                        onClick={() => handleStartEdit(p)}
-                        className="rounded bg-brand-blue/10 px-2 py-1 text-[11px] font-semibold text-brand-blue hover:bg-brand-blue/20 transition font-medium"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteProduct(p.id)}
-                        className="rounded bg-error-container/10 px-2 py-1 text-[11px] font-semibold text-error hover:bg-error-container/20 transition"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {prodPag.loading ? (
+                  <SkeletonTable rows={prodPag.pageSize || 5} columns={9} />
+                ) : (
+                  prodPag.data.map((p) => (
+                    <tr key={p.id} className="hover:bg-surface-bright">
+                      <td className="px-4 py-3">
+                        <div className="h-10 w-10 rounded bg-surface border border-surface-low overflow-hidden">
+                          {p.image_url ? (
+                            (() => {
+                              const urls = p.image_url.split(',');
+                              return (
+                                <div className="relative h-full w-full">
+                                  <img src={urls[0]} alt={p.name} className="h-full w-full object-cover" />
+                                  {urls.length > 1 && (
+                                    <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-[8px] px-1 rounded-sm font-bold">
+                                      +{urls.length - 1}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center text-[10px] text-text-secondary">No img</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-mono font-medium">{p.barcode}</td>
+                      <td className="px-4 py-3 font-semibold text-text-primary">{p.name}</td>
+                      <td className="px-4 py-3 text-text-secondary">
+                        {p.category_name || '-'} / {p.brand_name || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-text-primary">{formatCurrency(p.selling_price)}</td>
+                      <td className="px-4 py-3 text-right text-text-secondary">{formatCurrency(p.average_cost)}</td>
+                      <td className="px-4 py-3 text-right text-text-secondary">{formatCurrency(p.last_landed_cost)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={`font-semibold ${p.stock_qty < 10 ? 'text-error' : 'text-text-primary'}`}>
+                          {p.stock_qty}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center space-x-2">
+                        <button
+                          onClick={() => handleStartEdit(p)}
+                          className="rounded bg-brand-blue/10 px-2 py-1 text-[11px] font-semibold text-brand-blue hover:bg-brand-blue/20 transition font-medium"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteProduct(p.id)}
+                          className="rounded bg-error-container/10 px-2 py-1 text-[11px] font-semibold text-error hover:bg-error-container/20 transition"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
                 {prodPag.data.length === 0 && !prodPag.loading && (
                   <tr>
                     <td colSpan="9" className="px-4 py-8 text-center text-text-secondary">No products found.</td>
@@ -619,9 +650,11 @@ export default function Products() {
               </div>
               <button
                 type="submit"
-                className="w-full rounded bg-brand-blue py-2 text-sm font-semibold text-white hover:bg-brand-cobalt transition"
+                disabled={isSavingCategory}
+                className="w-full rounded bg-brand-blue py-2 text-sm font-semibold text-white hover:bg-brand-cobalt transition flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
               >
-                Add Category
+                {isSavingCategory && <Spinner size="sm" />}
+                <span>{isSavingCategory ? 'Adding...' : 'Add Category'}</span>
               </button>
             </form>
           </div>
@@ -651,26 +684,30 @@ export default function Products() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-low">
-                  {catPag.data.map((c) => (
-                    <tr key={c.id} className="hover:bg-surface-bright">
-                      <td className="px-4 py-3 font-semibold text-text-primary">{c.name}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => {
-                            if (confirm('Delete category?')) {
-                              api.categories.delete(c.id).then(() => {
-                                catPag.refresh();
-                                loadDropdowns();
-                              }).catch((e) => alert(e.message));
-                            }
-                          }}
-                          className="text-error hover:underline font-semibold"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {catPag.loading ? (
+                    <SkeletonTable rows={catPag.pageSize || 5} columns={2} />
+                  ) : (
+                    catPag.data.map((c) => (
+                      <tr key={c.id} className="hover:bg-surface-bright">
+                        <td className="px-4 py-3 font-semibold text-text-primary">{c.name}</td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => {
+                              if (confirm('Delete category?')) {
+                                api.categories.delete(c.id).then(() => {
+                                  catPag.refresh();
+                                  loadDropdowns();
+                                }).catch((e) => alert(e.message));
+                              }
+                            }}
+                            className="text-error hover:underline font-semibold"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                   {catPag.data.length === 0 && !catPag.loading && (
                     <tr>
                       <td colSpan="2" className="px-4 py-8 text-center text-text-secondary">No categories found.</td>
@@ -711,9 +748,11 @@ export default function Products() {
               </div>
               <button
                 type="submit"
-                className="w-full rounded bg-brand-blue py-2 text-sm font-semibold text-white hover:bg-brand-cobalt transition"
+                disabled={isSavingBrand}
+                className="w-full rounded bg-brand-blue py-2 text-sm font-semibold text-white hover:bg-brand-cobalt transition flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
               >
-                Add Brand
+                {isSavingBrand && <Spinner size="sm" />}
+                <span>{isSavingBrand ? 'Adding...' : 'Add Brand'}</span>
               </button>
             </form>
           </div>
@@ -743,26 +782,30 @@ export default function Products() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-low">
-                  {brandPag.data.map((b) => (
-                    <tr key={b.id} className="hover:bg-surface-bright">
-                      <td className="px-4 py-3 font-semibold text-text-primary">{b.name}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => {
-                            if (confirm('Delete brand?')) {
-                              api.brands.delete(b.id).then(() => {
-                                brandPag.refresh();
-                                loadDropdowns();
-                              }).catch((e) => alert(e.message));
-                            }
-                          }}
-                          className="text-error hover:underline font-semibold"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {brandPag.loading ? (
+                    <SkeletonTable rows={brandPag.pageSize || 5} columns={2} />
+                  ) : (
+                    brandPag.data.map((b) => (
+                      <tr key={b.id} className="hover:bg-surface-bright">
+                        <td className="px-4 py-3 font-semibold text-text-primary">{b.name}</td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => {
+                              if (confirm('Delete brand?')) {
+                                api.brands.delete(b.id).then(() => {
+                                  brandPag.refresh();
+                                  loadDropdowns();
+                                }).catch((e) => alert(e.message));
+                              }
+                            }}
+                            className="text-error hover:underline font-semibold"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                   {brandPag.data.length === 0 && !brandPag.loading && (
                     <tr>
                       <td colSpan="2" className="px-4 py-8 text-center text-text-secondary">No brands found.</td>
@@ -901,9 +944,11 @@ export default function Products() {
               </div>
               <button
                 type="submit"
-                className="w-full rounded bg-brand-blue py-2 text-sm font-semibold text-white hover:bg-brand-cobalt transition"
+                disabled={isSavingMapping}
+                className="w-full rounded bg-brand-blue py-2 text-sm font-semibold text-white hover:bg-brand-cobalt transition flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
               >
-                Save Supplier Mapping
+                {isSavingMapping && <Spinner size="sm" />}
+                <span>{isSavingMapping ? 'Linking...' : 'Save Supplier Mapping'}</span>
               </button>
             </form>
           </div>
@@ -936,22 +981,26 @@ export default function Products() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-low">
-                  {mappingPag.data.map((m) => (
-                    <tr key={m.id} className="hover:bg-surface-bright">
-                      <td className="px-4 py-3 font-semibold text-text-primary">{m.product_name}</td>
-                      <td className="px-4 py-3 text-text-secondary font-mono">{m.barcode}</td>
-                      <td className="px-4 py-3 text-text-primary">{m.supplier_name}</td>
-                      <td className="px-4 py-3 font-bold text-brand-blue">{formatCurrency(m.current_cost)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => deleteMapping(m.id)}
-                          className="text-error hover:underline font-semibold"
-                        >
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {mappingPag.loading ? (
+                    <SkeletonTable rows={mappingPag.pageSize || 5} columns={5} />
+                  ) : (
+                    mappingPag.data.map((m) => (
+                      <tr key={m.id} className="hover:bg-surface-bright">
+                        <td className="px-4 py-3 font-semibold text-text-primary">{m.product_name}</td>
+                        <td className="px-4 py-3 text-text-secondary font-mono">{m.barcode}</td>
+                        <td className="px-4 py-3 text-text-primary">{m.supplier_name}</td>
+                        <td className="px-4 py-3 font-bold text-brand-blue">{formatCurrency(m.current_cost)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => deleteMapping(m.id)}
+                            className="text-error hover:underline font-semibold"
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                   {mappingPag.data.length === 0 && !mappingPag.loading && (
                     <tr>
                       <td colSpan="5" className="px-4 py-8 text-center text-text-secondary">No supplier product mappings established.</td>
@@ -1005,21 +1054,25 @@ export default function Products() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-low">
-                {costHistoryPag.data.map((h) => (
-                  <tr key={h.id} className="hover:bg-surface-bright">
-                    <td className="px-4 py-3 text-text-secondary">{new Date(h.timestamp).toLocaleString()}</td>
-                    <td className="px-4 py-3 font-semibold text-text-primary">{h.product_name}</td>
-                    <td className="px-4 py-3 text-text-secondary font-mono">{h.barcode}</td>
-                    <td className="px-4 py-3 text-text-primary">{h.supplier_name}</td>
-                    <td className="px-4 py-3 font-bold text-brand-blue">{formatCurrency(h.cost)}</td>
-                    <td className="px-4 py-3 font-bold text-green-600">
-                      {h.selling_price !== null && h.selling_price !== undefined ? formatCurrency(h.selling_price) : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-text-secondary font-mono">
-                      {h.purchase ? `PO-${h.purchase}` : 'Initial Seed'}
-                    </td>
-                  </tr>
-                ))}
+                {costHistoryPag.loading ? (
+                  <SkeletonTable rows={costHistoryPag.pageSize || 5} columns={7} />
+                ) : (
+                  costHistoryPag.data.map((h) => (
+                    <tr key={h.id} className="hover:bg-surface-bright">
+                      <td className="px-4 py-3 text-text-secondary">{new Date(h.timestamp).toLocaleString()}</td>
+                      <td className="px-4 py-3 font-semibold text-text-primary">{h.product_name}</td>
+                      <td className="px-4 py-3 text-text-secondary font-mono">{h.barcode}</td>
+                      <td className="px-4 py-3 text-text-primary">{h.supplier_name}</td>
+                      <td className="px-4 py-3 font-bold text-brand-blue">{formatCurrency(h.cost)}</td>
+                      <td className="px-4 py-3 font-bold text-green-600">
+                        {h.selling_price !== null && h.selling_price !== undefined ? formatCurrency(h.selling_price) : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-text-secondary font-mono">
+                        {h.purchase ? `PO-${h.purchase}` : 'Initial Seed'}
+                      </td>
+                    </tr>
+                  ))
+                )}
                 {costHistoryPag.data.length === 0 && !costHistoryPag.loading && (
                   <tr>
                     <td colSpan="7" className="px-4 py-8 text-center text-text-secondary">No supplier cost history entries found.</td>

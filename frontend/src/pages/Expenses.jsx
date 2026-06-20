@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
+import { SkeletonTable, Spinner } from '../components/Skeleton';
 
 export default function Expenses() {
   const [searchParams] = useSearchParams();
@@ -16,6 +17,11 @@ export default function Expenses() {
   const [bankAccounts, setBankAccounts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [dropdownsLoading, setDropdownsLoading] = useState(true);
+
+  // Action loading states
+  const [isPostingExpense, setIsPostingExpense] = useState(false);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [isSavingIncome, setIsSavingIncome] = useState(false);
 
   // Paginated expense history hook
   const pag = usePagination(api.expenses.list, 10, currentTab === 'history');
@@ -116,6 +122,7 @@ export default function Expenses() {
       description: notes
     };
 
+    setIsPostingExpense(true);
     api.expenses.create(payload)
       .then(() => {
         setAmount('');
@@ -127,19 +134,22 @@ export default function Expenses() {
         pag.refresh();
         loadDropdowns();
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => alert(err.message))
+      .finally(() => setIsPostingExpense(false));
   };
 
   const handleCategorySubmit = (e) => {
     e.preventDefault();
     if (!newCatName) return;
 
+    setIsAddingCategory(true);
     api.expenseCategories.create({ name: newCatName })
       .then(() => {
         setNewCatName('');
         loadDropdowns();
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => alert(err.message))
+      .finally(() => setIsAddingCategory(false));
   };
 
   const handleIncomeSubmit = (e) => {
@@ -152,6 +162,7 @@ export default function Expenses() {
       description: incomeDesc
     };
 
+    setIsSavingIncome(true);
     api.incomes.create(payload)
       .then(() => {
         setIncomeAmount('');
@@ -160,7 +171,8 @@ export default function Expenses() {
         incomePag.refresh();
         loadDropdowns();
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => alert(err.message))
+      .finally(() => setIsSavingIncome(false));
   };
 
   const formatCurrency = (val) => {
@@ -335,9 +347,11 @@ export default function Expenses() {
               </div>
               <button
                 type="submit"
-                className="rounded bg-brand-blue px-6 py-2.5 text-xs font-semibold text-white hover:bg-brand-cobalt transition"
+                disabled={isPostingExpense}
+                className="rounded bg-brand-blue px-6 py-2.5 text-xs font-semibold text-white hover:bg-brand-cobalt transition disabled:opacity-50 flex items-center space-x-1"
               >
-                Post Expense Invoice
+                {isPostingExpense && <Spinner size="xs" />}
+                <span>Post Expense Invoice</span>
               </button>
             </form>
           </div>
@@ -357,16 +371,29 @@ export default function Expenses() {
                   className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none"
                 />
               </div>
-              <button type="submit" className="w-full rounded bg-brand-blue py-2 text-xs font-semibold text-white">
-                Add Category
+              <button
+                type="submit"
+                disabled={isAddingCategory}
+                className="w-full flex items-center justify-center space-x-2 rounded bg-brand-blue py-2 text-xs font-semibold text-white disabled:opacity-50"
+              >
+                {isAddingCategory && <Spinner size="xs" />}
+                <span>Add Category</span>
               </button>
             </form>
             <div className="divide-y divide-surface-low max-h-48 overflow-y-auto pt-2 text-xs">
-              {categories.map((c) => (
-                <div key={c.id} className="py-2 text-text-primary font-semibold">
-                  • {c.name}
+              {dropdownsLoading ? (
+                <div className="space-y-2 animate-pulse pt-2">
+                  <div className="h-3 w-3/4 bg-surface-dim/50 rounded" />
+                  <div className="h-3 w-1/2 bg-surface-dim/50 rounded" />
+                  <div className="h-3 w-2/3 bg-surface-dim/50 rounded" />
                 </div>
-              ))}
+              ) : (
+                categories.map((c) => (
+                  <div key={c.id} className="py-2 text-text-primary font-semibold">
+                    • {c.name}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -410,39 +437,43 @@ export default function Expenses() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-low">
-                {pag.data.map((e) => (
-                  <tr key={e.id} className="hover:bg-surface-bright">
-                    <td className="px-4 py-3 text-text-secondary">{new Date(e.timestamp).toLocaleString()}</td>
-                    <td className="px-4 py-3 font-semibold text-text-primary">{e.category_name}</td>
-                    <td className="px-4 py-3 text-text-secondary">{e.payment_source_name}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-error">{formatCurrency(e.amount)}</td>
-                    <td className="px-4 py-3 text-text-secondary">{e.description}</td>
-                    <td className="px-4 py-3 text-text-primary font-medium">
-                      {e.purchase ? (
-                        <div className="flex flex-col">
-                          <span>PO #{e.purchase}</span>
-                          {e.purchase_supplier_name && (
-                            <span className="text-[10px] text-text-secondary">{e.purchase_supplier_name}</span>
-                          )}
-                          {e.purchase_invoice_number && (
-                            <span className="text-[10px] text-text-secondary">Inv: {e.purchase_invoice_number}</span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-text-secondary">-</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {e.receipt_url ? (
-                        <a href={e.receipt_url} target="_blank" rel="noreferrer" className="text-brand-blue hover:underline font-semibold">
-                          View Receipt
-                        </a>
-                      ) : (
-                        <span className="text-text-secondary">-</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {pag.loading ? (
+                  <SkeletonTable rows={5} columns={7} />
+                ) : (
+                  pag.data.map((e) => (
+                    <tr key={e.id} className="hover:bg-surface-bright">
+                      <td className="px-4 py-3 text-text-secondary">{new Date(e.timestamp).toLocaleString()}</td>
+                      <td className="px-4 py-3 font-semibold text-text-primary">{e.category_name}</td>
+                      <td className="px-4 py-3 text-text-secondary">{e.payment_source_name}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-error">{formatCurrency(e.amount)}</td>
+                      <td className="px-4 py-3 text-text-secondary">{e.description}</td>
+                      <td className="px-4 py-3 text-text-primary font-medium">
+                        {e.purchase ? (
+                          <div className="flex flex-col">
+                            <span>PO #{e.purchase}</span>
+                            {e.purchase_supplier_name && (
+                              <span className="text-[10px] text-text-secondary">{e.purchase_supplier_name}</span>
+                            )}
+                            {e.purchase_invoice_number && (
+                              <span className="text-[10px] text-text-secondary">Inv: {e.purchase_invoice_number}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-text-secondary">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {e.receipt_url ? (
+                          <a href={e.receipt_url} target="_blank" rel="noreferrer" className="text-brand-blue hover:underline font-semibold">
+                            View Receipt
+                          </a>
+                        ) : (
+                          <span className="text-text-secondary">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
                 {pag.data.length === 0 && !pag.loading && (
                   <tr>
                     <td colSpan="7" className="px-4 py-8 text-center text-text-secondary">No expenses found.</td>
@@ -528,9 +559,11 @@ export default function Expenses() {
               </div>
               <button
                 type="submit"
-                className="w-full rounded bg-brand-blue py-2 text-sm font-semibold text-white hover:bg-brand-cobalt transition"
+                disabled={isSavingIncome}
+                className="w-full flex items-center justify-center space-x-2 rounded bg-brand-blue py-2 text-sm font-semibold text-white hover:bg-brand-cobalt transition disabled:opacity-50"
               >
-                Save Income
+                {isSavingIncome && <Spinner size="sm" />}
+                <span>Save Income</span>
               </button>
             </form>
           </div>
@@ -572,15 +605,19 @@ export default function Expenses() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-low">
-                {incomePag.data.map((inc) => (
-                  <tr key={inc.id} className="hover:bg-surface-bright">
-                    <td className="px-4 py-2.5 text-text-secondary">{new Date(inc.timestamp).toLocaleDateString()}</td>
-                    <td className="px-4 py-2.5 font-semibold text-text-primary">{inc.source}</td>
-                    <td className="px-4 py-2.5 text-text-secondary">{inc.payment_method_name}</td>
-                    <td className="px-4 py-2.5 text-right font-semibold text-green-600">{formatCurrency(inc.amount)}</td>
-                    <td className="px-4 py-2.5 text-text-secondary">{inc.description}</td>
-                  </tr>
-                ))}
+                {incomePag.loading ? (
+                  <SkeletonTable rows={5} columns={5} />
+                ) : (
+                  incomePag.data.map((inc) => (
+                    <tr key={inc.id} className="hover:bg-surface-bright">
+                      <td className="px-4 py-2.5 text-text-secondary">{new Date(inc.timestamp).toLocaleDateString()}</td>
+                      <td className="px-4 py-2.5 font-semibold text-text-primary">{inc.source}</td>
+                      <td className="px-4 py-2.5 text-text-secondary">{inc.payment_method_name}</td>
+                      <td className="px-4 py-2.5 text-right font-semibold text-green-600">{formatCurrency(inc.amount)}</td>
+                      <td className="px-4 py-2.5 text-text-secondary">{inc.description}</td>
+                    </tr>
+                  ))
+                )}
                 {incomePag.data.length === 0 && !incomePag.loading && (
                   <tr>
                     <td colSpan="5" className="px-4 py-8 text-center text-text-secondary">No income ledgers found.</td>

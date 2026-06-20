@@ -6,6 +6,7 @@ import FloatingActionButton from '../components/FloatingActionButton';
 import MobileBottomSheet from '../components/MobileBottomSheet';
 import { FaWhatsapp, FaPhoneAlt } from 'react-icons/fa';
 import { FiCopy, FiCheck } from 'react-icons/fi';
+import { SkeletonTable, Spinner } from '../components/Skeleton';
 
 function ContactNumber({ number, isWhatsapp }) {
   const [copied, setCopied] = useState(false);
@@ -102,6 +103,9 @@ export default function Suppliers() {
   const [expandedSupplier, setExpandedSupplier] = useState(null);
   const [mappedProducts, setMappedProducts] = useState([]);
   const [mappingsLoading, setMappingsLoading] = useState(false);
+  const [isSavingSupplier, setIsSavingSupplier] = useState(false);
+  const [isPostingPayment, setIsPostingPayment] = useState(false);
+  const [isPostingReceive, setIsPostingReceive] = useState(false);
 
   const toggleExpandSupplier = (supplierId) => {
     if (expandedSupplier === supplierId) {
@@ -151,6 +155,7 @@ export default function Suppliers() {
 
   const handleSupplierSubmit = (e) => {
     e.preventDefault();
+    setIsSavingSupplier(true);
     api.suppliers.create({ 
       name, 
       contact_info: contactInfo,
@@ -166,14 +171,19 @@ export default function Suppliers() {
         setContactNumber('');
         setPlace('');
         pag.refresh();
+        setIsSavingSupplier(false);
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => {
+        alert(err.message);
+        setIsSavingSupplier(false);
+      });
   };
 
   const handlePaymentSubmit = (e) => {
     e.preventDefault();
     if (!selectedSupplier || payAmount === '' || payBank === '') return;
 
+    setIsPostingPayment(true);
     api.supplierPayments.create({
       supplier: selectedSupplier.id,
       payment_from: parseInt(payBank),
@@ -184,14 +194,19 @@ export default function Suppliers() {
         setPayAmount('');
         pag.refresh();
         loadDropdowns();
+        setIsPostingPayment(false);
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => {
+        alert(err.message);
+        setIsPostingPayment(false);
+      });
   };
 
   const handleReceiveSubmit = (e) => {
     e.preventDefault();
     if (!selectedSupplier || receiveAmount === '' || receiveBank === '') return;
 
+    setIsPostingReceive(true);
     api.suppliers.receivePayment(selectedSupplier.id, {
       amount: parseFloat(receiveAmount),
       account_id: parseInt(receiveBank),
@@ -202,8 +217,12 @@ export default function Suppliers() {
         setReceiveAmount('');
         pag.refresh();
         loadDropdowns();
+        setIsPostingReceive(false);
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => {
+        alert(err.message);
+        setIsPostingReceive(false);
+      });
   };
 
   const openPayModal = (supplier) => {
@@ -300,9 +319,11 @@ export default function Suppliers() {
       </div>
       <button
         type="submit"
-        className="w-full sm:w-auto rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition cursor-pointer"
+        disabled={isSavingSupplier}
+        className="w-full sm:w-auto flex items-center justify-center space-x-2 rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
       >
-        Save Supplier
+        {isSavingSupplier && <Spinner size="sm" />}
+        <span>{isSavingSupplier ? 'Saving...' : 'Save Supplier'}</span>
       </button>
     </form>
   );
@@ -343,9 +364,11 @@ export default function Suppliers() {
         </button>
         <button
           type="submit"
-          className={`rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
+          disabled={isPostingPayment}
+          className={`rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
         >
-          Post Payment
+          {isPostingPayment && <Spinner size="xs" />}
+          <span>{isPostingPayment ? 'Posting...' : 'Post Payment'}</span>
         </button>
       </div>
     </form>
@@ -387,9 +410,11 @@ export default function Suppliers() {
         </button>
         <button
           type="submit"
-          className={`rounded bg-emerald-600 px-3 py-1.5 text-xs text-white hover:bg-emerald-700 ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
+          disabled={isPostingReceive}
+          className={`rounded bg-emerald-600 px-3 py-1.5 text-xs text-white hover:bg-emerald-700 flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
         >
-          Post Amount
+          {isPostingReceive && <Spinner size="xs" />}
+          <span>{isPostingReceive ? 'Posting...' : 'Post Amount'}</span>
         </button>
       </div>
     </form>
@@ -452,107 +477,114 @@ export default function Suppliers() {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-low">
-              {pag.data.map((s) => (
-                <React.Fragment key={s.id}>
-                  <tr className="hover:bg-surface-bright border-b border-surface-low">
-                    <td className="px-4 py-3 font-semibold text-text-primary">
-                      <button
-                        type="button"
-                        onClick={() => toggleExpandSupplier(s.id)}
-                        className="text-left font-semibold text-brand-blue hover:underline focus:outline-none flex items-center space-x-1"
-                      >
-                        <span>{s.name}</span>
-                        <svg className={`h-3 w-3 transform transition-transform ${expandedSupplier === s.id ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-text-secondary">
-                      <div className="space-y-1">
-                        <div>{s.contact_info}</div>
-                        {(s.contact_number || s.whatsapp_number) && (
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {s.contact_number && (
-                              <ContactNumber number={s.contact_number} isWhatsapp={false} />
-                            )}
-                            {s.whatsapp_number && (
-                              <ContactNumber number={s.whatsapp_number} isWhatsapp={true} />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-text-secondary font-medium">{s.place || '-'}</td>
-                    <td className="px-4 py-3 text-right">
-                      <span className={`font-semibold ${parseFloat(s.outstanding_balance) > 0 ? 'text-error font-bold' : 'text-text-primary'}`}>
-                        {formatCurrency(s.outstanding_balance)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {parseFloat(s.outstanding_balance) > 0 ? (
+              {pag.loading ? (
+                <SkeletonTable rows={pag.pageSize || 5} columns={5} />
+              ) : (
+                pag.data.map((s) => (
+                  <React.Fragment key={s.id}>
+                    <tr className="hover:bg-surface-bright border-b border-surface-low">
+                      <td className="px-4 py-3 font-semibold text-text-primary">
                         <button
-                          onClick={() => openPayModal(s)}
-                          className="rounded bg-brand-blue/10 px-3 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-blue/20 transition"
+                          type="button"
+                          onClick={() => toggleExpandSupplier(s.id)}
+                          className="text-left font-semibold text-brand-blue hover:underline focus:outline-none flex items-center space-x-1"
                         >
-                          Pay Amount
+                          <span>{s.name}</span>
+                          <svg className={`h-3 w-3 transform transition-transform ${expandedSupplier === s.id ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
                         </button>
-                      ) : parseFloat(s.outstanding_balance) < 0 ? (
-                        <button
-                          onClick={() => openReceiveModal(s)}
-                          className="rounded bg-emerald-600/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-600/20 transition"
-                        >
-                          Receive Amount
-                        </button>
-                      ) : (
-                        <button
-                          disabled
-                          className="rounded bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-400 cursor-not-allowed transition"
-                        >
-                          Pay Amount
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                  {expandedSupplier === s.id && (
-                    <tr>
-                      <td colSpan="5" className="bg-surface-lowest px-6 py-4 border-b border-surface-low">
-                        <div className="rounded-lg border border-surface-dim bg-white p-4 space-y-3 shadow-inner">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-semibold text-text-primary text-xs font-sans">Mapped Products & Negotiated Costs</h4>
-                            {mappingsLoading && <span className="text-[10px] text-brand-blue animate-pulse font-medium">Loading costs...</span>}
-                          </div>
-                          <table className="min-w-full text-left text-[11px] border border-surface-dim rounded bg-surface-bright overflow-hidden">
-                            <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
-                              <tr>
-                                <th className="px-3 py-1.5">Product Name</th>
-                                <th className="px-3 py-1.5">Barcode</th>
-                                <th className="px-3 py-1.5 text-right">Current Negotiated Cost</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-surface-low">
-                              {mappedProducts.map((mp) => (
-                                <tr key={mp.id}>
-                                  <td className="px-3 py-2 font-semibold text-text-primary">{mp.product_name}</td>
-                                  <td className="px-3 py-2 text-text-secondary font-mono">{mp.barcode}</td>
-                                  <td className="px-3 py-2 text-right font-bold text-brand-blue">{formatCurrency(mp.current_cost)}</td>
-                                </tr>
-                              ))}
-                              {mappedProducts.length === 0 && !mappingsLoading && (
-                                <tr>
-                                  <td colSpan="3" className="px-3 py-4 text-center text-text-secondary">No products mapped to this supplier. Setup mappings in Products module.</td>
-                                </tr>
+                      </td>
+                      <td className="px-4 py-3 text-text-secondary">
+                        <div className="space-y-1">
+                          <div>{s.contact_info}</div>
+                          {(s.contact_number || s.whatsapp_number) && (
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {s.contact_number && (
+                                <ContactNumber number={s.contact_number} isWhatsapp={false} />
                               )}
-                            </tbody>
-                          </table>
+                              {s.whatsapp_number && (
+                                <ContactNumber number={s.whatsapp_number} isWhatsapp={true} />
+                              )}
+                            </div>
+                          )}
                         </div>
                       </td>
+                      <td className="px-4 py-3 text-text-secondary font-medium">{s.place || '-'}</td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={`font-semibold ${parseFloat(s.outstanding_balance) > 0 ? 'text-error font-bold' : 'text-text-primary'}`}>
+                          {formatCurrency(s.outstanding_balance)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {parseFloat(s.outstanding_balance) > 0 ? (
+                          <button
+                            onClick={() => openPayModal(s)}
+                            className="rounded bg-brand-blue/10 px-3 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-blue/20 transition"
+                          >
+                            Pay Amount
+                          </button>
+                        ) : parseFloat(s.outstanding_balance) < 0 ? (
+                          <button
+                            onClick={() => openReceiveModal(s)}
+                            className="rounded bg-emerald-600/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-600/20 transition"
+                          >
+                            Receive Amount
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="rounded bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-400 cursor-not-allowed transition"
+                          >
+                            Pay Amount
+                          </button>
+                        )}
+                      </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
+                    {expandedSupplier === s.id && (
+                      <tr>
+                        <td colSpan="5" className="bg-surface-lowest px-6 py-4 border-b border-surface-low">
+                          <div className="rounded-lg border border-surface-dim bg-white p-4 space-y-3 shadow-inner">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-semibold text-text-primary text-xs font-sans">Mapped Products & Negotiated Costs</h4>
+                            </div>
+                            <table className="min-w-full text-left text-[11px] border border-surface-dim rounded bg-surface-bright overflow-hidden">
+                              <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
+                                <tr>
+                                  <th className="px-3 py-1.5">Product Name</th>
+                                  <th className="px-3 py-1.5">Barcode</th>
+                                  <th className="px-3 py-1.5 text-right">Current Negotiated Cost</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-surface-low">
+                                {mappingsLoading ? (
+                                  <SkeletonTable rows={3} columns={3} />
+                                ) : (
+                                  mappedProducts.map((mp) => (
+                                    <tr key={mp.id}>
+                                      <td className="px-3 py-2 font-semibold text-text-primary">{mp.product_name}</td>
+                                      <td className="px-3 py-2 text-text-secondary font-mono">{mp.barcode}</td>
+                                      <td className="px-3 py-2 text-right font-bold text-brand-blue">{formatCurrency(mp.current_cost)}</td>
+                                    </tr>
+                                  ))
+                                )}
+                                {mappedProducts.length === 0 && !mappingsLoading && (
+                                  <tr>
+                                    <td colSpan="3" className="px-3 py-4 text-center text-text-secondary">No products mapped to this supplier. Setup mappings in Products module.</td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))
+              )}
               {pag.data.length === 0 && !pag.loading && (
                 <tr>
-                  <td colSpan="4" className="px-4 py-8 text-center text-text-secondary">No suppliers found.</td>
+                  <td colSpan="5" className="px-4 py-8 text-center text-text-secondary">No suppliers found.</td>
                 </tr>
               )}
             </tbody>

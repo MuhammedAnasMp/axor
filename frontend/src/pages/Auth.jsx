@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { api } from '../utils/api';
+import { Spinner } from '../components/Skeleton';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -13,6 +14,7 @@ export default function Auth() {
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('Cashier');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const [logoClicks, setLogoClicks] = useState(0);
@@ -41,11 +43,15 @@ export default function Auth() {
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
     if (isLogin) {
       api.auth.login(username, password)
         .then(() => navigate('/erp'))
-        .catch((err) => setError(err.message));
+        .catch((err) => {
+          setError(err.message);
+          setIsSubmitting(false);
+        });
     } else {
       api.auth.register({
         username,
@@ -60,9 +66,13 @@ export default function Auth() {
         setIsLogin(true);
         setUsername('');
         setPassword('');
+        setIsSubmitting(false);
         alert('Registration successful! Please login.');
       })
-      .catch((err) => setError(err.message));
+      .catch((err) => {
+        setError(err.message);
+        setIsSubmitting(false);
+      });
     }
   };
 
@@ -178,9 +188,11 @@ export default function Auth() {
 
           <button
             type="submit"
-            className="w-full rounded bg-brand-blue py-2.5 text-sm font-semibold text-white hover:bg-brand-cobalt transition"
+            disabled={isSubmitting}
+            className="w-full flex items-center justify-center space-x-2 rounded bg-brand-blue py-2.5 text-sm font-semibold text-white hover:bg-brand-cobalt transition disabled:opacity-50 disabled:pointer-events-none"
           >
-            {isLogin ? 'Sign In' : 'Register'}
+            {isSubmitting && <Spinner size="sm" />}
+            <span>{isSubmitting ? (isLogin ? 'Signing In...' : 'Registering...') : (isLogin ? 'Sign In' : 'Register')}</span>
           </button>
         </form>
 
