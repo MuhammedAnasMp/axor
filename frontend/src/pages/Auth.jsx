@@ -109,7 +109,7 @@ export default function Auth() {
             {isLogin ? 'Login to Axon' : 'Create an Account'}
           </h2>
           <p className="text-xs text-text-secondary mt-1">
-            {isLogin ? 'xx Enter your credentials to access the ERP/POS' : 'Fill in the form to register a new employee'}
+            {isLogin ? 'please Enter your credentials to access the ERP/POS' : 'Fill in the form to register a new employee'}
           </p>
         </div>
 
@@ -225,7 +225,7 @@ export default function Auth() {
             <h3 className="text-xs font-bold text-brand-blue flex items-center">
               🧪 Developer API Settings
             </h3>
-            
+
             <div className="space-y-2">
               <div>
                 <label className="block text-[10px] font-semibold text-text-secondary mb-1">Local API URL</label>
