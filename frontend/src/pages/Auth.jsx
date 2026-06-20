@@ -64,17 +64,17 @@ export default function Auth() {
         phone,
         role
       })
-      .then(() => {
-        setIsLogin(true);
-        setUsername('');
-        setPassword('');
-        setIsSubmitting(false);
-        alert('Registration successful! Please login.');
-      })
-      .catch((err) => {
-        setError(err.message);
-        setIsSubmitting(false);
-      });
+        .then(() => {
+          setIsLogin(true);
+          setUsername('');
+          setPassword('');
+          setIsSubmitting(false);
+          alert('Registration successful! Please login.');
+        })
+        .catch((err) => {
+          setError(err.message);
+          setIsSubmitting(false);
+        });
     }
   };
 
@@ -86,7 +86,7 @@ export default function Auth() {
         style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}
       >
         <div className="mb-6 text-center">
-          <div 
+          <div
             onClick={handleLogoClick}
             className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-brand-blue text-white font-bold text-xl cursor-pointer select-none"
           >
@@ -96,7 +96,7 @@ export default function Auth() {
             {isLogin ? 'Login to Axon' : 'Create an Account'}
           </h2>
           <p className="text-xs text-text-secondary mt-1">
-            {isLogin ? 'Enter your credentials to access the ERP/POS' : 'Fill in the form to register a new employee'}
+            {isLogin ? 'xx Enter your credentials to access the ERP/POS' : 'Fill in the form to register a new employee'}
           </p>
         </div>
 
