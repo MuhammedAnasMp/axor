@@ -12,6 +12,7 @@ export function useOTAUpdate() {
   const [status, setStatus] = useState('idle'); // idle, checking, downloading, ready-to-reload, reinstall-required, error
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [updateInfo, setUpdateInfo] = useState(null);
+  const [downloadedBundle, setDownloadedBundle] = useState(null);
 
   useEffect(() => {
     // 1. Critical Safeguard: Notify CapacitorUpdater that the web app mounted successfully.
@@ -101,12 +102,13 @@ export function useOTAUpdate() {
         version: updateData.version,
       });
 
+      setDownloadedBundle(bundle);
       progressListener.remove();
       setStatus('ready-to-reload');
 
       if (updateData.is_mandatory) {
         // Immediate reload for critical bugfixes
-        applyUpdate(bundle.version);
+        applyUpdate(bundle);
       }
     } catch (err) {
       console.error('Download failed:', err);
@@ -114,10 +116,10 @@ export function useOTAUpdate() {
     }
   };
 
-  const applyUpdate = async (version) => {
+  const applyUpdate = async (bundleObj) => {
     try {
-      // Set update active and reload web view instantly
-      await CapacitorUpdater.set({ version });
+      // Set update active and reload web view instantly using the native bundle info object
+      await CapacitorUpdater.set(bundleObj);
     } catch (err) {
       console.error('Failed to set active update:', err);
       setStatus('error');
@@ -128,7 +130,7 @@ export function useOTAUpdate() {
     status,
     downloadProgress,
     updateInfo,
-    applyUpdate: () => updateInfo && applyUpdate(updateInfo.version),
+    applyUpdate: () => downloadedBundle && applyUpdate(downloadedBundle),
     checkAndApplyUpdates,
   };
 }
