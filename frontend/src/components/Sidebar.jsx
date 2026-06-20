@@ -324,27 +324,29 @@ export default function Sidebar() {
       {/* ========================================================================= */}
       {/* 2. MOBILE TOP APP BAR                                                     */}
       {/* ========================================================================= */}
-      <header className="md:hidden sticky top-0 left-0 right-0 z-35 flex h-14 items-center justify-between bg-white px-4 border-b border-surface-low shadow-sm safe-pt">
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="rounded-full p-2 text-text-secondary hover:bg-surface-low active:bg-surface-high transition-colors cursor-pointer"
-            aria-label="Open navigation drawer"
-          >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <h1 className="text-base font-bold tracking-tight text-text-primary">
-            {getScreenTitle()}
-          </h1>
-        </div>
-        
-        {/* Operator Badge on Right */}
-        <div className="flex items-center">
-          <span className="text-[10px] font-bold text-brand-blue bg-accent-blue/10 px-2 py-0.5 rounded-full">
-            Console
-          </span>
+      <header className="md:hidden sticky top-0 left-0 right-0 z-35 bg-white border-b border-surface-low shadow-sm safe-pt">
+        <div className="flex h-14 items-center justify-between px-4">
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="rounded-full p-2 text-text-secondary hover:bg-surface-low active:bg-surface-high transition-colors cursor-pointer"
+              aria-label="Open navigation drawer"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <h1 className="text-base font-bold tracking-tight text-text-primary">
+              {getScreenTitle()}
+            </h1>
+          </div>
+          
+          {/* Operator Badge on Right */}
+          <div className="flex items-center">
+            <span className="text-[10px] font-bold text-brand-blue bg-accent-blue/10 px-2 py-0.5 rounded-full">
+              Console
+            </span>
+          </div>
         </div>
       </header>
 
@@ -352,85 +354,87 @@ export default function Sidebar() {
       {/* 3. MOBILE BOTTOM NAVIGATION BAR                                           */}
       {/* ========================================================================= */}
       <nav 
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-surface-low flex justify-around items-center h-16 safe-pb"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-surface-low safe-pb"
         style={{ boxShadow: '0px -2px 10px rgba(0,0,0,0.06)' }}
       >
-        {/* Dashboard Tab */}
-        <Link 
-          to="/erp"
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            location.pathname === '/erp' ? 'text-brand-blue' : 'text-text-secondary'
-          }`}
-        >
-          <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
-            location.pathname === '/erp' ? 'bg-accent-blue/15' : 'bg-transparent'
-          }`}>
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-          </div>
-          <span className="text-[9px] font-bold tracking-tight">Home</span>
-        </Link>
+        <div className="flex justify-around items-center h-16">
+          {/* Dashboard Tab */}
+          <Link 
+            to="/erp"
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+              location.pathname === '/erp' ? 'text-brand-blue' : 'text-text-secondary'
+            }`}
+          >
+            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
+              location.pathname === '/erp' ? 'bg-accent-blue/15' : 'bg-transparent'
+            }`}>
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </div>
+            <span className="text-[9px] font-bold tracking-tight">Home</span>
+          </Link>
 
-        {/* Products Tab */}
-        <Link 
-          to="/erp/products"
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            location.pathname.startsWith('/erp/products') ? 'text-brand-blue' : 'text-text-secondary'
-          }`}
-        >
-          <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
-            location.pathname.startsWith('/erp/products') ? 'bg-accent-blue/15' : 'bg-transparent'
-          }`}>
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-          </div>
-          <span className="text-[9px] font-bold tracking-tight">Products</span>
-        </Link>
+          {/* Products Tab */}
+          <Link 
+            to="/erp/products"
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+              location.pathname.startsWith('/erp/products') ? 'text-brand-blue' : 'text-text-secondary'
+            }`}
+          >
+            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
+              location.pathname.startsWith('/erp/products') ? 'bg-accent-blue/15' : 'bg-transparent'
+            }`}>
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <span className="text-[9px] font-bold tracking-tight">Products</span>
+          </Link>
 
-        {/* POS Tab (Signature Action Button in center) */}
-        <Link 
-          to="/pos"
-          className="flex flex-col items-center justify-center flex-1 py-1 text-tertiary"
-        >
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-tertiary-container/10 text-tertiary hover:bg-tertiary-container/20 transition-colors shadow-sm">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <span className="text-[9px] font-bold tracking-tight mt-0.5">POS</span>
-        </Link>
+          {/* POS Tab (Signature Action Button in center) */}
+          <Link 
+            to="/pos"
+            className="flex flex-col items-center justify-center flex-1 py-1 text-tertiary"
+          >
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-tertiary-container/10 text-tertiary hover:bg-tertiary-container/20 transition-colors shadow-sm">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <span className="text-[9px] font-bold tracking-tight mt-0.5">POS</span>
+          </Link>
 
-        {/* Sales/Billing Tab */}
-        <Link 
-          to="/erp/sales"
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            location.pathname.startsWith('/erp/sales') ? 'text-brand-blue' : 'text-text-secondary'
-          }`}
-        >
-          <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
-            location.pathname.startsWith('/erp/sales') ? 'bg-accent-blue/15' : 'bg-transparent'
-          }`}>
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
-            </svg>
-          </div>
-          <span className="text-[9px] font-bold tracking-tight">Sales</span>
-        </Link>
+          {/* Sales/Billing Tab */}
+          <Link 
+            to="/erp/sales"
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+              location.pathname.startsWith('/erp/sales') ? 'text-brand-blue' : 'text-text-secondary'
+            }`}
+          >
+            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
+              location.pathname.startsWith('/erp/sales') ? 'bg-accent-blue/15' : 'bg-transparent'
+            }`}>
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+              </svg>
+            </div>
+            <span className="text-[9px] font-bold tracking-tight">Sales</span>
+          </Link>
 
-        {/* Menu Toggle Tab */}
-        <button 
-          onClick={() => setDrawerOpen(true)}
-          className="flex flex-col items-center justify-center flex-1 py-1 text-text-secondary cursor-pointer"
-        >
-          <div className="flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 bg-transparent">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-            </svg>
-          </div>
-          <span className="text-[9px] font-bold tracking-tight">More</span>
-        </button>
+          {/* Menu Toggle Tab */}
+          <button 
+            onClick={() => setDrawerOpen(true)}
+            className="flex flex-col items-center justify-center flex-1 py-1 text-text-secondary cursor-pointer"
+          >
+            <div className="flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 bg-transparent">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+              </svg>
+            </div>
+            <span className="text-[9px] font-bold tracking-tight">More</span>
+          </button>
+        </div>
       </nav>
 
       {/* ========================================================================= */}

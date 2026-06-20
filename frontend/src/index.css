@@ -139,22 +139,37 @@ input, textarea {
   min-height: 200px;
 }
 
+/* Custom visible thin scrollbar for table scroll wrappers */
+.overflow-x-auto {
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--color-surface-dim) transparent !important;
+}
+
+.overflow-x-auto::-webkit-scrollbar {
+  height: 5px !important;
+  width: 5px !important;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background-color: var(--color-surface-dim) !important;
+  border-radius: 10px !important;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-secondary) !important;
+}
+
 /* Mobile-First Spacing & Layout Overrides */
 @media (max-width: 767.98px) {
-  /* 1. Page Header & Title Compression */
-  h2.text-2xl {
-    font-size: 1.125rem !important; /* text-lg */
-    line-height: 1.5rem !important;
-    margin-bottom: 0.125rem !important;
-  }
-  h1.text-3xl {
-    font-size: 1.25rem !important; /* text-xl */
-    line-height: 1.75rem !important;
-    margin-bottom: 0.125rem !important;
-  }
-  h2.text-2xl + p.text-xs,
-  h1.text-3xl + p.text-xs,
-  div > h2 + p {
+  /* 1. Page Header & Title Hiding - completely hidden on mobile to prevent duplicate screen titles */
+  main h2.text-2xl,
+  main h1.text-3xl,
+  main div:has(> h2.text-2xl),
+  main div:has(> h1.text-3xl) {
     display: none !important;
   }
 
@@ -247,11 +262,14 @@ input, textarea {
     margin-bottom: 0.5rem !important; /* mb-2 */
     font-size: 0.8125rem !important;
   }
-  table {
-    display: block !important;
+  div:has(> table) {
     overflow-x: auto !important;
-    width: 100% !important;
     -webkit-overflow-scrolling: touch !important;
+  }
+  table {
+    display: table !important;
+    width: 100% !important;
+    min-width: 100% !important;
   }
   table th {
     padding-top: 0.3125rem !important; /* py-1.25 */
