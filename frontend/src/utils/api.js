@@ -1,6 +1,16 @@
 const getBaseUrl = () => {
   const isTestDevice = localStorage.getItem('is_test_device') === 'true';
   if (isTestDevice) {
+    // Sanitize any malformed URLs stored in localStorage from previous builds
+    const storedLocal = localStorage.getItem('local_api_url');
+    if (storedLocal && (storedLocal.includes(':3000/') || !storedLocal.startsWith('http'))) {
+      localStorage.removeItem('local_api_url');
+    }
+    const storedProd = localStorage.getItem('production_api_url');
+    if (storedProd && !storedProd.startsWith('http')) {
+      localStorage.removeItem('production_api_url');
+    }
+
     const activeMode = localStorage.getItem('active_api_mode') || 'local';
     if (activeMode === 'production') {
       return localStorage.getItem('production_api_url') || 'https://axor-0r99.onrender.com/api';
