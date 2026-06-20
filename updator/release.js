@@ -57,22 +57,29 @@ function main() {
     process.exit(1);
   }
 
-  // 5. Zip dist/ contents using native Windows PowerShell Compress-Archive
-  console.log('🤐 Zipping web assets...');
+  // 5. Zip dist/ contents using @capgo/cli to ensure correct zip structure and path formats (slashes)
+  console.log('🤐 Zipping web assets with Capgo CLI...');
+  const defaultZipName = `com.axor.app_${newVersion}.zip`;
+  const defaultZipPath = path.join(frontendDir, defaultZipName);
   const zipPath = path.join(frontendDir, 'ota_update.zip');
   
-  // Remove existing zip if any
+  // Remove existing zips if any
   if (fs.existsSync(zipPath)) {
     fs.unlinkSync(zipPath);
   }
+  if (fs.existsSync(defaultZipPath)) {
+    fs.unlinkSync(defaultZipPath);
+  }
 
-  const isWindows = process.platform === 'win32';
-  const zipSuccess = isWindows
-    ? runCommand(`powershell -Command "Compress-Archive -Path dist\\* -DestinationPath ota_update.zip -Force"`, { cwd: frontendDir })
-    : runCommand(`zip -r ../ota_update.zip .`, { cwd: path.join(frontendDir, 'dist') });
+  // Run capgo zip command which automatically handles paths correctly
+  const zipSuccess = runCommand(`npx @capgo/cli bundle zip com.axor.app --path ./dist`, { cwd: frontendDir });
 
-  if (!zipSuccess || !fs.existsSync(zipPath)) {
-    console.error('❌ Failed to zip dist/ contents.');
+  if (zipSuccess && fs.existsSync(defaultZipPath)) {
+    fs.renameSync(defaultZipPath, zipPath);
+  }
+
+  if (!fs.existsSync(zipPath)) {
+    console.error('❌ Failed to zip dist/ contents using Capgo CLI.');
     process.exit(1);
   }
 
