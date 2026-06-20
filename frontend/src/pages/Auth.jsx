@@ -100,10 +100,10 @@ export default function Auth() {
       >
         <div className="mb-6 text-center flex flex-col items-center">
           <img 
-            src="/mobile_app_icon.png"
+            src="/icon_for_website-removebg-preview_no_border.png"
             alt="Axor Logo"
             onClick={handleLogoClick}
-            className="h-16 w-16 mb-2 cursor-pointer select-none object-contain rounded-xl shadow-md transition-transform hover:scale-105"
+            className="h-16 w-16 mb-2 cursor-pointer select-none object-contain transition-transform hover:scale-105"
           />
           <h2 className="text-2xl font-semibold tracking-tight text-text-primary">
             {isLogin ? 'Login to Axon' : 'Create an Account'}
