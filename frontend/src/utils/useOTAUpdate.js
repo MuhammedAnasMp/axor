@@ -62,8 +62,14 @@ export function useOTAUpdate() {
         },
       });
 
-      if (!data || !data.update_available) {
+      if (!data) {
+        // No bundle registered in the backend at all
         setStatus('waiting-for-ui');
+        return;
+      }
+      if (!data.update_available) {
+        // Already on the latest version — show nothing
+        setStatus('idle');
         return;
       }
 
@@ -79,7 +85,7 @@ export function useOTAUpdate() {
       }
     } catch (error) {
       console.error('OTA Error:', error);
-      setStatus('waiting-for-ui');
+      setStatus('idle');
     }
   };
 
