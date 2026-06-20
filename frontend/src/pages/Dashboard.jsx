@@ -186,7 +186,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Dashboard</h2>
-        <p className="text-xs text-text-secondary">Overview of today's key performance indicators and operations.</p>
+        <p className="text-xs text-text-secondary">xxOverview of today's key performance indicators and operations.</p>
       </div>
 
       {/* Metrics Cards Grid */}

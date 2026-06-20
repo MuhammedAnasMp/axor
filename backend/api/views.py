@@ -1675,8 +1675,7 @@ def check_ota_update(request):
 
     # If a newer web asset version is available
     if client_web < target_web:
-        # Serve dynamically via serve_ota_download to avoid relying on Render's local disk
-        bundle_url = request.build_absolute_uri(f"/api/ota/download/{latest_update.version}/")
+        bundle_url = request.build_absolute_uri(latest_update.zip_file.url)
         return Response({
             "update_available": True,
             "update_type": "OTA_UPDATE",
@@ -1688,29 +1687,4 @@ def check_ota_update(request):
         })
 
     return Response({"update_available": False})
-
-
-@api_view(['GET'])
-@permission_classes([permissions.AllowAny])
-def serve_ota_download(request, version):
-    """
-    Serves the binary bytes of the registered OTA ZIP directly from the database
-    to support persistent serving on ephemeral hosting platforms like Render.
-    """
-    from django.http import HttpResponse, Http404
-    from .models import OTAUpdateBundle
-
-    try:
-        bundle = OTAUpdateBundle.objects.get(version=version)
-        if not bundle.zip_data:
-            # Fallback to local disk file if binary data is not populated
-            if bundle.zip_file:
-                return HttpResponse(bundle.zip_file.read(), content_type="application/zip")
-            raise Http404("Update file not found.")
-
-        response = HttpResponse(bundle.zip_data, content_type="application/zip")
-        response['Content-Disposition'] = f'attachment; filename="update_v{version}.zip"'
-        return response
-    except OTAUpdateBundle.DoesNotExist:
-        raise Http404("Update bundle not found.")
 

@@ -359,11 +359,6 @@ class OTAUpdateBundle(models.Model):
         validators=[FileExtensionValidator(allowed_extensions=['zip'])],
         help_text="ZIP file containing Vite build assets (index.html, assets/, etc.)"
     )
-    zip_data = models.BinaryField(
-        null=True, 
-        blank=True,
-        help_text="Binary contents of the ZIP file stored in the database for Render persistent serving"
-    )
     checksum = models.CharField(
         max_length=64, 
         blank=True, 
@@ -391,27 +386,22 @@ class OTAUpdateBundle(models.Model):
     def save(self, *args, **kwargs):
         if self.zip_file and not self.checksum:
             sha256 = hashlib.sha256()
-            file_content = b''
             for chunk in self.zip_file.chunks():
                 sha256.update(chunk)
-                file_content += chunk
             self.checksum = sha256.hexdigest()
-            self.zip_data = file_content
             
         super().save(*args, **kwargs)
-        
-        # Delete the physical file from local disk immediately since it is stored in database (zip_data)
-        if self.zip_file:
-            try:
-                self.zip_file.delete(save=False)
-            except Exception:
-                pass
         
         # Keep only the latest 2 bundles (current one and the previous one)
         all_bundles = type(self).objects.order_by('-created_at')
         if all_bundles.count() > 2:
             bundles_to_delete = all_bundles[2:]
             for old_bundle in bundles_to_delete:
+                if old_bundle.zip_file:
+                    try:
+                        old_bundle.zip_file.delete(save=False)
+                    except Exception:
+                        pass
                 old_bundle.delete()
 
     def __str__(self):
