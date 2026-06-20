@@ -400,16 +400,18 @@ class OTAUpdateBundle(models.Model):
             
         super().save(*args, **kwargs)
         
+        # Delete the physical file from local disk immediately since it is stored in database (zip_data)
+        if self.zip_file:
+            try:
+                self.zip_file.delete(save=False)
+            except Exception:
+                pass
+        
         # Keep only the latest 2 bundles (current one and the previous one)
         all_bundles = type(self).objects.order_by('-created_at')
         if all_bundles.count() > 2:
             bundles_to_delete = all_bundles[2:]
             for old_bundle in bundles_to_delete:
-                if old_bundle.zip_file:
-                    try:
-                        old_bundle.zip_file.delete(save=False)
-                    except Exception:
-                        pass
                 old_bundle.delete()
 
     def __str__(self):

@@ -18,7 +18,8 @@ function runCommand(command, options = {}) {
 }
 
 function main() {
-  const packageJsonPath = path.join(__dirname, 'package.json');
+  const frontendDir = path.join(__dirname, '..', 'frontend');
+  const packageJsonPath = path.join(frontendDir, 'package.json');
   
   if (!fs.existsSync(packageJsonPath)) {
     console.error('package.json not found in frontend directory.');
@@ -48,7 +49,7 @@ function main() {
 
   // 4. Run Vite build (compiles react app with injected __APP_VERSION__)
   console.log('📦 Compiling frontend assets...');
-  const buildSuccess = runCommand('npx vite build', { cwd: __dirname });
+  const buildSuccess = runCommand('npx vite build', { cwd: frontendDir });
   if (!buildSuccess) {
     console.error('❌ Build failed. Restoring original version...');
     packageJson.version = oldVersion;
@@ -58,7 +59,7 @@ function main() {
 
   // 5. Zip dist/ contents using native Windows PowerShell Compress-Archive
   console.log('🤐 Zipping web assets...');
-  const zipPath = path.join(__dirname, 'ota_update.zip');
+  const zipPath = path.join(frontendDir, 'ota_update.zip');
   
   // Remove existing zip if any
   if (fs.existsSync(zipPath)) {
@@ -67,29 +68,33 @@ function main() {
 
   const isWindows = process.platform === 'win32';
   const zipSuccess = isWindows
-    ? runCommand(`powershell -Command "Compress-Archive -Path dist\\* -DestinationPath ota_update.zip -Force"`, { cwd: __dirname })
-    : runCommand(`zip -r ../ota_update.zip .`, { cwd: path.join(__dirname, 'dist') });
+    ? runCommand(`powershell -Command "Compress-Archive -Path dist\\* -DestinationPath ota_update.zip -Force"`, { cwd: frontendDir })
+    : runCommand(`zip -r ../ota_update.zip .`, { cwd: path.join(frontendDir, 'dist') });
 
   if (!zipSuccess || !fs.existsSync(zipPath)) {
     console.error('❌ Failed to zip dist/ contents.');
     process.exit(1);
   }
 
-  const uiOnly = process.argv.includes('--ui-only');
-  if (uiOnly) {
-    console.log(`\n🎉 Success! UI update zip created at: ${zipPath}\n`);
-    return;
-  }
-
-  // 6. Run Django database registration script
-  console.log('💾 Registering bundle in Django backend...');
+  // 6. Run Django database registration scripts
+  console.log('💾 Registering bundle in Django databases...');
   let pythonCmd = 'python';
   const venvPythonPath = path.join(__dirname, '..', 'backend', 'venv', 'Scripts', 'python.exe');
   if (fs.existsSync(venvPythonPath)) {
     pythonCmd = `"${venvPythonPath}"`;
   }
-  const registerSuccess = runCommand(
-    `${pythonCmd} ../backend/register_ota.py ${newVersion} ota_update.zip`,
+  
+  // Register in LOCAL database
+  console.log('Registering in LOCAL database...');
+  const localRegisterSuccess = runCommand(
+    `${pythonCmd} "${path.join(__dirname, 'register_ota.py')}" ${newVersion} "${zipPath}"`,
+    { cwd: __dirname }
+  );
+
+  // Register in PRODUCTION database (Neon)
+  console.log('Registering in PRODUCTION Neon database...');
+  const prodRegisterSuccess = runCommand(
+    `${pythonCmd} "${path.join(__dirname, 'register_ota.py')}" ${newVersion} "${zipPath}" --prod`,
     { cwd: __dirname }
   );
 
@@ -98,10 +103,10 @@ function main() {
     fs.unlinkSync(zipPath);
   }
 
-  if (registerSuccess) {
-    console.log(`\n🎉 Success! OTA Update Bundle v${newVersion} is published and active.\n`);
+  if (localRegisterSuccess && prodRegisterSuccess) {
+    console.log(`\n🎉 Success! OTA Update Bundle v${newVersion} is registered in testing mode on both LOCAL and PRODUCTION.\n`);
   } else {
-    console.error('\n❌ Failed to register update in database.\n');
+    console.error('\n❌ Failed to register update in one or both databases.\n');
     process.exit(1);
   }
 }

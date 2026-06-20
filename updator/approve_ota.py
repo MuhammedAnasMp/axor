@@ -1,5 +1,7 @@
 import os
 import sys
+from pathlib import Path
+from dotenv import load_dotenv
 
 def main():
     # Process custom arguments
@@ -15,22 +17,22 @@ def main():
         
     if len(args) < 1:
         print("Usage: python approve_ota.py <version> [--prod]")
-        print("Options:")
-        print("  --prod    Approve the version on the PRODUCTION database")
         sys.exit(1)
         
     version = args[0]
     
-    # Set up Django environment
+    # Set up Django environment and sys.path
+    base_dir = Path(__file__).resolve().parent
+    backend_dir = base_dir.parent / 'backend'
+    sys.path.append(str(backend_dir))
+    
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'axon_backend.settings')
     
     if is_prod:
-        from pathlib import Path
-        from dotenv import load_dotenv
-        base_dir = Path(__file__).resolve().parent
-        load_dotenv(base_dir / '.env.production', override=True)
+        load_dotenv(backend_dir / '.env.production', override=True)
         print("Connecting to PRODUCTION Neon database...")
     else:
+        load_dotenv(backend_dir / '.env', override=True)
         print("Connecting to LOCAL database...")
         
     import django
