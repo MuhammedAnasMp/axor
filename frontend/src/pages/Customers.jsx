@@ -431,6 +431,7 @@ export default function Customers() {
             setPageSize={pag.setPageSize}
             totalCount={pag.totalCount}
             totalPages={pag.totalPages}
+            loading={pag.loading}
           />
         </div>
       </div>

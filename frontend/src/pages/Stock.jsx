@@ -323,25 +323,27 @@ export default function Stock() {
       </div>
 
       {/* Tabs Menu */}
-      <div className="flex border-b border-surface-low space-x-6 text-sm font-medium">
-        <a 
-          href="/erp/stock" 
-          className={`pb-2 ${currentTab === 'current' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-        >
-          Current Stock
-        </a>
-        <a 
-          href="/erp/stock?tab=history" 
-          className={`pb-2 ${currentTab === 'history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-        >
-          Stock History Log
-        </a>
-        <a 
-          href="/erp/stock?tab=damaged" 
-          className={`pb-2 ${currentTab === 'damaged' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-        >
-          Damaged Items
-        </a>
+      <div className="tabs-container border-b border-surface-low">
+        <div className="tabs-scrollable space-x-6 text-sm font-medium">
+          <a 
+            href="/erp/stock" 
+            className={`pb-2 ${currentTab === 'current' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Current Stock
+          </a>
+          <a 
+            href="/erp/stock?tab=history" 
+            className={`pb-2 ${currentTab === 'history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Stock History Log
+          </a>
+          <a 
+            href="/erp/stock?tab=damaged" 
+            className={`pb-2 ${currentTab === 'damaged' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Damaged Items
+          </a>
+        </div>
       </div>
 
       {/* Current Stock Tab */}
@@ -436,6 +438,7 @@ export default function Stock() {
               setPageSize={stockPag.setPageSize}
               totalCount={stockPag.totalCount}
               totalPages={stockPag.totalPages}
+              loading={stockPag.loading}
             />
           </div>
         </div>
@@ -516,6 +519,7 @@ export default function Stock() {
               setPageSize={historyPag.setPageSize}
               totalCount={historyPag.totalCount}
               totalPages={historyPag.totalPages}
+              loading={historyPag.loading}
             />
           </div>
         </div>
@@ -587,6 +591,7 @@ export default function Stock() {
               setPageSize={damagedPag.setPageSize}
               totalCount={damagedPag.totalCount}
               totalPages={damagedPag.totalPages}
+              loading={damagedPag.loading}
             />
           </div>
         </div>

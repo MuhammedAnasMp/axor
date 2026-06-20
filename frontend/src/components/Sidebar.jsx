@@ -440,7 +440,7 @@ export default function Sidebar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setDrawerOpen(false)}
-              className="md:hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs"
+              className="md:hidden fixed inset-0 z-[990] bg-black/45 backdrop-blur-xs"
             />
 
             {/* Left drawer panel */}
@@ -449,7 +449,7 @@ export default function Sidebar() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 27, stiffness: 240 }}
-              className="md:hidden fixed top-0 bottom-0 left-0 z-55 w-72 bg-white flex flex-col shadow-2xl safe-pt safe-pb h-full"
+              className="md:hidden fixed top-0 bottom-0 left-0 z-[1000] w-72 bg-white flex flex-col shadow-2xl safe-pt safe-pb h-full"
             >
               {/* Drawer Brand Header */}
               <div className="flex h-20 items-center justify-between px-5 border-b border-surface-low bg-surface-low/50">

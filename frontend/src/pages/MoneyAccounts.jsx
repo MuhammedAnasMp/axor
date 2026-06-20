@@ -340,6 +340,7 @@ export default function MoneyAccounts() {
               setPageSize={transferPag.setPageSize}
               totalCount={transferPag.totalCount}
               totalPages={transferPag.totalPages}
+              loading={transferPag.loading}
             />
           </div>
         </div>

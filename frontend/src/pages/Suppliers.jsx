@@ -597,6 +597,7 @@ export default function Suppliers() {
             setPageSize={pag.setPageSize}
             totalCount={pag.totalCount}
             totalPages={pag.totalPages}
+            loading={pag.loading}
           />
         </div>
       </div>

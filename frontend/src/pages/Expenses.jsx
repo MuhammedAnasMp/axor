@@ -488,6 +488,7 @@ export default function Expenses() {
               setPageSize={pag.setPageSize}
               totalCount={pag.totalCount}
               totalPages={pag.totalPages}
+              loading={pag.loading}
             />
           </div>
         </div>
@@ -633,6 +634,7 @@ export default function Expenses() {
               setPageSize={incomePag.setPageSize}
               totalCount={incomePag.totalCount}
               totalPages={incomePag.totalPages}
+              loading={incomePag.loading}
             />
           </div>
         </div>

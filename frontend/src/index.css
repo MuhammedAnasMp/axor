@@ -91,3 +91,46 @@ input, textarea {
   opacity: 0.9;
 }
 
+/* Scrollable tabs with linear-gradient fade effect on right */
+.tabs-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.tabs-scrollable {
+  display: flex;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  white-space: nowrap;
+  flex-wrap: nowrap;
+}
+
+.tabs-scrollable::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.tabs-scrollable > * {
+  flex-shrink: 0;
+}
+
+.tabs-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 48px;
+  background: linear-gradient(to right, transparent, var(--color-surface));
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Responsive Table cells prevent wrapping/squishing */
+.overflow-x-auto table th,
+.overflow-x-auto table td {
+  white-space: nowrap !important;
+}
+

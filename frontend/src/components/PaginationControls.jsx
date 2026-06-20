@@ -6,9 +6,11 @@ export default function PaginationControls({
   pageSize, 
   setPageSize, 
   totalCount, 
-  totalPages 
+  totalPages,
+  loading
 }) {
-  const startEntry = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  if (totalCount === 0 || loading) return null;
+  const startEntry = (page - 1) * pageSize + 1;
   const endEntry = Math.min(page * pageSize, totalCount);
 
   // Generate page numbers to show

@@ -186,25 +186,27 @@ export default function Sales() {
       </div>
 
       {/* Tabs Menu */}
-      <div className="flex border-b border-surface-low space-x-6 text-sm font-medium">
-        <a 
-          href="/erp/sales" 
-          className={`pb-2 ${currentTab === 'create' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-        >
-          Create Sales Invoice
-        </a>
-        <a 
-          href="/erp/sales?tab=history" 
-          className={`pb-2 ${currentTab === 'history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-        >
-          Sales History Log
-        </a>
-        <a 
-          href="/erp/sales?tab=payments" 
-          className={`pb-2 ${currentTab === 'payments' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-        >
-          Customer Payments Log
-        </a>
+      <div className="tabs-container border-b border-surface-low">
+        <div className="tabs-scrollable space-x-6 text-sm font-medium">
+          <a 
+            href="/erp/sales" 
+            className={`pb-2 ${currentTab === 'create' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Create Sales Invoice
+          </a>
+          <a 
+            href="/erp/sales?tab=history" 
+            className={`pb-2 ${currentTab === 'history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Sales History Log
+          </a>
+          <a 
+            href="/erp/sales?tab=payments" 
+            className={`pb-2 ${currentTab === 'payments' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Customer Payments Log
+          </a>
+        </div>
       </div>
 
       {/* Create Sales Invoice */}
@@ -243,8 +245,8 @@ export default function Sales() {
               {/* Add Line Item */}
               <div className="rounded border border-surface-low p-4 bg-surface-lowest space-y-3">
                 <span className="text-xs font-semibold text-brand-blue">Add Product to Invoice</span>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <div className="sm:col-span-2">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="md:col-span-2">
                     <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Select Product</label>
                     <select
                       value={selectedProduct}
@@ -395,7 +397,7 @@ export default function Sales() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <label className="block text-xs font-semibold text-text-secondary mb-1">Discount (INR)</label>
                     <input
@@ -519,6 +521,7 @@ export default function Sales() {
               setPageSize={salesPag.setPageSize}
               totalCount={salesPag.totalCount}
               totalPages={salesPag.totalPages}
+              loading={salesPag.loading}
             />
           </div>
         </div>
@@ -587,6 +590,7 @@ export default function Sales() {
               setPageSize={paymentsPag.setPageSize}
               totalCount={paymentsPag.totalCount}
               totalPages={paymentsPag.totalPages}
+              loading={paymentsPag.loading}
             />
           </div>
         </div>

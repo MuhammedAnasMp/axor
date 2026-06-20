@@ -1414,6 +1414,7 @@ export default function Employees() {
             setPageSize={pag.setPageSize}
             totalCount={pag.totalCount}
             totalPages={pag.totalPages}
+            loading={pag.loading}
           />
         </div>
       </div>

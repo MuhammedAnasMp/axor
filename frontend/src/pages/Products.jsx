@@ -334,7 +334,7 @@ export default function Products() {
       {!isMobile && (
         <h3 className="text-sm font-semibold text-text-primary">{editingProduct ? `Edit Product: ${editingProduct.name}` : 'Add New Product'}</h3>
       )}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className="block text-xs font-semibold text-text-secondary mb-1">Product Name</label>
           <input
@@ -392,7 +392,7 @@ export default function Products() {
             className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
           />
         </div>
-        <div className="sm:col-span-2">
+        <div className="md:col-span-2">
           <label className="block text-xs font-semibold text-text-secondary mb-1">Description</label>
           <textarea
             value={description}
@@ -400,7 +400,7 @@ export default function Products() {
             className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
           />
         </div>
-        <div className="sm:col-span-2">
+        <div className="md:col-span-2">
           <label className="block text-xs font-semibold text-text-secondary mb-1">Product Images</label>
           <div className="space-y-3">
             <input
@@ -474,37 +474,39 @@ export default function Products() {
       </div>
 
       {/* Tabs Menu */}
-      <div className="flex border-b border-surface-low space-x-6 text-sm font-medium">
-        <a
-          href="/erp/products"
-          className={`pb-2 ${currentTab === 'products' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-        >
-          Product Catalog
-        </a>
-        <a
-          href="/erp/products?tab=mappings"
-          className={`pb-2 ${currentTab === 'mappings' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-        >
-          Supplier Mappings
-        </a>
-        <a
-          href="/erp/products?tab=cost-history"
-          className={`pb-2 ${currentTab === 'cost-history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-        >
-          Cost History
-        </a>
-        <a
-          href="/erp/products?tab=categories"
-          className={`pb-2 ${currentTab === 'categories' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-        >
-          Categories
-        </a>
-        <a
-          href="/erp/products?tab=brands"
-          className={`pb-2 ${currentTab === 'brands' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-        >
-          Brands
-        </a>
+      <div className="tabs-container border-b border-surface-low">
+        <div className="tabs-scrollable space-x-6 text-sm font-medium">
+          <a
+            href="/erp/products"
+            className={`pb-2 ${currentTab === 'products' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Product Catalog
+          </a>
+          <a
+            href="/erp/products?tab=mappings"
+            className={`pb-2 ${currentTab === 'mappings' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Supplier Mappings
+          </a>
+          <a
+            href="/erp/products?tab=cost-history"
+            className={`pb-2 ${currentTab === 'cost-history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Cost History
+          </a>
+          <a
+            href="/erp/products?tab=categories"
+            className={`pb-2 ${currentTab === 'categories' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Categories
+          </a>
+          <a
+            href="/erp/products?tab=brands"
+            className={`pb-2 ${currentTab === 'brands' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Brands
+          </a>
+        </div>
       </div>
 
       {/* Product Catalog Tab */}
@@ -626,6 +628,7 @@ export default function Products() {
               setPageSize={prodPag.setPageSize}
               totalCount={prodPag.totalCount}
               totalPages={prodPag.totalPages}
+              loading={prodPag.loading}
             />
           </div>
         </div>
@@ -723,6 +726,7 @@ export default function Products() {
                 setPageSize={catPag.setPageSize}
                 totalCount={catPag.totalCount}
                 totalPages={catPag.totalPages}
+                loading={catPag.loading}
               />
             </div>
           </div>
@@ -821,6 +825,7 @@ export default function Products() {
                 setPageSize={brandPag.setPageSize}
                 totalCount={brandPag.totalCount}
                 totalPages={brandPag.totalPages}
+                loading={brandPag.loading}
               />
             </div>
           </div>
@@ -1016,6 +1021,7 @@ export default function Products() {
                 setPageSize={mappingPag.setPageSize}
                 totalCount={mappingPag.totalCount}
                 totalPages={mappingPag.totalPages}
+                loading={mappingPag.loading}
               />
             </div>
           </div>
@@ -1088,6 +1094,7 @@ export default function Products() {
               setPageSize={costHistoryPag.setPageSize}
               totalCount={costHistoryPag.totalCount}
               totalPages={costHistoryPag.totalPages}
+              loading={costHistoryPag.loading}
             />
           </div>
         </div>

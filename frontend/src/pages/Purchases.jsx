@@ -1028,25 +1028,27 @@ export default function Purchases() {
       </div>
 
       {/* Tabs Menu */}
-      <div className="flex border-b border-surface-low space-x-6 text-sm font-medium">
-        <a
-          href="/erp/purchases"
-          className={`pb-2 ${currentTab === 'create' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-        >
-          Create Purchase Order
-        </a>
-        <a
-          href="/erp/purchases?tab=receive"
-          className={`pb-2 ${currentTab === 'receive' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-        >
-          Receive Products
-        </a>
-        <a
-          href="/erp/purchases?tab=history"
-          className={`pb-2 ${currentTab === 'history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-        >
-          Purchase History Log
-        </a>
+      <div className="tabs-container border-b border-surface-low">
+        <div className="tabs-scrollable space-x-6 text-sm font-medium">
+          <a
+            href="/erp/purchases"
+            className={`pb-2 ${currentTab === 'create' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Create Purchase Order
+          </a>
+          <a
+            href="/erp/purchases?tab=receive"
+            className={`pb-2 ${currentTab === 'receive' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Receive Products
+          </a>
+          <a
+            href="/erp/purchases?tab=history"
+            className={`pb-2 ${currentTab === 'history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Purchase History Log
+          </a>
+        </div>
       </div>
 
       {/* Create Purchase Order */}
@@ -1974,6 +1976,7 @@ export default function Purchases() {
               setPageSize={receivePag.setPageSize}
               totalCount={receivePag.totalCount}
               totalPages={receivePag.totalPages}
+              loading={receivePag.loading}
             />
           </div>
         </div>
@@ -2141,6 +2144,7 @@ export default function Purchases() {
               setPageSize={historyPag.setPageSize}
               totalCount={historyPag.totalCount}
               totalPages={historyPag.totalPages}
+              loading={historyPag.loading}
             />
           </div>
         </div>
