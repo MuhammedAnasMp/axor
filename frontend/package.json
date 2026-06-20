@@ -1,12 +1,13 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "1.0.22",
+  "version": "1.0.23",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build-ui": "node ../updator/release.js --ui-only",
+    "build--ui": "npm run build-ui",
     "lint": "eslint .",
     "preview": "vite preview"
   },

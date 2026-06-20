@@ -105,6 +105,34 @@ function main() {
 
   if (localRegisterSuccess && prodRegisterSuccess) {
     console.log(`\n🎉 Success! OTA Update Bundle v${newVersion} is registered in testing mode on both LOCAL and PRODUCTION.\n`);
+
+    // 8. Git commit and push changes
+    console.log('🐙 Staging changes and committing to Git...');
+    const rootDir = path.join(__dirname, '..');
+    const gitAddSuccess = runCommand('git add .', { cwd: rootDir });
+    if (gitAddSuccess) {
+      const commitMessage = `release: UI update v${newVersion}`;
+      const gitCommitSuccess = runCommand(`git commit -m "${commitMessage}"`, { cwd: rootDir });
+      if (gitCommitSuccess) {
+        console.log('Pushing changes to GitHub...');
+        let branch = 'master';
+        try {
+          branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: rootDir }).toString().trim();
+        } catch (e) {
+          console.warn('Failed to detect current branch name, defaulting to master.');
+        }
+        const gitPushSuccess = runCommand(`git push origin ${branch}`, { cwd: rootDir });
+        if (gitPushSuccess) {
+          console.log(`\n✅ Successfully pushed v${newVersion} to GitHub on branch ${branch}!\n`);
+        } else {
+          console.error('\n❌ Git push failed.\n');
+        }
+      } else {
+        console.warn('\n⚠️ Git commit failed or nothing to commit.\n');
+      }
+    } else {
+      console.error('\n❌ Git add failed.\n');
+    }
   } else {
     console.error('\n❌ Failed to register update in one or both databases.\n');
     process.exit(1);
