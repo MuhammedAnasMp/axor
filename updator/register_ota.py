@@ -83,6 +83,7 @@ def main():
             checksum=checksum,
             is_active=True,
             is_testing=is_testing,
+            is_mandatory=True,
             release_notes=f"Release version {version} (Testing: {is_testing})"
         )
         bundle.save()
