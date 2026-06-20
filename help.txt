@@ -8,3 +8,9 @@ npx cap sync
 
 npm run build-ui
 
+
+
+npm run build-ui - just build ZIP + update DB (no git push)
+npm run build-ui push - build + update DB + git commit + push to GitHub
+npm run build-ui publish - publish current testing version to all users (approve)
+npm run build-ui remove - remove the OTA testing version

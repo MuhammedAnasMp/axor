@@ -210,9 +210,7 @@ export default function Sidebar() {
         <div className="flex h-16 items-center justify-between px-4 border-b border-surface-low">
           {!collapsed && (
             <div className="flex items-center space-x-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded bg-brand-blue text-white font-bold">
-                A
-              </div>
+              <img src="/icon_for_website-removebg-preview_no_border.png" alt="Axon Logo" className="h-8 w-8 object-contain" />
               <span className="font-semibold text-lg tracking-tight">Axon ERP</span>
             </div>
           )}
@@ -461,9 +459,7 @@ export default function Sidebar() {
               {/* Drawer Brand Header */}
               <div className="flex h-20 items-center justify-between px-5 border-b border-surface-low bg-surface-low/50">
                 <div className="flex items-center space-x-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-blue text-white font-black text-lg shadow-sm">
-                    A
-                  </div>
+                  <img src="/icon_for_website-removebg-preview_no_border.png" alt="Axon Logo" className="h-10 w-10 object-contain filter drop-shadow-sm" />
                   <div>
                     <span className="font-extrabold text-base tracking-tight text-text-primary">Axon Business</span>
                     <span className="block text-[10px] font-semibold text-text-secondary">Enterprise Resource Console</span>

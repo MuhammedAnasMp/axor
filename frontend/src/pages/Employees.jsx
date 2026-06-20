@@ -690,7 +690,7 @@ export default function Employees() {
                               type="text"
                               required
                               value={profileUsername}
-                              onChange={(e) => setProfileUsername(e.target.value)}
+                              onChange={(e) => setProfileUsername(e.target.value.toLowerCase())}
                               className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
                             />
                           </div>
@@ -1214,7 +1214,7 @@ export default function Employees() {
                 type="text"
                 required
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => setUsername(e.target.value.toLowerCase())}
                 className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
               />
             </div>

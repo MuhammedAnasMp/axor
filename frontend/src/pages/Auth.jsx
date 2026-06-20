@@ -98,13 +98,13 @@ export default function Auth() {
         className="w-full max-w-md rounded-2xl bg-white p-8 shadow-md"
         style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}
       >
-        <div className="mb-6 text-center">
-          <div
+        <div className="mb-6 text-center flex flex-col items-center">
+          <img 
+            src="/mobile_app_icon.png"
+            alt="Axor Logo"
             onClick={handleLogoClick}
-            className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-brand-blue text-white font-bold text-xl cursor-pointer select-none"
-          >
-            A
-          </div>
+            className="h-16 w-16 mb-2 cursor-pointer select-none object-contain rounded-xl shadow-md transition-transform hover:scale-105"
+          />
           <h2 className="text-2xl font-semibold tracking-tight text-text-primary">
             {isLogin ? 'Login to Axon' : 'Create an Account'}
           </h2>
@@ -126,7 +126,7 @@ export default function Auth() {
               type="text"
               required
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => setUsername(e.target.value.toLowerCase())}
               className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue"
             />
           </div>
