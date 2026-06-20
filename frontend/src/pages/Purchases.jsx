@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
@@ -1030,24 +1030,24 @@ export default function Purchases() {
       {/* Tabs Menu */}
       <div className="tabs-container border-b border-surface-low">
         <div className="tabs-scrollable space-x-6 text-sm font-medium">
-          <a
-            href="/erp/purchases"
+          <Link
+            to="/erp/purchases"
             className={`pb-2 ${currentTab === 'create' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Create Purchase Order
-          </a>
-          <a
-            href="/erp/purchases?tab=receive"
+          </Link>
+          <Link
+            to="/erp/purchases?tab=receive"
             className={`pb-2 ${currentTab === 'receive' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Receive Products
-          </a>
-          <a
-            href="/erp/purchases?tab=history"
+          </Link>
+          <Link
+            to="/erp/purchases?tab=history"
             className={`pb-2 ${currentTab === 'history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Purchase History Log
-          </a>
+          </Link>
         </div>
       </div>
 

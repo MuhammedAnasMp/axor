@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
@@ -128,18 +128,18 @@ export default function MoneyAccounts() {
 
       {/* Tabs Menu */}
       <div className="flex border-b border-surface-low space-x-6 text-sm font-medium">
-        <a
-          href="/erp/accounts"
+        <Link
+          to="/erp/accounts"
           className={`pb-2 ${currentTab === 'accounts' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
         >
           Cash & Banks
-        </a>
-        <a
-          href="/erp/accounts?tab=transfers"
+        </Link>
+        <Link
+          to="/erp/accounts?tab=transfers"
           className={`pb-2 ${currentTab === 'transfers' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
         >
           Transfers Log
-        </a>
+        </Link>
       </div>
 
       {/* Cash & Banks Tab */}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
@@ -217,34 +217,34 @@ export default function Expenses() {
       <div className="space-y-4">
         {/* Main Tabs (Horizontal) */}
         <div className="flex border-b border-surface-low space-x-6 text-sm font-semibold">
-          <a 
-            href="/erp/expenses" 
+          <Link 
+            to="/erp/expenses" 
             className={`pb-2 transition ${mainTab === 'expense' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary hover:text-text-primary'}`}
           >
             Expenses
-          </a>
-          <a 
-            href="/erp/expenses?tab=income" 
+          </Link>
+          <Link 
+            to="/erp/expenses?tab=income" 
             className={`pb-2 transition ${mainTab === 'income' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary hover:text-text-primary'}`}
           >
             Incomes
-          </a>
+          </Link>
         </div>
 
         {/* Secondary Tabs (Sub-navigation) */}
         <div className="flex space-x-4 text-xs font-semibold bg-surface-low/60 p-1 rounded-lg w-fit shadow-inner">
-          <a 
-            href={mainTab === 'expense' ? '/erp/expenses' : '/erp/expenses?tab=income'} 
+          <Link 
+            to={mainTab === 'expense' ? '/erp/expenses' : '/erp/expenses?tab=income'} 
             className={`px-4 py-1.5 rounded-md transition ${subTab === 'add' ? 'bg-white text-brand-blue shadow font-bold' : 'text-text-secondary hover:text-text-primary'}`}
           >
             {mainTab === 'expense' ? 'Add Expense' : 'Add Income'}
-          </a>
-          <a 
-            href={mainTab === 'expense' ? '/erp/expenses?tab=history' : '/erp/expenses?tab=income-history'} 
+          </Link>
+          <Link 
+            to={mainTab === 'expense' ? '/erp/expenses?tab=history' : '/erp/expenses?tab=income-history'} 
             className={`px-4 py-1.5 rounded-md transition ${subTab === 'history' ? 'bg-white text-brand-blue shadow font-bold' : 'text-text-secondary hover:text-text-primary'}`}
           >
             History Log
-          </a>
+          </Link>
         </div>
       </div>
 

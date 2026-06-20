@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
@@ -476,36 +476,36 @@ export default function Products() {
       {/* Tabs Menu */}
       <div className="tabs-container border-b border-surface-low">
         <div className="tabs-scrollable space-x-6 text-sm font-medium">
-          <a
-            href="/erp/products"
+          <Link
+            to="/erp/products"
             className={`pb-2 ${currentTab === 'products' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Product Catalog
-          </a>
-          <a
-            href="/erp/products?tab=mappings"
+          </Link>
+          <Link
+            to="/erp/products?tab=mappings"
             className={`pb-2 ${currentTab === 'mappings' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Supplier Mappings
-          </a>
-          <a
-            href="/erp/products?tab=cost-history"
+          </Link>
+          <Link
+            to="/erp/products?tab=cost-history"
             className={`pb-2 ${currentTab === 'cost-history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Cost History
-          </a>
-          <a
-            href="/erp/products?tab=categories"
+          </Link>
+          <Link
+            to="/erp/products?tab=categories"
             className={`pb-2 ${currentTab === 'categories' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Categories
-          </a>
-          <a
-            href="/erp/products?tab=brands"
+          </Link>
+          <Link
+            to="/erp/products?tab=brands"
             className={`pb-2 ${currentTab === 'brands' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Brands
-          </a>
+          </Link>
         </div>
       </div>
 

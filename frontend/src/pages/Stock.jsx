@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
@@ -325,24 +325,24 @@ export default function Stock() {
       {/* Tabs Menu */}
       <div className="tabs-container border-b border-surface-low">
         <div className="tabs-scrollable space-x-6 text-sm font-medium">
-          <a 
-            href="/erp/stock" 
+          <Link 
+            to="/erp/stock" 
             className={`pb-2 ${currentTab === 'current' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Current Stock
-          </a>
-          <a 
-            href="/erp/stock?tab=history" 
+          </Link>
+          <Link 
+            to="/erp/stock?tab=history" 
             className={`pb-2 ${currentTab === 'history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Stock History Log
-          </a>
-          <a 
-            href="/erp/stock?tab=damaged" 
+          </Link>
+          <Link 
+            to="/erp/stock?tab=damaged" 
             className={`pb-2 ${currentTab === 'damaged' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Damaged Items
-          </a>
+          </Link>
         </div>
       </div>
 
