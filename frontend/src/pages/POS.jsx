@@ -3,16 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../utils/api';
 import { Spinner } from '../components/Skeleton';
+import MobileBottomSheet from '../components/MobileBottomSheet';
 
 function POSProductSkeleton() {
   return (
-    <div className="animate-pulse flex flex-col bg-white rounded-lg border border-surface-low p-3 shadow-sm text-left">
-      <div className="h-20 w-full rounded bg-surface-dim/50 border border-surface-low mb-2" />
-      <div className="h-3.5 w-3/4 bg-surface-dim/40 rounded mb-1.5" />
-      <div className="h-2.5 w-1/2 bg-surface-dim/30 rounded mb-2" />
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-surface-low">
-        <div className="h-3.5 w-12 bg-surface-dim/40 rounded" />
-        <div className="h-3.5 w-16 bg-surface-dim/30 rounded" />
+    <div className="animate-pulse flex flex-row sm:flex-col bg-white rounded-lg border border-surface-low p-2 sm:p-3 shadow-sm text-left items-center sm:items-start w-full">
+      <div className="h-10 w-10 sm:h-20 sm:w-full rounded bg-surface-dim/50 border border-surface-low flex-shrink-0 sm:mb-2 mr-3 sm:mr-0" />
+      <div className="flex-1 min-w-0 flex flex-col justify-between sm:w-full">
+        <div>
+          <div className="h-3.5 w-3/4 bg-surface-dim/40 rounded mb-1" />
+          <div className="h-2.5 w-1/2 bg-surface-dim/30 rounded mb-1" />
+        </div>
+        <div className="flex items-center justify-between mt-1 sm:mt-2 pt-1 border-t border-surface-low sm:w-full">
+          <div className="h-3 w-12 bg-surface-dim/40 rounded" />
+          <div className="h-3 w-16 bg-surface-dim/30 rounded" />
+        </div>
       </div>
     </div>
   );
@@ -38,6 +43,7 @@ export default function POS() {
   // Receipt modal state
   const [receiptSale, setReceiptSale] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [showCheckoutSheet, setShowCheckoutSheet] = useState(false);
 
   // Price Override modal state
   const [showOverrideModal, setShowOverrideModal] = useState(false);
@@ -194,6 +200,7 @@ export default function POS() {
         setTax('0');
         setSelectedCustomer('');
         setShowReceipt(true);
+        setShowCheckoutSheet(false);
         loadData();
       })
       .catch((err) => alert(err.message))
@@ -206,6 +213,100 @@ export default function POS() {
       currency: 'INR'
     }).format(val);
   };
+
+  const renderCheckoutForm = (isMobile = false) => (
+    <div className="space-y-3 text-left">
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Select Customer</label>
+          <select
+            value={selectedCustomer}
+            onChange={(e) => setSelectedCustomer(e.target.value)}
+            disabled={loading || isSubmittingCheckout}
+            className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue disabled:opacity-50"
+          >
+            <option value="">-- Walk-In Customer --</option>
+            {customers.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Payment Method</label>
+          <select
+            value={paymentType}
+            onChange={(e) => setPaymentType(e.target.value)}
+            disabled={loading || isSubmittingCheckout}
+            className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue disabled:opacity-50"
+          >
+            <option value="Cash">Cash</option>
+            <option value="Bank">Bank</option>
+            <option value="Credit">Credit</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Discount</label>
+          <input
+            type="number"
+            value={discount}
+            onChange={(e) => setDiscount(e.target.value)}
+            disabled={loading || isSubmittingCheckout}
+            className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue disabled:opacity-50"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Tax</label>
+          <input
+            type="number"
+            value={tax}
+            onChange={(e) => setTax(e.target.value)}
+            disabled={loading || isSubmittingCheckout}
+            className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue disabled:opacity-50"
+          />
+        </div>
+      </div>
+
+      {paymentType !== 'Credit' && (
+        <div>
+          <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Deduct Account</label>
+          <select
+            value={paidTo}
+            onChange={(e) => setPaidTo(e.target.value)}
+            disabled={loading || isSubmittingCheckout}
+            className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue disabled:opacity-50"
+          >
+            {bankAccounts.map(b => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Checkout Totals */}
+      <div className="border-t border-surface-dim pt-3 space-y-1 text-xs font-semibold">
+        <div className="flex justify-between text-text-secondary">
+          <span>Subtotal:</span>
+          <span>{formatCurrency(calculateSubtotal())}</span>
+        </div>
+        <div className="flex justify-between text-text-primary text-sm font-bold pt-1">
+          <span>Total Payable:</span>
+          <span className="text-brand-blue">{formatCurrency(calculateTotal())}</span>
+        </div>
+      </div>
+
+      <button
+        onClick={handleCheckout}
+        disabled={loading || isSubmittingCheckout || cart.length === 0}
+        className="w-full flex items-center justify-center space-x-2 rounded bg-brand-blue py-3 text-sm font-bold text-white hover:bg-brand-cobalt disabled:opacity-50 disabled:pointer-events-none transition cursor-pointer"
+      >
+        {isSubmittingCheckout && <Spinner size="sm" />}
+        <span>{isMobile ? "Confirm & Pay Invoice" : "Post Checkout Terminal"}</span>
+      </button>
+    </div>
+  );
 
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -256,8 +357,8 @@ export default function POS() {
           />
         </div>
 
-        {/* Product Grid */}
-        <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {/* Product Grid / List */}
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col space-y-2 sm:grid sm:grid-cols-3 lg:grid-cols-4 sm:gap-3 sm:space-y-0">
           {loading ? (
             Array.from({ length: 8 }).map((_, idx) => (
               <POSProductSkeleton key={idx} />
@@ -270,20 +371,24 @@ export default function POS() {
                 key={p.id}
                 onClick={() => addToCart(p)}
                 disabled={isSubmittingCheckout}
-                className="flex flex-col bg-white rounded-lg border border-surface-low p-3 hover:-translate-y-0.5 transition shadow-sm hover:shadow text-left disabled:opacity-50 disabled:pointer-events-none"
+                className="flex flex-row sm:flex-col bg-white rounded-lg border border-surface-low p-2 sm:p-3 hover:-translate-y-0.5 transition shadow-sm hover:shadow text-left disabled:opacity-50 disabled:pointer-events-none items-center sm:items-start w-full"
               >
-                <div className="h-20 w-full rounded bg-surface border border-surface-low overflow-hidden mb-2">
+                <div className="h-10 w-10 sm:h-20 sm:w-full rounded bg-surface border border-surface-low overflow-hidden flex-shrink-0 sm:mb-2 mr-3 sm:mr-0">
                   {p.image_url ? (
                     <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-[10px] text-text-secondary">No image</div>
                   )}
                 </div>
-                <span className="text-xs font-semibold text-text-primary line-clamp-2 leading-tight flex-1">{p.name}</span>
-                <span className="text-[10px] text-text-secondary font-mono mt-0.5">{p.barcode}</span>
-                <div className="flex items-center justify-between mt-2 pt-1 border-t border-surface-low">
-                  <span className="text-xs font-bold text-brand-blue">{formatCurrency(p.selling_price)}</span>
-                  <span className="text-[10px] text-text-secondary bg-surface px-1.5 py-0.5 rounded">Stock: {p.stock_qty}</span>
+                <div className="flex-1 min-w-0 flex flex-col justify-between sm:w-full">
+                  <div className="flex flex-col sm:block">
+                    <span className="text-xs font-semibold text-text-primary line-clamp-1 sm:line-clamp-2 leading-tight">{p.name}</span>
+                    <span className="text-[9px] sm:text-[10px] text-text-secondary font-mono mt-0.5 block">{p.barcode}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1 sm:mt-2 pt-1 border-t border-surface-low sm:w-full">
+                    <span className="text-xs font-bold text-brand-blue">{formatCurrency(p.selling_price)}</span>
+                    <span className="text-[9px] sm:text-[10px] text-text-secondary bg-surface px-1.5 py-0.5 rounded">Stock: {p.stock_qty}</span>
+                  </div>
                 </div>
               </button>
             ))
@@ -359,97 +464,23 @@ export default function POS() {
           )}
         </div>
 
-        {/* Cart Summary Form */}
-        <div className="p-4 bg-surface border-t border-surface-dim space-y-3">
-          
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Select Customer</label>
-              <select
-                value={selectedCustomer}
-                onChange={(e) => setSelectedCustomer(e.target.value)}
-                disabled={loading || isSubmittingCheckout}
-                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none disabled:opacity-50"
-              >
-                <option value="">-- Walk-In Customer --</option>
-                {customers.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Payment Method</label>
-              <select
-                value={paymentType}
-                onChange={(e) => setPaymentType(e.target.value)}
-                disabled={loading || isSubmittingCheckout}
-                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none disabled:opacity-50"
-              >
-                <option value="Cash">Cash</option>
-                <option value="Bank">Bank</option>
-                <option value="Credit">Credit</option>
-              </select>
-            </div>
+        {/* Cart Summary Form (Desktop Inline) */}
+        <div className="hidden md:block p-4 bg-surface border-t border-surface-dim space-y-3">
+          {renderCheckoutForm(false)}
+        </div>
+
+        {/* Mobile checkout action bar */}
+        <div className="md:hidden p-3 bg-surface border-t border-surface-dim flex items-center justify-between">
+          <div className="flex flex-col text-left">
+            <span className="text-[10px] font-semibold text-text-secondary">Total Payable:</span>
+            <span className="text-sm font-bold text-brand-blue">{formatCurrency(calculateTotal())}</span>
           </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Discount</label>
-              <input
-                type="number"
-                value={discount}
-                onChange={(e) => setDiscount(e.target.value)}
-                disabled={loading || isSubmittingCheckout}
-                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none disabled:opacity-50"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Tax</label>
-              <input
-                type="number"
-                value={tax}
-                onChange={(e) => setTax(e.target.value)}
-                disabled={loading || isSubmittingCheckout}
-                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none disabled:opacity-50"
-              />
-            </div>
-          </div>
-
-          {paymentType !== 'Credit' && (
-            <div>
-              <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Deduct Account</label>
-              <select
-                value={paidTo}
-                onChange={(e) => setPaidTo(e.target.value)}
-                disabled={loading || isSubmittingCheckout}
-                className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none disabled:opacity-50"
-              >
-                {bankAccounts.map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Checkout Totals */}
-          <div className="border-t border-surface-dim pt-3 space-y-1 text-xs font-semibold">
-            <div className="flex justify-between text-text-secondary">
-              <span>Subtotal:</span>
-              <span>{formatCurrency(calculateSubtotal())}</span>
-            </div>
-            <div className="flex justify-between text-text-primary text-sm font-bold pt-1">
-              <span>Total Payable:</span>
-              <span className="text-brand-blue">{formatCurrency(calculateTotal())}</span>
-            </div>
-          </div>
-
           <button
-            onClick={handleCheckout}
+            onClick={() => setShowCheckoutSheet(true)}
             disabled={loading || isSubmittingCheckout || cart.length === 0}
-            className="w-full flex items-center justify-center space-x-2 rounded bg-brand-blue py-3 text-sm font-bold text-white hover:bg-brand-cobalt disabled:opacity-50 disabled:pointer-events-none transition"
+            className="rounded bg-brand-blue px-6 py-2.5 text-xs font-bold text-white hover:bg-brand-cobalt disabled:opacity-50 disabled:pointer-events-none transition cursor-pointer"
           >
-            {isSubmittingCheckout && <Spinner size="sm" />}
-            <span>Post Checkout Terminal</span>
+            Checkout & Pay
           </button>
         </div>
       </div>
@@ -546,6 +577,15 @@ export default function POS() {
           </div>
         </div>
       )}
+
+      {/* Mobile Checkout Bottom Sheet */}
+      <MobileBottomSheet
+        isOpen={showCheckoutSheet}
+        onClose={() => setShowCheckoutSheet(false)}
+        title="Invoice Checkout & Payment"
+      >
+        {renderCheckoutForm(true)}
+      </MobileBottomSheet>
     </div>
   );
 }

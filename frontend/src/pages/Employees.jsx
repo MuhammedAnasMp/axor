@@ -244,25 +244,25 @@ export default function Employees() {
       role,
       image_url: regImageUrl
     })
-    .then(() => {
-      setShowRegForm(false);
-      setUsername('');
-      setPassword('');
-      setEmail('');
-      setFirstName('');
-      setLastName('');
-      setPhone('');
-      setRole('Cashier');
-      setRegImageUrl('');
-      alert('Employee Registered Successfully!');
-      pag.refresh();
-      loadLeaderboard();
-      setIsRegistering(false);
-    })
-    .catch((err) => {
-      alert(err.message);
-      setIsRegistering(false);
-    });
+      .then(() => {
+        setShowRegForm(false);
+        setUsername('');
+        setPassword('');
+        setEmail('');
+        setFirstName('');
+        setLastName('');
+        setPhone('');
+        setRole('Cashier');
+        setRegImageUrl('');
+        alert('Employee Registered Successfully!');
+        pag.refresh();
+        loadLeaderboard();
+        setIsRegistering(false);
+      })
+      .catch((err) => {
+        alert(err.message);
+        setIsRegistering(false);
+      });
   };
 
   const toggleStatus = (emp) => {
@@ -314,18 +314,18 @@ export default function Employees() {
       paid_from: parseInt(advancePaidFrom),
       description: advanceDescription
     })
-    .then(() => {
-      alert('Advance salary paid out successfully!');
-      setAdvanceAmount('');
-      setAdvanceDescription('');
-      loadSummary(selectedEmployee.id);
-      loadBankAccounts();
-      setIsSavingAdvance(false);
-    })
-    .catch((err) => {
-      alert(err.message);
-      setIsSavingAdvance(false);
-    });
+      .then(() => {
+        alert('Advance salary paid out successfully!');
+        setAdvanceAmount('');
+        setAdvanceDescription('');
+        loadSummary(selectedEmployee.id);
+        loadBankAccounts();
+        setIsSavingAdvance(false);
+      })
+      .catch((err) => {
+        alert(err.message);
+        setIsSavingAdvance(false);
+      });
   };
 
   const handleReverseAdvance = (advId) => {
@@ -353,18 +353,18 @@ export default function Employees() {
       paid_from: parseInt(payrollPaidFrom),
       description: payrollDescription
     })
-    .then(() => {
-      alert('Payroll processed successfully!');
-      setAllowanceInput('0');
-      setPayrollDescription('');
-      loadSummary(selectedEmployee.id);
-      loadBankAccounts();
-      setIsSavingPayroll(false);
-    })
-    .catch((err) => {
-      alert(err.message);
-      setIsSavingPayroll(false);
-    });
+      .then(() => {
+        alert('Payroll processed successfully!');
+        setAllowanceInput('0');
+        setPayrollDescription('');
+        loadSummary(selectedEmployee.id);
+        loadBankAccounts();
+        setIsSavingPayroll(false);
+      })
+      .catch((err) => {
+        alert(err.message);
+        setIsSavingPayroll(false);
+      });
   };
 
   const handleReversePayroll = (payId) => {
@@ -395,17 +395,17 @@ export default function Employees() {
       paid_from: parseInt(editPaidFrom),
       description: editDescription
     })
-    .then(() => {
-      alert('Payroll record updated and recalculated successfully!');
-      setEditingPayroll(null);
-      loadSummary(selectedEmployee.id);
-      loadBankAccounts();
-      setIsSavingEditPayroll(false);
-    })
-    .catch((err) => {
-      alert(err.message);
-      setIsSavingEditPayroll(false);
-    });
+      .then(() => {
+        alert('Payroll record updated and recalculated successfully!');
+        setEditingPayroll(null);
+        loadSummary(selectedEmployee.id);
+        loadBankAccounts();
+        setIsSavingEditPayroll(false);
+      })
+      .catch((err) => {
+        alert(err.message);
+        setIsSavingEditPayroll(false);
+      });
   };
 
   const handleViewAuditTrail = (payId) => {
@@ -435,10 +435,10 @@ export default function Employees() {
       employee_id: selectedEmployee.id,
       records: [{ date: dateStr, status: nextStatus }]
     })
-    .then(() => {
-      loadSummary(selectedEmployee.id);
-    })
-    .catch((err) => alert(err.message));
+      .then(() => {
+        loadSummary(selectedEmployee.id);
+      })
+      .catch((err) => alert(err.message));
   };
 
   const formatCurrency = (val) => {
@@ -452,7 +452,7 @@ export default function Employees() {
     const isSorted = pag.ordering === field || pag.ordering === `-${field}`;
     const isDesc = pag.ordering === `-${field}`;
     return (
-      <th 
+      <th
         onClick={(e) => {
           e.stopPropagation();
           pag.handleSort(field);
@@ -584,8 +584,8 @@ export default function Employees() {
             </button>
             <div className="flex items-center space-x-3">
               {selectedEmployee.image_url ? (
-                <img 
-                  src={selectedEmployee.image_url} 
+                <img
+                  src={selectedEmployee.image_url}
                   alt={`${selectedEmployee.user?.first_name} ${selectedEmployee.user?.last_name}`}
                   className="h-12 w-12 rounded-full object-cover border-2 border-brand-blue"
                 />
@@ -602,11 +602,11 @@ export default function Employees() {
               </div>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          {/* <div className="flex items-center space-x-2">
             <span className="rounded-full bg-surface-low border border-surface-dim px-3 py-1 text-xs font-bold text-text-primary">
               {selectedEmployee.role}
             </span>
-          </div>
+          </div> */}
         </div>
 
         {/* Sub Navigation Tabs */}
@@ -615,11 +615,10 @@ export default function Employees() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 border-b-2 transition ${
-                activeTab === tab 
-                  ? 'border-brand-blue text-brand-blue font-semibold' 
+              className={`px-4 py-2 border-b-2 transition ${activeTab === tab
+                  ? 'border-brand-blue text-brand-blue font-semibold'
                   : 'border-transparent text-text-secondary hover:text-text-primary'
-              }`}
+                }`}
             >
               {tab}
             </button>
@@ -651,8 +650,8 @@ export default function Employees() {
                         <div className="flex flex-col items-center space-y-2">
                           <span className="block text-xs font-semibold text-text-secondary">Profile Image</span>
                           {profileImageUrl ? (
-                            <img 
-                              src={profileImageUrl} 
+                            <img
+                              src={profileImageUrl}
                               alt="Profile Preview"
                               className="h-24 w-24 rounded-full object-cover border-2 border-brand-blue"
                               onError={(e) => {
@@ -874,10 +873,9 @@ export default function Employees() {
                                   {adv.description || '-'}
                                 </td>
                                 <td className="px-3 py-2.5">
-                                  <span className={`inline-block rounded px-1.5 py-0.5 text-[8px] font-bold ${
-                                    adv.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                                    adv.status === 'Deducted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                  }`}>
+                                  <span className={`inline-block rounded px-1.5 py-0.5 text-[8px] font-bold ${adv.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                      adv.status === 'Deducted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                    }`}>
                                     {adv.status}
                                   </span>
                                 </td>
@@ -1138,9 +1136,8 @@ export default function Employees() {
                               <td className="px-3 py-2.5 font-bold text-green-700">{formatCurrency(pay.total_paid)}</td>
                               <td className="px-3 py-2.5">{pay.paid_from_name || 'N/A'}</td>
                               <td className="px-3 py-2.5">
-                                <span className={`inline-block rounded px-2 py-0.5 text-[9px] font-semibold ${
-                                  pay.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }`}>
+                                <span className={`inline-block rounded px-2 py-0.5 text-[9px] font-semibold ${pay.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                  }`}>
                                   {pay.status}
                                 </span>
                               </td>
@@ -1149,23 +1146,35 @@ export default function Employees() {
                                   <>
                                     <button
                                       onClick={() => startEditPayroll(pay)}
-                                      className="rounded bg-brand-blue/10 hover:bg-brand-blue/20 px-2 py-0.5 text-[10px] font-semibold text-brand-blue transition"
+                                      className="inline-flex items-center justify-center rounded bg-brand-blue/10 p-1 text-[10px] font-semibold text-brand-blue hover:bg-brand-blue/20 transition"
+                                      title="Edit Payroll"
                                     >
-                                      Edit
+                                      <svg className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                      </svg>
+                                      <span className="hidden sm:inline">Edit</span>
                                     </button>
                                     <button
                                       onClick={() => handleReversePayroll(pay.id)}
-                                      className="rounded bg-error-container/10 hover:bg-error-container/20 px-2 py-0.5 text-[10px] font-semibold text-error transition"
+                                      className="inline-flex items-center justify-center rounded bg-error-container/10 p-1 text-[10px] font-semibold text-error hover:bg-error-container/20 transition"
+                                      title="Reverse Payroll"
                                     >
-                                      Reverse
+                                      <svg className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                      </svg>
+                                      <span className="hidden sm:inline">Reverse</span>
                                     </button>
                                   </>
                                 )}
                                 <button
                                   onClick={() => handleViewAuditTrail(pay.id)}
-                                  className="rounded bg-surface-low hover:bg-surface-dim px-2 py-0.5 text-[10px] font-semibold text-text-primary transition"
+                                  className="inline-flex items-center justify-center rounded bg-surface-low hover:bg-surface-dim p-1 text-[10px] font-semibold text-text-primary transition"
+                                  title="Audit Logs"
                                 >
-                                  Audit
+                                  <svg className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2" />
+                                  </svg>
+                                  <span className="hidden sm:inline">Audit</span>
                                 </button>
                               </td>
                             </tr>
@@ -1346,17 +1355,17 @@ export default function Employees() {
                 <SkeletonTable rows={pag.pageSize || 5} columns={7} />
               ) : (
                 pag.data.map((emp) => (
-                  <tr 
-                    key={emp.id} 
+                  <tr
+                    key={emp.id}
                     onClick={() => handleSelectEmployee(emp)}
                     className="hover:bg-surface-bright cursor-pointer"
                   >
                     <td className="px-4 py-3 text-text-primary">
                       <div className="flex items-center space-x-3">
                         {emp.image_url ? (
-                          <img 
-                            src={emp.image_url} 
-                            alt="" 
+                          <img
+                            src={emp.image_url}
+                            alt=""
                             className="h-8 w-8 rounded-full object-cover border border-surface-dim"
                           />
                         ) : (

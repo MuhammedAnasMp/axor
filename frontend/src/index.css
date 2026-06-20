@@ -134,3 +134,143 @@ input, textarea {
   white-space: nowrap !important;
 }
 
+/* Keep a minimum height for table containers to prevent collapse */
+.overflow-x-auto:has(table) {
+  min-height: 200px;
+}
+
+/* Mobile-First Spacing & Layout Overrides */
+@media (max-width: 767.98px) {
+  /* 1. Page Header & Title Compression */
+  h2.text-2xl {
+    font-size: 1.125rem !important; /* text-lg */
+    line-height: 1.5rem !important;
+    margin-bottom: 0.125rem !important;
+  }
+  h1.text-3xl {
+    font-size: 1.25rem !important; /* text-xl */
+    line-height: 1.75rem !important;
+    margin-bottom: 0.125rem !important;
+  }
+  h2.text-2xl + p.text-xs,
+  h1.text-3xl + p.text-xs,
+  div > h2 + p {
+    display: none !important;
+  }
+
+  /* 2. Container & Card Padding/Margin Reduction */
+  main {
+    padding-top: 0.5rem !important;
+    padding-left: 0.625rem !important;
+    padding-right: 0.625rem !important;
+  }
+  .p-8 {
+    padding: 0.875rem !important; /* ~14px */
+  }
+  .p-6 {
+    padding: 0.75rem !important; /* 12px */
+  }
+  .p-5 {
+    padding: 0.75rem !important; /* 12px */
+  }
+  .p-4 {
+    padding: 0.625rem !important; /* 10px */
+  }
+
+  /* Force lower margins between stacked cards/elements */
+  .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.75rem !important; /* 12px */
+  }
+  .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.5rem !important; /* 8px */
+  }
+  .gap-6 {
+    gap: 0.75rem !important; /* 12px */
+  }
+  .gap-4 {
+    gap: 0.5rem !important; /* 8px */
+  }
+
+  /* 3. Form Label Gaps & Input Padding */
+  label, 
+  .block.text-xs.font-semibold, 
+  .block.text-\[11px\].font-semibold {
+    margin-bottom: 0.125rem !important;
+    font-size: 0.6875rem !important;
+  }
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="date"],
+  select,
+  textarea {
+    padding-top: 0.3125rem !important; /* sleeker fields */
+    padding-bottom: 0.3125rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* 4. Tab View Containers & Scroll Bar sitting */
+  .tabs-container {
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  .tabs-scrollable,
+  div[class*="border-b"][class*="space-x-"] {
+    display: flex !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    flex-wrap: nowrap !important;
+    gap: 0.75rem !important;
+    column-gap: 0.75rem !important;
+    margin-left: 0px !important;
+    margin-right: 0px !important;
+    scrollbar-width: none !important;
+  }
+  .tabs-scrollable::-webkit-scrollbar,
+  div[class*="border-b"][class*="space-x-"]::-webkit-scrollbar {
+    display: none !important;
+  }
+  .tabs-scrollable > *,
+  div[class*="border-b"][class*="space-x-"] > * {
+    flex-shrink: 0 !important;
+    margin-left: 0px !important;
+    margin-right: 0px !important;
+    padding-bottom: 0.375rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Table Row Flattening & Empty states */
+  h3.text-sm {
+    margin-bottom: 0.5rem !important; /* mb-2 */
+    font-size: 0.8125rem !important;
+  }
+  table {
+    display: block !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  table th {
+    padding-top: 0.3125rem !important; /* py-1.25 */
+    padding-bottom: 0.3125rem !important;
+    padding-left: 0.375rem !important; /* px-1.5 */
+    padding-right: 0.375rem !important;
+    font-size: 0.6875rem !important;
+  }
+  table td {
+    padding-top: 0.25rem !important; /* py-1 */
+    padding-bottom: 0.25rem !important;
+    padding-left: 0.375rem !important; /* px-1.5 */
+    padding-right: 0.375rem !important;
+    font-size: 0.7rem !important;
+  }
+  table td[colSpan] {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+}
+
+

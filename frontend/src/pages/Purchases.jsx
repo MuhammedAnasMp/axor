@@ -4,6 +4,8 @@ import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
 import { SkeletonTable, Spinner } from '../components/Skeleton';
+import MobileBottomSheet from '../components/MobileBottomSheet';
+
 
 export default function Purchases() {
   const [searchParams] = useSearchParams();
@@ -79,6 +81,9 @@ export default function Purchases() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsPO, setDetailsPO] = useState(null);
   const [expandedReturnRows, setExpandedReturnRows] = useState({});
+  const [showMobileCart, setShowMobileCart] = useState(false);
+  const [showMobileBilling, setShowMobileBilling] = useState(false);
+
 
   // Auto-complete inside receiving modal
   const [recProductSearch, setRecProductSearch] = useState('');
@@ -560,6 +565,7 @@ export default function Purchases() {
           historyPag.refresh();
           loadDropdowns();
           setPoMode(null);
+          setShowMobileBilling(false);
         })
         .catch((err) => alert(err.message))
         .finally(() => setIsSavingPO(false));
@@ -655,6 +661,7 @@ export default function Purchases() {
           historyPag.refresh();
           loadDropdowns();
           setPoMode(null);
+          setShowMobileBilling(false);
         })
         .catch((err) => alert(`Error creating some POs: ${err.message}`))
         .finally(() => setIsSavingPO(false));
@@ -715,7 +722,14 @@ export default function Purchases() {
     setPostingSupplierId(supId.toString());
     api.purchases.create(payload)
       .then(() => {
-        setItems(prevItems => prevItems.filter(item => item.supplier_id.toString() !== supId.toString()));
+        setItems(prevItems => {
+          const remaining = prevItems.filter(item => item.supplier_id.toString() !== supId.toString());
+          if (remaining.length === 0) {
+            setShowMobileBilling(false);
+            setPoMode(null);
+          }
+          return remaining;
+        });
         setSupplierBilling(prev => {
           const next = { ...prev };
           delete next[supId];
@@ -1019,6 +1033,410 @@ export default function Purchases() {
     return groups;
   };
 
+  const renderBillingForm = () => {
+    return (
+      <>
+        {poMode === 'supplier' ? (
+          <form onSubmit={handleSubmitPO} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-text-secondary mb-1">Invoice / Ref #</label>
+              <input
+                type="text"
+                value={invoiceNumber}
+                onChange={(e) => setInvoiceNumber(e.target.value)}
+                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-text-secondary mb-1">
+                Additional Expense (Shipping, Customs, Delivery)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={additionalCosts}
+                onChange={(e) => setAdditionalCosts(e.target.value)}
+                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-text-secondary mb-1">Payment Method</label>
+              <select
+                value={paymentType}
+                onChange={(e) => setPaymentType(e.target.value)}
+                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+              >
+                <option value="Cash">Immediate Cash Payment</option>
+                <option value="Bank">Immediate Bank Transfer</option>
+                <option value="Credit">
+                  Post on credit (Accounts Payable) (old Credit: {
+                    formatCurrency(suppliers.find(s => s.id.toString() === supplier)?.outstanding_balance || 0)
+                  })
+                </option>
+              </select>
+              {paymentType === 'Credit' && (
+                <div className="text-[10px] text-red-600 font-bold mt-1">
+                  Current supplier credit balance: {
+                    formatCurrency(suppliers.find(s => s.id.toString() === supplier)?.outstanding_balance || 0)
+                  }
+                </div>
+              )}
+            </div>
+            {(paymentType !== 'Credit' || parseFloat(additionalCosts || 0) > 0) && (
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary mb-1">Deduct Cash/Bank Account</label>
+                <select
+                  value={paidFrom}
+                  onChange={(e) => setPaidFrom(e.target.value)}
+                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+                >
+                  {bankAccounts.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {(() => {
+              const selectedSupplierObj = suppliers.find(s => s.id.toString() === supplier);
+              const oldCreditVal = selectedSupplierObj && parseFloat(selectedSupplierObj.outstanding_balance) > 0
+                ? parseFloat(selectedSupplierObj.outstanding_balance)
+                : 0;
+              const negativeCreditVal = selectedSupplierObj && parseFloat(selectedSupplierObj.outstanding_balance) < 0
+                ? Math.abs(parseFloat(selectedSupplierObj.outstanding_balance))
+                : 0;
+
+              return (
+                <div className="space-y-2 pt-1">
+                  {paymentType !== 'Credit' && oldCreditVal > 0 && (
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="payOldCredit"
+                        checked={payOldCredit}
+                        onChange={(e) => setPayOldCredit(e.target.checked)}
+                        className="rounded border-surface-dim text-brand-blue focus:ring-brand-blue h-4 w-4"
+                      />
+                      <label htmlFor="payOldCredit" className="text-xs font-semibold text-text-primary cursor-pointer">
+                        Pay Old Credit to Supplier ({formatCurrency(oldCreditVal)})
+                      </label>
+                    </div>
+                  )}
+                  {paymentType !== 'Credit' && negativeCreditVal > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="deductSupplierCredit"
+                          checked={deductSupplierCredit}
+                          onChange={(e) => {
+                            setDeductSupplierCredit(e.target.checked);
+                            if (e.target.checked) {
+                              const itemsTotal = items.reduce((acc, curr) => acc + (curr.quantity * curr.purchase_cost), 0);
+                              setDeductAmount(Math.min(negativeCreditVal, itemsTotal).toString());
+                            } else {
+                              setDeductAmount('0');
+                            }
+                          }}
+                          className="rounded border-surface-dim text-brand-blue focus:ring-brand-blue h-4 w-4"
+                        />
+                        <label htmlFor="deductSupplierCredit" className="text-xs font-semibold text-text-primary cursor-pointer select-none">
+                          Deduct Old Supplier Credit
+                        </label>
+                      </div>
+                      {deductSupplierCredit && (
+                        <div className="pl-6">
+                          <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Deduct Amount (Max: {formatCurrency(negativeCreditVal)})</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            max={negativeCreditVal}
+                            value={deductAmount}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value || 0);
+                              if (val > negativeCreditVal) {
+                                setDeductAmount(negativeCreditVal.toString());
+                              } else {
+                                setDeductAmount(e.target.value);
+                              }
+                            }}
+                            className="w-full max-w-[150px] rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none text-text-primary focus:border-brand-blue"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            <div className="border-t border-surface-low pt-4 space-y-2 text-xs font-semibold">
+              <div className="flex justify-between text-text-secondary">
+                <span>Additional Cost:</span>
+                <span>{formatCurrency(additionalCosts)}</span>
+              </div>
+              {(() => {
+                const expectedProfit = items.reduce((acc, item) => {
+                  const sell = item.new_selling_price !== null && item.new_selling_price !== undefined && item.new_selling_price !== '' ? parseFloat(item.new_selling_price) : parseFloat(item.selling_price || 0);
+                  return acc + (item.quantity * (sell - item.purchase_cost));
+                }, 0) - parseFloat(additionalCosts || 0);
+                return (
+                  <div className={`flex justify-between px-2 py-1.5 rounded-md font-bold border ${expectedProfit >= 0 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200'}`}>
+                    <span>Expected Total Profit:</span>
+                    <span>{formatCurrency(expectedProfit)}</span>
+                  </div>
+                );
+              })()}
+              {(() => {
+                const baseAmt = items.reduce((acc, curr) => acc + (curr.quantity * curr.purchase_cost), 0) - (deductSupplierCredit ? parseFloat(deductAmount || 0) : 0);
+                const oldCreditVal = paymentType !== 'Credit' && payOldCredit ? (() => {
+                  const selectedSupplierObj = suppliers.find(s => s.id.toString() === supplier);
+                  return selectedSupplierObj && parseFloat(selectedSupplierObj.outstanding_balance) > 0 ? parseFloat(selectedSupplierObj.outstanding_balance) : 0;
+                })() : 0;
+                const finalPayAmt = baseAmt + oldCreditVal;
+
+                return finalPayAmt < 0 ? (
+                  <div className="flex justify-between text-emerald-600 font-bold">
+                    <span>Supplier will pay to you:</span>
+                    <span>{formatCurrency(Math.abs(finalPayAmt))}</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-text-secondary">
+                    <span>Amount to Pay Supplier:</span>
+                    <span>{formatCurrency(finalPayAmt)}</span>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSavingPO}
+              className="w-full flex items-center justify-center space-x-2 rounded bg-brand-blue py-2.5 text-sm font-bold text-white hover:bg-brand-cobalt transition disabled:opacity-50 cursor-pointer"
+            >
+              {isSavingPO && <Spinner size="sm" />}
+              <span>Post Purchase Order</span>
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmitPO} className="space-y-6">
+            {items.length === 0 ? (
+              <p className="text-xs text-text-secondary text-center py-4">Add products to see billing details.</p>
+            ) : (
+              Object.keys(supplierBilling).map((supId) => {
+                const billing = supplierBilling[supId];
+                if (!billing) return null;
+                const supplierItems = items.filter(item => item.supplier_id.toString() === supId);
+                const supplierName = supplierItems[0]?.supplier_name || 'Unknown Supplier';
+                const itemsSubtotal = supplierItems.reduce((acc, curr) => acc + (curr.quantity * curr.purchase_cost), 0);
+                const additional = parseFloat(billing.additionalCosts || 0);
+
+                const selectedSupplierObj = suppliers.find(s => s.id.toString() === supId.toString());
+                const oldCreditVal = selectedSupplierObj && parseFloat(selectedSupplierObj.outstanding_balance) > 0
+                  ? parseFloat(selectedSupplierObj.outstanding_balance)
+                  : 0;
+
+                const updateBillingField = (field, val) => {
+                  setSupplierBilling(prev => ({
+                    ...prev,
+                    [supId]: {
+                      ...prev[supId],
+                      [field]: val
+                    }
+                  }));
+                };
+
+                return (
+                  <div key={supId} className="border border-surface-low rounded-xl p-3 bg-surface-lowest space-y-3">
+                    <div className="flex justify-between items-center border-b border-surface-low pb-1.5">
+                      <span className="text-xs font-bold text-brand-blue">{supplierName}</span>
+                      <span className="text-[10px] text-text-secondary">{supplierItems.length} item(s)</span>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Invoice / Ref #</label>
+                      <input
+                        type="text"
+                        value={billing.invoiceNumber}
+                        onChange={(e) => updateBillingField('invoiceNumber', e.target.value)}
+                        className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Additional Landing Cost</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={billing.additionalCosts}
+                        onChange={(e) => updateBillingField('additionalCosts', e.target.value)}
+                        className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Payment Method</label>
+                      <select
+                        value={billing.paymentType}
+                        onChange={(e) => updateBillingField('paymentType', e.target.value)}
+                        className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue"
+                      >
+                        <option value="Cash">Immediate Cash Payment</option>
+                        <option value="Bank">Immediate Bank Transfer</option>
+                        <option value="Credit">
+                          Post on credit (Accounts Payable) (old Credit: {
+                            formatCurrency(suppliers.find(s => s.id.toString() === supId.toString())?.outstanding_balance || 0)
+                          })
+                        </option>
+                      </select>
+                      {billing.paymentType === 'Credit' && (
+                        <div className="text-[9px] text-red-600 font-bold mt-0.5">
+                          Current supplier credit balance: {
+                            formatCurrency(suppliers.find(s => s.id.toString() === supId.toString())?.outstanding_balance || 0)
+                          }
+                        </div>
+                      )}
+                    </div>
+                    {(billing.paymentType !== 'Credit' || additional > 0) && (
+                      <div>
+                        <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Deduct Account</label>
+                        <select
+                          value={billing.paidFrom}
+                          onChange={(e) => updateBillingField('paidFrom', e.target.value)}
+                          className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue"
+                        >
+                          {bankAccounts.map((b) => (
+                            <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {billing.paymentType !== 'Credit' && (
+                      <div className="space-y-2 pt-1">
+                        {oldCreditVal > 0 && (
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`payOldCredit-${supId}`}
+                              checked={billing.payOldCredit || false}
+                              onChange={(e) => updateBillingField('payOldCredit', e.target.checked)}
+                              className="rounded border-surface-dim text-brand-blue focus:ring-brand-blue h-4 w-4"
+                            />
+                            <label htmlFor={`payOldCredit-${supId}`} className="text-xs font-semibold text-text-primary cursor-pointer select-none">
+                              Pay Old Credit to Supplier ({formatCurrency(oldCreditVal)})
+                            </label>
+                          </div>
+                        )}
+                        {selectedSupplierObj && parseFloat(selectedSupplierObj.outstanding_balance) < 0 && (() => {
+                          const negativeCreditVal = Math.abs(parseFloat(selectedSupplierObj.outstanding_balance));
+                          return (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="checkbox"
+                                  id={`deductSupplierCredit-${supId}`}
+                                  checked={billing.deductSupplierCredit || false}
+                                  onChange={(e) => {
+                                    updateBillingField('deductSupplierCredit', e.target.checked);
+                                    if (e.target.checked) {
+                                      updateBillingField('deductAmount', Math.min(negativeCreditVal, itemsSubtotal).toString());
+                                    } else {
+                                      updateBillingField('deductAmount', '0');
+                                    }
+                                  }}
+                                  className="rounded border-surface-dim text-brand-blue focus:ring-brand-blue h-4 w-4"
+                                />
+                                <label htmlFor={`deductSupplierCredit-${supId}`} className="text-xs font-semibold text-text-primary cursor-pointer select-none">
+                                  Deduct Old Supplier Credit
+                                </label>
+                              </div>
+                              {billing.deductSupplierCredit && (
+                                <div className="pl-6">
+                                  <label className="block text-[10px] font-semibold text-text-secondary mb-0.5 font-sans">Deduct Amount (Max: {formatCurrency(negativeCreditVal)})</label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    max={negativeCreditVal}
+                                    value={billing.deductAmount || '0'}
+                                    onChange={(e) => {
+                                      const val = parseFloat(e.target.value || 0);
+                                      if (val > negativeCreditVal) {
+                                        updateBillingField('deductAmount', negativeCreditVal.toString());
+                                      } else {
+                                        updateBillingField('deductAmount', e.target.value);
+                                      }
+                                    }}
+                                    className="w-full max-w-[150px] rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none text-text-primary focus:border-brand-blue"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+
+                    <div className="pt-2 border-t border-dashed border-surface-low text-xs font-semibold space-y-1">
+                      <div className="flex justify-between text-text-secondary text-[10px]">
+                        <span>Subtotal:</span>
+                        <span>{formatCurrency(itemsSubtotal)}</span>
+                      </div>
+                      <div className="flex justify-between text-text-secondary text-[10px]">
+                        <span>Landed Cost:</span>
+                        <span>{formatCurrency(additional)}</span>
+                      </div>
+                      {(() => {
+                        const expectedProfit = supplierItems.reduce((acc, item) => {
+                          const sell = item.new_selling_price !== null && item.new_selling_price !== undefined && item.new_selling_price !== '' ? parseFloat(item.new_selling_price) : parseFloat(item.selling_price || 0);
+                          return acc + (item.quantity * (sell - item.purchase_cost));
+                        }, 0) - additional;
+                        return (
+                          <div className={`flex justify-between px-2 py-1 rounded text-[10px] font-bold border ${expectedProfit >= 0 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200'}`}>
+                            <span>PO Profit:</span>
+                            <span>{formatCurrency(expectedProfit)}</span>
+                          </div>
+                        );
+                      })()}
+                      {billing.paymentType !== 'Credit' && billing.payOldCredit && oldCreditVal > 0 && (
+                        <div className="flex justify-between text-text-secondary text-[10px]">
+                          <span>Old Credit Paid:</span>
+                          <span>{formatCurrency(oldCreditVal)}</span>
+                        </div>
+                      )}
+                      {(() => {
+                        const baseAmt = itemsSubtotal - (billing.deductSupplierCredit ? parseFloat(billing.deductAmount || 0) : 0);
+                        const finalPayAmt = baseAmt + (billing.paymentType !== 'Credit' && billing.payOldCredit ? oldCreditVal : 0);
+
+                        return finalPayAmt < 0 ? (
+                          <div className="flex justify-between text-emerald-600 text-[10px] font-bold">
+                            <span>Supplier will pay to you:</span>
+                            <span>{formatCurrency(Math.abs(finalPayAmt))}</span>
+                          </div>
+                        ) : (
+                          <div className="flex justify-between text-text-secondary text-[10px]">
+                            <span>Amount to Pay Supplier:</span>
+                            <span>{formatCurrency(finalPayAmt)}</span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={postingSupplierId === supId.toString()}
+                      onClick={() => handlePostSingleSupplierPO(supId)}
+                      className="w-full flex items-center justify-center space-x-2 rounded bg-brand-blue py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition mt-3 disabled:opacity-50 cursor-pointer"
+                    >
+                      {postingSupplierId === supId.toString() && <Spinner size="sm" />}
+                      <span>Post Purchase Order</span>
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </form>
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Title */}
@@ -1182,9 +1600,16 @@ export default function Purchases() {
                     <button
                       type="button"
                       onClick={handleOpenViewAllPopup}
-                      className="text-[10px] text-brand-blue hover:underline font-semibold"
+                      className="text-[10px] text-brand-blue hover:underline font-semibold flex items-center"
+                      title="View all products"
                     >
-                      View All
+                      <span className="hidden sm:inline">View All</span>
+                      <span className="sm:hidden p-1 bg-brand-blue/10 rounded-full text-brand-blue active:bg-brand-blue/20">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </span>
                     </button>
                   </div>
                   <div className="relative">
@@ -1343,7 +1768,7 @@ export default function Purchases() {
             </div>
 
             {/* Line Items Table */}
-            <div className="overflow-x-auto pt-2">
+            <div className="overflow-x-auto pt-2 hidden lg:block">
               <table className="min-w-full text-left text-xs">
                 <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
                   <tr>
@@ -1415,418 +1840,9 @@ export default function Purchases() {
           </div>
 
           {/* Supplier, Payment & Totals */}
-          <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low h-fit space-y-4" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+          <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low h-fit space-y-4 hidden lg:block" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
             <h3 className="text-sm font-semibold text-text-primary">Billing & Settlement</h3>
-
-            {poMode === 'supplier' ? (
-              <form onSubmit={handleSubmitPO} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary mb-1">Invoice / Ref #</label>
-                  <input
-                    type="text"
-                    value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                    className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary mb-1">
-                    Additional Expance (Shipping, Customs, Delivery)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={additionalCosts}
-                    onChange={(e) => setAdditionalCosts(e.target.value)}
-                    className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary mb-1">Payment Method</label>
-                  <select
-                    value={paymentType}
-                    onChange={(e) => setPaymentType(e.target.value)}
-                    className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-                  >
-                    <option value="Cash">Immediate Cash Payment</option>
-                    <option value="Bank">Immediate Bank Transfer</option>
-                    <option value="Credit">
-                      Post on credit (Accounts Payable) (old Credit: {
-                        formatCurrency(suppliers.find(s => s.id.toString() === supplier)?.outstanding_balance || 0)
-                      })
-                    </option>
-                  </select>
-                  {paymentType === 'Credit' && (
-                    <div className="text-[10px] text-red-600 font-bold mt-1">
-                      Current supplier credit balance: {
-                        formatCurrency(suppliers.find(s => s.id.toString() === supplier)?.outstanding_balance || 0)
-                      }
-                    </div>
-                  )}
-                </div>
-                {(paymentType !== 'Credit' || parseFloat(additionalCosts || 0) > 0) && (
-                  <div>
-                    <label className="block text-xs font-semibold text-text-secondary mb-1">Deduct Cash/Bank Account</label>
-                    <select
-                      value={paidFrom}
-                      onChange={(e) => setPaidFrom(e.target.value)}
-                      className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-                    >
-                      {bankAccounts.map((b) => (
-                        <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {(() => {
-                  const selectedSupplierObj = suppliers.find(s => s.id.toString() === supplier);
-                  const oldCreditVal = selectedSupplierObj && parseFloat(selectedSupplierObj.outstanding_balance) > 0
-                    ? parseFloat(selectedSupplierObj.outstanding_balance)
-                    : 0;
-                  const negativeCreditVal = selectedSupplierObj && parseFloat(selectedSupplierObj.outstanding_balance) < 0
-                    ? Math.abs(parseFloat(selectedSupplierObj.outstanding_balance))
-                    : 0;
-
-                  return (
-                    <div className="space-y-2 pt-1">
-                      {paymentType !== 'Credit' && oldCreditVal > 0 && (
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="payOldCredit"
-                            checked={payOldCredit}
-                            onChange={(e) => setPayOldCredit(e.target.checked)}
-                            className="rounded border-surface-dim text-brand-blue focus:ring-brand-blue h-4 w-4"
-                          />
-                          <label htmlFor="payOldCredit" className="text-xs font-semibold text-text-primary cursor-pointer">
-                            Pay Old Credit to Supplier ({formatCurrency(oldCreditVal)})
-                          </label>
-                        </div>
-                      )}
-                      {paymentType !== 'Credit' && negativeCreditVal > 0 && (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="deductSupplierCredit"
-                              checked={deductSupplierCredit}
-                              onChange={(e) => {
-                                setDeductSupplierCredit(e.target.checked);
-                                if (e.target.checked) {
-                                  const itemsTotal = items.reduce((acc, curr) => acc + (curr.quantity * curr.purchase_cost), 0);
-                                  setDeductAmount(Math.min(negativeCreditVal, itemsTotal).toString());
-                                } else {
-                                  setDeductAmount('0');
-                                }
-                              }}
-                              className="rounded border-surface-dim text-brand-blue focus:ring-brand-blue h-4 w-4"
-                            />
-                            <label htmlFor="deductSupplierCredit" className="text-xs font-semibold text-text-primary cursor-pointer select-none">
-                              Deduct Old Supplier Credit
-                            </label>
-                          </div>
-                          {deductSupplierCredit && (
-                            <div className="pl-6">
-                              <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Deduct Amount (Max: {formatCurrency(negativeCreditVal)})</label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                max={negativeCreditVal}
-                                value={deductAmount}
-                                onChange={(e) => {
-                                  const val = parseFloat(e.target.value || 0);
-                                  if (val > negativeCreditVal) {
-                                    setDeductAmount(negativeCreditVal.toString());
-                                  } else {
-                                    setDeductAmount(e.target.value);
-                                  }
-                                }}
-                                className="w-full max-w-[150px] rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none text-text-primary"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                <div className="border-t border-surface-low pt-4 space-y-2 text-sm font-semibold">
-                  <div className="flex justify-between text-text-secondary text-xs">
-                    <span>Additional Cost:</span>
-                    <span>{formatCurrency(additionalCosts)}</span>
-                  </div>
-                  {(() => {
-                    const expectedProfit = items.reduce((acc, item) => {
-                      const sell = item.new_selling_price !== null && item.new_selling_price !== undefined && item.new_selling_price !== '' ? parseFloat(item.new_selling_price) : parseFloat(item.selling_price || 0);
-                      return acc + (item.quantity * (sell - item.purchase_cost));
-                    }, 0) - parseFloat(additionalCosts || 0);
-                    return (
-                      <div className={`flex justify-between px-2 py-1.5 rounded-md text-xs font-bold border ${expectedProfit >= 0 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200'}`}>
-                        <span>Expected Total Profit (Include Expenses):</span>
-                        <span>{formatCurrency(expectedProfit)}</span>
-                      </div>
-                    );
-                  })()}
-                  {(() => {
-                    const baseAmt = items.reduce((acc, curr) => acc + (curr.quantity * curr.purchase_cost), 0) - (deductSupplierCredit ? parseFloat(deductAmount || 0) : 0);
-                    const oldCreditVal = paymentType !== 'Credit' && payOldCredit ? (() => {
-                      const selectedSupplierObj = suppliers.find(s => s.id.toString() === supplier);
-                      return selectedSupplierObj && parseFloat(selectedSupplierObj.outstanding_balance) > 0 ? parseFloat(selectedSupplierObj.outstanding_balance) : 0;
-                    })() : 0;
-                    const finalPayAmt = baseAmt + oldCreditVal;
-
-                    return finalPayAmt < 0 ? (
-                      <div className="flex justify-between text-emerald-600 text-xs font-bold">
-                        <span>Supplier will pay to you:</span>
-                        <span>{formatCurrency(Math.abs(finalPayAmt))}</span>
-                      </div>
-                    ) : (
-                      <div className="flex justify-between text-text-secondary text-xs">
-                        <span>Amount to Pay Supplier:</span>
-                        <span>{formatCurrency(finalPayAmt)}</span>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSavingPO}
-                  className="w-full flex items-center justify-center space-x-2 rounded bg-brand-blue py-2.5 text-sm font-semibold text-white hover:bg-brand-cobalt transition disabled:opacity-50"
-                >
-                  {isSavingPO && <Spinner size="sm" />}
-                  <span>Post Purchase Order</span>
-                </button>
-              </form>
-            ) : (
-              // Product-based mode: Show separate form fields per supplier group
-              <form onSubmit={handleSubmitPO} className="space-y-6">
-                {items.length === 0 ? (
-                  <p className="text-xs text-text-secondary text-center py-4">Add products to see billing details.</p>
-                ) : (
-                  Object.keys(supplierBilling).map((supId) => {
-                    const billing = supplierBilling[supId];
-                    if (!billing) return null;
-                    const supplierItems = items.filter(item => item.supplier_id.toString() === supId);
-                    const supplierName = supplierItems[0]?.supplier_name || 'Unknown Supplier';
-                    const itemsSubtotal = supplierItems.reduce((acc, curr) => acc + (curr.quantity * curr.purchase_cost), 0);
-                    const additional = parseFloat(billing.additionalCosts || 0);
-
-                    const selectedSupplierObj = suppliers.find(s => s.id.toString() === supId.toString());
-                    const oldCreditVal = selectedSupplierObj && parseFloat(selectedSupplierObj.outstanding_balance) > 0
-                      ? parseFloat(selectedSupplierObj.outstanding_balance)
-                      : 0;
-
-                    const total = itemsSubtotal + additional + (billing.paymentType !== 'Credit' && billing.payOldCredit ? oldCreditVal : 0);
-
-                    const updateBillingField = (field, val) => {
-                      setSupplierBilling(prev => ({
-                        ...prev,
-                        [supId]: {
-                          ...prev[supId],
-                          [field]: val
-                        }
-                      }));
-                    };
-
-                    return (
-                      <div key={supId} className="border border-surface-low rounded p-3 bg-surface-lowest space-y-3">
-                        <div className="flex justify-between items-center border-b border-surface-low pb-1.5">
-                          <span className="text-xs font-bold text-brand-blue">{supplierName}</span>
-                          <span className="text-[10px] text-text-secondary">{supplierItems.length} item(s)</span>
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Invoice / Ref #</label>
-                          <input
-                            type="text"
-                            value={billing.invoiceNumber}
-                            onChange={(e) => updateBillingField('invoiceNumber', e.target.value)}
-                            className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Additional Landing Cost</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={billing.additionalCosts}
-                            onChange={(e) => updateBillingField('additionalCosts', e.target.value)}
-                            className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Payment Method</label>
-                          <select
-                            value={billing.paymentType}
-                            onChange={(e) => updateBillingField('paymentType', e.target.value)}
-                            className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue"
-                          >
-                            <option value="Cash">Immediate Cash Payment</option>
-                            <option value="Bank">Immediate Bank Transfer</option>
-                            <option value="Credit">
-                              Post on credit (Accounts Payable) (old Credit: {
-                                formatCurrency(suppliers.find(s => s.id.toString() === supId.toString())?.outstanding_balance || 0)
-                              })
-                            </option>
-                          </select>
-                          {billing.paymentType === 'Credit' && (
-                            <div className="text-[9px] text-red-600 font-bold mt-0.5">
-                              Current supplier credit balance: {
-                                formatCurrency(suppliers.find(s => s.id.toString() === supId.toString())?.outstanding_balance || 0)
-                              }
-                            </div>
-                          )}
-                        </div>
-                        {(billing.paymentType !== 'Credit' || additional > 0) && (
-                          <div>
-                            <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Deduct Account</label>
-                            <select
-                              value={billing.paidFrom}
-                              onChange={(e) => updateBillingField('paidFrom', e.target.value)}
-                              className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue"
-                            >
-                              {bankAccounts.map((b) => (
-                                <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-
-                        {billing.paymentType !== 'Credit' && (
-                          <div className="space-y-2 pt-1">
-                            {oldCreditVal > 0 && (
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id={`payOldCredit-${supId}`}
-                                  checked={billing.payOldCredit || false}
-                                  onChange={(e) => updateBillingField('payOldCredit', e.target.checked)}
-                                  className="rounded border-surface-dim text-brand-blue focus:ring-brand-blue h-4 w-4"
-                                />
-                                <label htmlFor={`payOldCredit-${supId}`} className="text-xs font-semibold text-text-primary cursor-pointer select-none">
-                                  Pay Old Credit to Supplier ({formatCurrency(oldCreditVal)})
-                                </label>
-                              </div>
-                            )}
-                            {selectedSupplierObj && parseFloat(selectedSupplierObj.outstanding_balance) < 0 && (() => {
-                              const negativeCreditVal = Math.abs(parseFloat(selectedSupplierObj.outstanding_balance));
-                              return (
-                                <div className="space-y-1.5">
-                                  <div className="flex items-center space-x-2">
-                                    <input
-                                      type="checkbox"
-                                      id={`deductSupplierCredit-${supId}`}
-                                      checked={billing.deductSupplierCredit || false}
-                                      onChange={(e) => {
-                                        updateBillingField('deductSupplierCredit', e.target.checked);
-                                        if (e.target.checked) {
-                                          updateBillingField('deductAmount', Math.min(negativeCreditVal, itemsSubtotal).toString());
-                                        } else {
-                                          updateBillingField('deductAmount', '0');
-                                        }
-                                      }}
-                                      className="rounded border-surface-dim text-brand-blue focus:ring-brand-blue h-4 w-4"
-                                    />
-                                    <label htmlFor={`deductSupplierCredit-${supId}`} className="text-xs font-semibold text-text-primary cursor-pointer select-none">
-                                      Deduct Old Supplier Credit
-                                    </label>
-                                  </div>
-                                  {billing.deductSupplierCredit && (
-                                    <div className="pl-6">
-                                      <label className="block text-[10px] font-semibold text-text-secondary mb-0.5 font-sans">Deduct Amount (Max: {formatCurrency(negativeCreditVal)})</label>
-                                      <input
-                                        type="number"
-                                        step="0.01"
-                                        max={negativeCreditVal}
-                                        value={billing.deductAmount || '0'}
-                                        onChange={(e) => {
-                                          const val = parseFloat(e.target.value || 0);
-                                          if (val > negativeCreditVal) {
-                                            updateBillingField('deductAmount', negativeCreditVal.toString());
-                                          } else {
-                                            updateBillingField('deductAmount', e.target.value);
-                                          }
-                                        }}
-                                        className="w-full max-w-[150px] rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none text-text-primary"
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        )}
-
-                        <div className="pt-2 border-t border-dashed border-surface-low text-xs font-semibold space-y-1">
-                          <div className="flex justify-between text-text-secondary text-[10px]">
-                            <span>Subtotal:</span>
-                            <span>{formatCurrency(itemsSubtotal)}</span>
-                          </div>
-                          <div className="flex justify-between text-text-secondary text-[10px]">
-                            <span>Landed Cost:</span>
-                            <span>{formatCurrency(additional)}</span>
-                          </div>
-                          {(() => {
-                            const expectedProfit = supplierItems.reduce((acc, item) => {
-                              const sell = item.new_selling_price !== null && item.new_selling_price !== undefined && item.new_selling_price !== '' ? parseFloat(item.new_selling_price) : parseFloat(item.selling_price || 0);
-                              return acc + (item.quantity * (sell - item.purchase_cost));
-                            }, 0) - additional;
-                            return (
-                              <div className={`flex justify-between px-2 py-1 rounded text-[10px] font-bold border ${expectedProfit >= 0 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200'}`}>
-                                <span>PO Profit (Include Expenses):</span>
-                                <span>{formatCurrency(expectedProfit)}</span>
-                              </div>
-                            );
-                          })()}
-                          {billing.paymentType !== 'Credit' && billing.payOldCredit && oldCreditVal > 0 && (
-                            <div className="flex justify-between text-text-secondary text-[10px]">
-                              <span>Old Credit Paid:</span>
-                              <span>{formatCurrency(oldCreditVal)}</span>
-                            </div>
-                          )}
-                          {(() => {
-                            const baseAmt = itemsSubtotal - (billing.deductSupplierCredit ? parseFloat(billing.deductAmount || 0) : 0);
-                            const finalPayAmt = baseAmt + (billing.paymentType !== 'Credit' && billing.payOldCredit ? oldCreditVal : 0);
-
-                            return finalPayAmt < 0 ? (
-                              <div className="flex justify-between text-emerald-600 text-[10px] font-bold">
-                                <span>Supplier will pay to you:</span>
-                                <span>{formatCurrency(Math.abs(finalPayAmt))}</span>
-                              </div>
-                            ) : (
-                              <div className="flex justify-between text-text-secondary text-[10px]">
-                                <span>Amount to Pay Supplier:</span>
-                                <span>{formatCurrency(finalPayAmt)}</span>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                        <button
-                          type="button"
-                          disabled={postingSupplierId === supId.toString()}
-                          onClick={() => handlePostSingleSupplierPO(supId)}
-                          className="w-full flex items-center justify-center space-x-2 rounded bg-brand-blue py-2 text-xs font-semibold text-white hover:bg-brand-cobalt transition mt-3 disabled:opacity-50"
-                        >
-                          {postingSupplierId === supId.toString() && <Spinner size="sm" />}
-                          <span>Post Purchase Order</span>
-                        </button>
-                      </div>
-                    );
-                  })
-                )}
-
-                {/* {items.length > 0 && (
-                  <button
-                    type="submit"
-                    className="w-full rounded bg-brand-blue py-2.5 text-sm font-semibold text-white hover:bg-brand-cobalt transition mt-4"
-                  >
-                    Post Purchase Orders
-                  </button>
-                )} */}
-              </form>
-            )}
+            {renderBillingForm()}
           </div>
         </div>
       )}
@@ -2043,9 +2059,12 @@ export default function Purchases() {
                         {p.is_received && (
                           <button
                             onClick={() => handleOpenReturnModal(p)}
-                            className="rounded bg-error-container/10 px-2 py-1 text-[11px] font-semibold text-error hover:bg-error-container/20"
+                            className="inline-flex items-center justify-center rounded bg-red-600 hover:bg-red-700 px-2.5 py-1 text-[11px] font-bold text-white transition shadow-sm cursor-pointer"
                           >
-                            Return Purchase
+                            <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                            </svg>
+                            <span>Return Purchase</span>
                           </button>
                         )}
                       </td>
@@ -2122,9 +2141,12 @@ export default function Purchases() {
                     <div className="pt-2 border-t border-surface-lowest flex justify-end">
                       <button
                         onClick={() => handleOpenReturnModal(p)}
-                        className="rounded bg-error-container/10 px-3 py-1.5 text-xs font-semibold text-error hover:bg-error-container/20 w-full sm:w-auto"
+                        className="inline-flex items-center justify-center rounded bg-red-600 hover:bg-red-700 px-3 py-2 text-xs font-bold text-white transition shadow-sm w-full sm:w-auto cursor-pointer"
                       >
-                        Return Purchase
+                        <svg className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                        </svg>
+                        <span>Return Purchase</span>
                       </button>
                     </div>
                   )}
@@ -2677,9 +2699,16 @@ export default function Purchases() {
                         <button
                           type="button"
                           onClick={handleOpenRecViewAllPopup}
-                          className="text-[10px] text-brand-blue hover:underline font-semibold"
+                          className="text-[10px] text-brand-blue hover:underline font-semibold flex items-center"
+                          title="View all products"
                         >
-                          View All
+                          <span className="hidden sm:inline">View All</span>
+                          <span className="sm:hidden p-1 bg-brand-blue/10 rounded-full text-brand-blue active:bg-brand-blue/20">
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </span>
                         </button>
                       </div>
                       <input
@@ -3569,6 +3598,94 @@ export default function Purchases() {
           </div>
         </div>
       )}
+
+      {/* 1. Mobile Floating Cart Button */}
+      {currentTab === 'create' && poMode && items.length > 0 && (
+        <div className="lg:hidden fixed bottom-20 right-6 z-40">
+          <button
+            onClick={() => setShowMobileCart(true)}
+            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-brand-blue text-white shadow-xl hover:bg-brand-cobalt transition active:scale-95 cursor-pointer"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <span className="absolute -top-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white border-2 border-white shadow-sm animate-pulse">
+              {items.length}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* 2. Mobile Cart Bottom Sheet */}
+      <MobileBottomSheet
+        isOpen={showMobileCart}
+        onClose={() => setShowMobileCart(false)}
+        title={`Purchase Cart (${items.length} items)`}
+      >
+        <div className="space-y-4 pb-8">
+          {items.length === 0 ? (
+            <div className="text-center py-8 text-text-secondary text-xs">Your cart is empty.</div>
+          ) : (
+            <div className="space-y-3">
+              {Object.entries(getGroupedItems()).map(([supId, group]) => (
+                <div key={supId} className="border border-surface-low rounded-xl p-3 bg-surface-lowest space-y-2">
+                  <div className="font-bold text-xs text-brand-blue border-b border-surface-low pb-1">
+                    Supplier: {group.supplierName}
+                  </div>
+                  <div className="divide-y divide-surface-low">
+                    {group.items.map((item) => {
+                      const sell = item.new_selling_price !== null && item.new_selling_price !== undefined && item.new_selling_price !== '' ? parseFloat(item.new_selling_price) : parseFloat(item.selling_price || 0);
+                      const itemProfit = item.quantity * (sell - item.purchase_cost);
+                      return (
+                        <div key={item.originalIndex} className="py-2 flex items-center justify-between text-xs gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-text-primary truncate">{item.name}</div>
+                            <div className="text-[10px] text-text-secondary mt-0.5">
+                              Qty: <span className="font-bold text-text-primary">{item.quantity}</span> | Cost: <span className="font-semibold">{formatCurrency(item.purchase_cost)}</span> | Profit: <span className={`font-semibold ${itemProfit >= 0 ? 'text-green-600' : 'text-error'}`}>{formatCurrency(itemProfit)}</span>
+                            </div>
+                          </div>
+                          <div className="text-right flex items-center space-x-3">
+                            <div className="font-bold text-text-primary">{formatCurrency(item.quantity * item.purchase_cost)}</div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveLineItem(item.originalIndex)}
+                              className="text-error font-bold p-1 hover:underline cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobileCart(false);
+                  setShowMobileBilling(true);
+                }}
+                className="w-full mt-4 rounded-xl bg-brand-blue py-3 text-sm font-bold text-white hover:bg-brand-cobalt transition shadow-sm cursor-pointer text-center"
+              >
+                Continue to Billing
+              </button>
+            </div>
+          )}
+        </div>
+      </MobileBottomSheet>
+
+      {/* 3. Mobile Billing Bottom Sheet */}
+      <MobileBottomSheet
+        isOpen={showMobileBilling}
+        onClose={() => setShowMobileBilling(false)}
+        title="Billing & Settlement"
+      >
+        <div className="space-y-4 pb-8">
+          {renderBillingForm()}
+        </div>
+      </MobileBottomSheet>
     </div>
   );
 }

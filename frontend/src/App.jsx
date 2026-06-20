@@ -38,7 +38,7 @@ function ERPLayout() {
         </header>
 
         {/* Content Outlet */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 pb-24 md:pb-8 bg-surface">
+        <main className="flex-1 overflow-y-auto p-2.5 sm:p-4 md:p-6 lg:p-8 pb-24 md:pb-8 bg-surface">
           <Outlet />
         </main>
       </div>
