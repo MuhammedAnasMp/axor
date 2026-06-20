@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../utils/api';
 
+const CURRENT_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0';
+
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [openTab, setOpenTab] = useState(null);
@@ -313,6 +315,11 @@ export default function Sidebar() {
             </svg>
             {!collapsed && <span>Logout</span>}
           </button>
+          <div className="text-center pt-2 pb-1 border-t border-surface-low/55 mt-2">
+            <span className="text-[10px] text-text-secondary font-semibold">
+              {collapsed ? `v${CURRENT_VERSION}` : `App Version: v${CURRENT_VERSION}`}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -559,6 +566,11 @@ export default function Sidebar() {
                   </svg>
                   <span>Log Out Securely</span>
                 </button>
+                <div className="text-center pt-3 border-t border-surface-low/55 mt-2">
+                  <span className="text-[10px] text-text-secondary font-semibold">
+                    App Version: v{CURRENT_VERSION}
+                  </span>
+                </div>
               </div>
             </motion.div>
           </>

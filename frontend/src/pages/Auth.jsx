@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { api } from '../utils/api';
 import { Spinner } from '../components/Skeleton';
 
+const CURRENT_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0';
+
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
@@ -203,6 +205,11 @@ export default function Auth() {
           >
             {isLogin ? "Don't have an account? Register employee" : 'Already have an account? Sign In'}
           </button>
+        </div>
+        <div className="mt-4 text-center border-t border-surface-low pt-3">
+          <span className="text-[10px] text-text-secondary font-medium">
+            App Version: v{CURRENT_VERSION}
+          </span>
         </div>
       </motion.div>
     </div>
