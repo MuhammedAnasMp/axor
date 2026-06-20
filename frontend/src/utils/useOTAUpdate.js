@@ -62,7 +62,7 @@ export function useOTAUpdate() {
       });
 
       if (!data || !data.update_available) {
-        setStatus('idle');
+        setStatus('waiting-for-ui');
         return;
       }
 
@@ -78,7 +78,7 @@ export function useOTAUpdate() {
       }
     } catch (error) {
       console.error('OTA Error:', error);
-      setStatus('error');
+      setStatus('waiting-for-ui');
     }
   };
 

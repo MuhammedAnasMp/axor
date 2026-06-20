@@ -1,4 +1,15 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api';
+const getBaseUrl = () => {
+  const isTestDevice = localStorage.getItem('is_test_device') === 'true';
+  if (isTestDevice) {
+    const activeMode = localStorage.getItem('active_api_mode') || 'local';
+    if (activeMode === 'production') {
+      return localStorage.getItem('production_api_url') || 'https://axor-0r99.onrender.com/api';
+    } else {
+      return localStorage.getItem('local_api_url') || 'http://172.16.4.167:8001/api';
+    }
+  }
+  return import.meta.env.VITE_API_URL || 'http://localhost:8001/api';
+};
 
 // Helper to get CSRF token from cookies (if needed)
 function getCookie(name) {
@@ -17,7 +28,8 @@ function getCookie(name) {
 }
 
 export const request = async (endpoint, options = {}) => {
-  let url = `${BASE_URL}${endpoint}`;
+  const baseUrl = getBaseUrl();
+  let url = `${baseUrl}${endpoint}`;
   if (options.params) {
     const searchParams = new URLSearchParams();
     Object.entries(options.params).forEach(([key, val]) => {

@@ -42,6 +42,19 @@ export default function Auth() {
     }
   };
 
+  const [isTestDevice] = useState(localStorage.getItem('is_test_device') === 'true');
+  const [localApiUrl, setLocalApiUrl] = useState(localStorage.getItem('local_api_url') || 'http://172.16.4.167:8001/api');
+  const [prodApiUrl, setProdApiUrl] = useState(localStorage.getItem('production_api_url') || 'https://axor-0r99.onrender.com/api');
+  const [activeApiMode, setActiveApiMode] = useState(localStorage.getItem('active_api_mode') || 'local');
+
+  const saveApiSettings = (localUrl, prodUrl, mode) => {
+    localStorage.setItem('local_api_url', localUrl);
+    localStorage.setItem('production_api_url', prodUrl);
+    localStorage.setItem('active_api_mode', mode);
+    alert('API Settings Saved!');
+    window.location.reload();
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
@@ -206,6 +219,73 @@ export default function Auth() {
             {isLogin ? "Don't have an account? Register employee" : 'Already have an account? Sign In'}
           </button>
         </div>
+
+        {isTestDevice && (
+          <div className="mt-6 border-t border-dashed border-surface-low pt-4 space-y-3">
+            <h3 className="text-xs font-bold text-brand-blue flex items-center">
+              🧪 Developer API Settings
+            </h3>
+            
+            <div className="space-y-2">
+              <div>
+                <label className="block text-[10px] font-semibold text-text-secondary mb-1">Local API URL</label>
+                <input
+                  type="text"
+                  value={localApiUrl}
+                  onChange={(e) => setLocalApiUrl(e.target.value)}
+                  className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-text-secondary mb-1">Production API URL</label>
+                <input
+                  type="text"
+                  value={prodApiUrl}
+                  onChange={(e) => setProdApiUrl(e.target.value)}
+                  className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-text-secondary mb-1">Active Environment</label>
+                <div className="flex space-x-4 mt-1">
+                  <label className="flex items-center space-x-1.5 text-xs text-text-primary cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="api_mode"
+                      value="local"
+                      checked={activeApiMode === 'local'}
+                      onChange={() => setActiveApiMode('local')}
+                      className="text-brand-blue focus:ring-brand-blue"
+                    />
+                    <span>Local</span>
+                  </label>
+                  <label className="flex items-center space-x-1.5 text-xs text-text-primary cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="api_mode"
+                      value="production"
+                      checked={activeApiMode === 'production'}
+                      onChange={() => setActiveApiMode('production')}
+                      className="text-brand-blue focus:ring-brand-blue"
+                    />
+                    <span>Production</span>
+                  </label>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => saveApiSettings(localApiUrl, prodApiUrl, activeApiMode)}
+                className="w-full mt-2 rounded bg-surface-low border border-surface-dim text-text-primary hover:bg-surface-dim py-1.5 text-xs font-semibold transition cursor-pointer"
+              >
+                Save & Apply Settings
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="mt-4 text-center border-t border-surface-low pt-3">
           <span className="text-[10px] text-text-secondary font-medium">
             App Version: v{CURRENT_VERSION}
