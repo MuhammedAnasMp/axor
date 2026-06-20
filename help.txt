@@ -1,0 +1,10 @@
+npm run build
+
+
+npx cap sync
+
+.\gradlew.bat assembleDebug
+
+
+npm run build-ui
+
