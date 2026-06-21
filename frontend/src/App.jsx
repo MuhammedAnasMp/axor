@@ -150,10 +150,25 @@ export default function App() {
             <Route path="sales" element={<Sales />} />
           </Route>
 
+          {/* Ping endpoint fallback */}
+          <Route path="/ping" element={<PingPage />} />
+
           {/* Catch-all Redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </>
   );
+}
+
+function PingPage() {
+  React.useEffect(() => {
+    document.body.innerText = JSON.stringify({ ping: "test ok" }, null, 2);
+    document.body.style.fontFamily = "monospace";
+    document.body.style.whiteSpace = "pre";
+    document.body.style.backgroundColor = "#ffffff";
+    document.body.style.color = "#000000";
+    document.body.style.padding = "20px";
+  }, []);
+  return null;
 }

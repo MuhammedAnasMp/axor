@@ -319,7 +319,7 @@ export default function POS() {
       {/* Products Left Panel */}
       <div className="flex-1 flex flex-col h-1/2 md:h-full overflow-hidden border-r border-surface-dim">
         {/* POS Header / Search */}
-        <div className="p-4 bg-white border-b border-surface-low space-y-3 shadow-sm">
+        <div className="p-4 safe-pt bg-white border-b border-surface-low space-y-3 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <button 

@@ -1,4 +1,4 @@
-const getBaseUrl = () => {
+export const getBaseUrl = () => {
   const isTestDevice = localStorage.getItem('is_test_device') === 'true';
   if (isTestDevice) {
     // Sanitize any malformed URLs stored in localStorage from previous builds

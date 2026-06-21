@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { api } from '../utils/api';
+import { api, getBaseUrl } from '../utils/api';
 
 const CURRENT_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0';
 
@@ -9,8 +9,28 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [openTab, setOpenTab] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    api.auth.me()
+      .then((user) => setCurrentUser(user))
+      .catch((err) => console.error("Error fetching user profile:", err));
+  }, []);
+
+  const isDeveloper = currentUser && (
+    currentUser.role === 'Owner' ||
+    currentUser.user?.is_staff ||
+    currentUser.user?.is_superuser ||
+    currentUser.user?.username === 'admin'
+  );
+
+  const getAdminUrl = () => {
+    const apiBase = getBaseUrl();
+    const base = apiBase.replace(/\/api\/?$/, '');
+    return `${base}/admin/`;
+  };
 
   const handleLogout = () => {
     api.auth.logout()
@@ -161,6 +181,23 @@ export default function Sidebar() {
     }
   ];
 
+  if (isDeveloper) {
+    navItems.push({
+      id: 12,
+      title: 'Developer',
+      path: '#dev',
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+        </svg>
+      ),
+      subItems: [
+        { title: 'Ping Status', path: 'https://vcn2c24w.status.cron-job.org/', isExternal: true },
+        { title: 'Admin', path: getAdminUrl(), isExternal: true }
+      ]
+    });
+  }
+
   const handleTabClick = (item, isMobile = false) => {
     if (collapsed && !isMobile) {
       setCollapsed(false);
@@ -272,6 +309,19 @@ export default function Sidebar() {
                   <div className="mt-1 ml-6 pl-3 border-l border-surface-dim space-y-1">
                     {item.subItems.map((sub, sIdx) => {
                       const subActive = location.pathname + location.search === sub.path;
+                      if (sub.isExternal) {
+                        return (
+                          <a
+                            key={sIdx}
+                            href={sub.path}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block rounded px-3 py-1.5 text-xs font-medium transition text-text-secondary hover:text-text-primary hover:bg-surface-low"
+                          >
+                            {sub.title}
+                          </a>
+                        );
+                      }
                       return (
                         <Link
                           key={sIdx}
@@ -520,6 +570,20 @@ export default function Sidebar() {
                         <div className="mt-1 ml-6 pl-4 border-l-2 border-surface-dim space-y-1.5 py-1">
                           {item.subItems.map((sub, sIdx) => {
                             const subActive = location.pathname + location.search === sub.path;
+                            if (sub.isExternal) {
+                              return (
+                                <a
+                                  key={sIdx}
+                                  href={sub.path}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={() => setDrawerOpen(false)}
+                                  className="block rounded-lg px-3 py-2 text-xs font-bold transition text-text-secondary hover:text-text-primary active:bg-surface-low"
+                                >
+                                  {sub.title}
+                                  </a>
+                              );
+                            }
                             return (
                               <Link
                                 key={sIdx}
