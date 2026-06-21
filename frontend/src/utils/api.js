@@ -13,12 +13,12 @@ const getBaseUrl = () => {
 
     const activeMode = localStorage.getItem('active_api_mode') || 'local';
     if (activeMode === 'production') {
-      return localStorage.getItem('production_api_url') || 'https://axor-0r99.onrender.com/api';
+      return localStorage.getItem('production_api_url') || 'https://axonbackend.pythonanywhere.com/api';
     } else {
       return localStorage.getItem('local_api_url') || 'http://172.16.4.167:8001/api';
     }
   }
-  return import.meta.env.VITE_API_URL || 'http://localhost:8001/api';
+  return import.meta.env.VITE_API_URL || 'http://172.16.4.167:8001/api';
 };
 
 // Helper to get CSRF token from cookies (if needed)
