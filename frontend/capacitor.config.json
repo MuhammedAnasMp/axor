@@ -1,6 +1,6 @@
 {
-  "appId": "com.axor.app",
-  "appName": "Axor",
+  "appId": "com.axon.app",
+  "appName": "Axon",
   "webDir": "dist",
   "android": {
     "allowMixedContent": true
