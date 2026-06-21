@@ -85,14 +85,23 @@ function cmdBuild({ withPush = false } = {}) {
   }
 
   console.log('🤐 Zipping web assets with Capgo CLI...');
-  const defaultZipName = `com.axor.app_${newVersion}.zip`;
+  let appId = 'com.axon.app';
+  const capConfigPath = path.join(frontendDir, 'capacitor.config.json');
+  if (fs.existsSync(capConfigPath)) {
+    try {
+      const capConfig = JSON.parse(fs.readFileSync(capConfigPath, 'utf8'));
+      if (capConfig.appId) appId = capConfig.appId;
+    } catch (e) {}
+  }
+  
+  const defaultZipName = `${appId}_${newVersion}.zip`;
   const defaultZipPath = path.join(frontendDir, defaultZipName);
   const zipPath = path.join(frontendDir, 'ota_update.zip');
 
   if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
   if (fs.existsSync(defaultZipPath)) fs.unlinkSync(defaultZipPath);
 
-  const zipSuccess = runCommand(`npx @capgo/cli bundle zip com.axor.app --path ./dist`, { cwd: frontendDir });
+  const zipSuccess = runCommand(`npx @capgo/cli bundle zip ${appId} --path ./dist`, { cwd: frontendDir });
   if (zipSuccess && fs.existsSync(defaultZipPath)) fs.renameSync(defaultZipPath, zipPath);
   if (!fs.existsSync(zipPath)) {
     console.error('❌ Failed to zip dist/ contents using Capgo CLI.');
