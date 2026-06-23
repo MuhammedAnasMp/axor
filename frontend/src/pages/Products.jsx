@@ -692,67 +692,71 @@ export default function Products() {
   return (
     <div className="space-y-6">
       {/* Title */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Products Management</h2>
-          <p className="text-xs text-text-secondary">Add and configure products, categories, brands, and supplier costs.</p>
+      {!isMobile && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Products Management</h2>
+            <p className="text-xs text-text-secondary">Add and configure products, categories, brands, and supplier costs.</p>
+          </div>
+          {currentTab === 'products' && (
+            <button
+              onClick={() => {
+                if (showForm) {
+                  setEditingProduct(null);
+                  resetProductForm();
+                }
+                setShowForm(!showForm);
+              }}
+              className="hidden md:inline-block rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
+            >
+              {showForm ? 'Cancel' : 'Add Product'}
+            </button>
+          )}
         </div>
-        {currentTab === 'products' && (
-          <button
-            onClick={() => {
-              if (showForm) {
-                setEditingProduct(null);
-                resetProductForm();
-              }
-              setShowForm(!showForm);
-            }}
-            className="hidden md:inline-block rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
-          >
-            {showForm ? 'Cancel' : 'Add Product'}
-          </button>
-        )}
-      </div>
+      )}
 
       {/* Tabs Menu */}
-      <div className="hidden md:block tabs-container border-b border-surface-low">
-        <div className="tabs-scrollable space-x-6 text-sm font-medium">
-          <Link
-            to="/erp/products"
-            className={`pb-2 ${currentTab === 'products' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-          >
-            Product Catalog
-          </Link>
+      {!isMobile && (
+        <div className="hidden md:block tabs-container border-b border-surface-low">
+          <div className="tabs-scrollable space-x-6 text-sm font-medium">
+            <Link
+              to="/erp/products"
+              className={`pb-2 ${currentTab === 'products' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+            >
+              Products
+            </Link>
 
-          <Link
-            to="/erp/products?tab=cost-history"
-            className={`pb-2 ${currentTab === 'cost-history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-          >
-            Cost History
-          </Link>
-          <Link
-            to="/erp/products?tab=categories"
-            className={`pb-2 ${currentTab === 'categories' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-          >
-            Categories
-          </Link>
-          <Link
-            to="/erp/products?tab=brands"
-            className={`pb-2 ${currentTab === 'brands' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-          >
-            Brands
-          </Link>
-          <Link
-            to="/erp/products?tab=model"
-            className={`pb-2 ${currentTab === 'model' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-          >
-            Mobile Models
-          </Link>
+            <Link
+              to="/erp/products?tab=cost-history"
+              className={`pb-2 ${currentTab === 'cost-history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+            >
+              Cost History
+            </Link>
+            <Link
+              to="/erp/products?tab=categories"
+              className={`pb-2 ${currentTab === 'categories' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+            >
+              Categories
+            </Link>
+            <Link
+              to="/erp/products?tab=brands"
+              className={`pb-2 ${currentTab === 'brands' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+            >
+              Brands
+            </Link>
+            <Link
+              to="/erp/products?tab=model"
+              className={`pb-2 ${currentTab === 'model' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+            >
+              Mobile Models
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Product Catalog Tab */}
       {currentTab === 'products' && (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {/* Add Product Form */}
           {showForm && (
             <div className="hidden md:block">
@@ -761,16 +765,16 @@ export default function Products() {
           )}
 
           {/* Search bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-t-lg border-t border-x border-surface-low">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 md:bg-white md:p-4 md:rounded-t-lg md:border-t md:border-x md:border-surface-low bg-transparent p-0 border-none">
             <div className="relative w-full sm:w-72">
               <input
                 type="text"
                 value={prodPag.search}
                 onChange={(e) => prodPag.setSearch(e.target.value)}
                 placeholder="Search products using name/barcode..."
-                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
               />
-              <span className="absolute left-3 top-2.5 text-text-secondary">
+              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -783,7 +787,7 @@ export default function Products() {
 
           {/* Product Grid / List */}
           {isMobile ? (
-            <div className="divide-y divide-surface-low bg-white border-x border-b border-surface-low rounded-b-lg">
+            <div className="space-y-3 md:pt-2">
               {prodPag.loading ? (
                 <div className="p-4 space-y-4">
                   {[1, 2, 3, 4, 5].map((idx) => (
@@ -801,7 +805,7 @@ export default function Products() {
                   <div
                     key={p.id}
                     onClick={() => setSelectedProductDetails(p)}
-                    className="p-4 hover:bg-surface-bright transition-colors cursor-pointer space-y-2.5"
+                    className="rounded-lg border border-surface-low bg-white p-4 shadow-sm active:bg-surface-low transition-colors cursor-pointer space-y-2.5"
                   >
                     {/* Row 1: Image, Name, and Stock */}
                     <div className="flex items-start justify-between gap-3">
@@ -1037,7 +1041,7 @@ export default function Products() {
           </div>
 
           {/* Categories List */}
-          <div className="rounded-lg bg-white p-6 shadow-sm md:col-span-2" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+          <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none shadow-none md:col-span-2">
             <h3 className="text-sm font-semibold text-text-primary mb-4">Category List</h3>
 
             {/* Search and Loading */}
@@ -1047,13 +1051,13 @@ export default function Products() {
                 value={catPag.search}
                 onChange={(e) => catPag.setSearch(e.target.value)}
                 placeholder="Search categories..."
-                className="rounded border border-surface-dim bg-white px-3 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue w-64"
+                className="rounded border border-surface-dim bg-white px-3 py-2.5 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue w-64 search-input-mobile"
               />
               {activeLoading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
             </div>
 
             {isMobile ? (
-              <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden">
+              <div className="space-y-3 pt-2">
                 {catPag.loading ? (
                   <div className="p-4 space-y-4">
                     {[1, 2, 3, 4, 5].map((idx) => (
@@ -1062,7 +1066,7 @@ export default function Products() {
                   </div>
                 ) : (
                   catPag.data.map((c) => (
-                    <div key={c.id} className="p-4 flex items-center justify-between">
+                    <div key={c.id} className="rounded-lg border border-surface-low bg-white p-4 shadow-sm flex items-center justify-between">
                       <span className="font-semibold text-xs text-text-primary">{c.name}</span>
                       <button
                         onClick={() => {
@@ -1186,7 +1190,7 @@ export default function Products() {
           </div>
 
           {/* Brands List */}
-          <div className="rounded-lg bg-white p-6 shadow-sm md:col-span-2" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+          <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none shadow-none md:col-span-2">
             <h3 className="text-sm font-semibold text-text-primary mb-4">Brands Directory</h3>
 
             {/* Search and Loading */}
@@ -1196,13 +1200,13 @@ export default function Products() {
                 value={brandPag.search}
                 onChange={(e) => brandPag.setSearch(e.target.value)}
                 placeholder="Search brands..."
-                className="rounded border border-surface-dim bg-white px-3 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue w-64"
+                className="rounded border border-surface-dim bg-white px-3 py-2.5 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue w-64 search-input-mobile"
               />
               {activeLoading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
             </div>
 
             {isMobile ? (
-              <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden">
+              <div className="space-y-3 pt-2">
                 {brandPag.loading ? (
                   <div className="p-4 space-y-4">
                     {[1, 2, 3, 4, 5].map((idx) => (
@@ -1211,7 +1215,7 @@ export default function Products() {
                   </div>
                 ) : (
                   brandPag.data.map((b) => (
-                    <div key={b.id} className="p-4 flex items-center justify-between">
+                    <div key={b.id} className="rounded-lg border border-surface-low bg-white p-4 shadow-sm flex items-center justify-between">
                       <span className="font-semibold text-xs text-text-primary">{b.name}</span>
                       <button
                         onClick={() => {
@@ -1389,7 +1393,7 @@ export default function Products() {
           </div>
 
           {/* Mobile Models List */}
-          <div className="rounded-lg bg-white p-6 shadow-sm md:col-span-2" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+          <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none shadow-none md:col-span-2">
             <h3 className="text-sm font-semibold text-text-primary mb-4">Mobile Models Directory</h3>
 
             {/* Search and Loading */}
@@ -1399,13 +1403,13 @@ export default function Products() {
                 value={modelPag.search}
                 onChange={(e) => modelPag.setSearch(e.target.value)}
                 placeholder="Search models or brands..."
-                className="rounded border border-surface-dim bg-white px-3 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue w-64"
+                className="rounded border border-surface-dim bg-white px-3 py-2.5 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue w-64 search-input-mobile"
               />
               {activeLoading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
             </div>
 
             {isMobile ? (
-              <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden">
+              <div className="space-y-3 pt-2">
                 {modelPag.loading ? (
                   <div className="p-4 space-y-4">
                     {[1, 2, 3, 4, 5].map((idx) => (
@@ -1414,7 +1418,7 @@ export default function Products() {
                   </div>
                 ) : (
                   modelPag.data.map((m) => (
-                    <div key={m.id} className="p-4 flex items-center justify-between">
+                    <div key={m.id} className="rounded-lg border border-surface-low bg-white p-4 shadow-sm flex items-center justify-between">
                       <div className="min-w-0">
                         <span className="font-bold text-xs text-brand-blue">{m.brand_name}</span>
                         <span className="ml-2 font-medium text-xs text-text-primary">{m.model_name}</span>
@@ -1504,10 +1508,8 @@ export default function Products() {
       {/* Cost History Tab */}
       {currentTab === 'cost-history' && (
         <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low" style={isMobile ? {} : { boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
-          <div className="flex items-center justify-between mb-4 md:mb-6">
-            <h3 className="text-sm font-semibold text-text-primary">Supplier Cost Price Fluctuation History</h3>
-            {activeLoading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
-          </div>
+
+          {activeLoading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
 
           <div className="flex items-center justify-between mb-4 gap-4">
             <input
@@ -1515,12 +1517,12 @@ export default function Products() {
               value={costHistoryPag.search}
               onChange={(e) => costHistoryPag.setSearch(e.target.value)}
               placeholder="Search history by product or supplier..."
-              className="w-full sm:w-64 rounded border border-surface-dim bg-white px-3 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue"
+              className="w-full sm:w-64 rounded border border-surface-dim bg-white px-3 py-2.5 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue search-input-mobile"
             />
           </div>
 
           {isMobile ? (
-            <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden">
+            <div className="space-y-3 pt-2">
               {costHistoryPag.loading ? (
                 <div className="p-3 space-y-4">
                   {[1, 2, 3, 4, 5].map((idx) => (
@@ -1532,7 +1534,7 @@ export default function Products() {
                 </div>
               ) : (
                 costHistoryPag.data.map((h) => (
-                  <div key={h.id} className="p-3 space-y-2 text-xs">
+                  <div key={h.id} className="rounded-lg border border-surface-low bg-white p-3 shadow-sm space-y-2 text-xs">
                     {/* Row 1: Product SKU, Date / Time */}
                     <div className="flex justify-between items-start gap-2">
                       <div className="min-w-0">
@@ -2017,10 +2019,57 @@ export default function Products() {
       </MobileBottomSheet>
 
       {/* Floating Action Button for mobile */}
-      {(currentTab === 'products' || currentTab === 'categories' || currentTab === 'brands') && !showForm && !activeMobileForm && !showCreateMenu && (
+      {((currentTab === 'products' && !showForm) ||
+        ((currentTab === 'categories' || currentTab === 'brands' || currentTab === 'model') && !activeMobileForm)) && (
         <FloatingActionButton
+          icon={
+            currentTab === 'products' ? (
+              <div className="relative">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+              </div>
+            ) : currentTab === 'categories' ? (
+              <div className="relative">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+              </div>
+            ) : currentTab === 'brands' ? (
+              <div className="relative">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M6 20h12a2 2 0 002-2V9a2 2 0 00-2-2h-1a2 2 0 00-2-2H9a2 2 0 00-2 2H6a2 2 0 00-2 2v9a2 2 0 002 2z" />
+                </svg>
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+              </div>
+            ) : currentTab === 'model' ? (
+              <div className="relative">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+              </div>
+            ) : null
+          }
           onClick={() => {
-            setShowCreateMenu(true);
+            if (currentTab === 'products') {
+              setEditingProduct(null);
+              resetProductForm();
+              setShowForm(true);
+            } else if (currentTab === 'categories') {
+              setCatName('');
+              setActiveMobileForm('category');
+            } else if (currentTab === 'brands') {
+              setBrandName('');
+              setActiveMobileForm('brand');
+            } else if (currentTab === 'model') {
+              setTabModelBrand('');
+              setTabSearchBrandQuery('');
+              setTabNewModelName('');
+              setActiveMobileForm('model');
+            }
           }}
         />
       )}

@@ -227,6 +227,15 @@ input, textarea {
     font-size: 0.75rem !important;
   }
 
+  input[type="text"].search-input-mobile,
+  input[type="search"].search-input-mobile,
+  input.search-input-mobile {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    font-size: 0.875rem !important;
+  }
+
+
   /* 4. Tab View Containers & Scroll Bar sitting */
   .tabs-container {
     margin-top: 0.25rem !important;

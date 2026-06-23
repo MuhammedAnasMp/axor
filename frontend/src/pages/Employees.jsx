@@ -878,7 +878,7 @@ export default function Employees() {
                       )}
                     </form>
 
-                    <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4">
+                    <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none shadow-none space-y-4">
                       <h3 className="text-sm font-semibold text-text-primary border-b border-surface-low pb-2">Financial Totals</h3>
                       <div className="space-y-4">
                         <div>
@@ -918,7 +918,7 @@ export default function Employees() {
                   </div>
 
                   {/* Advance History */}
-                  <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4">
+                  <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none shadow-none space-y-4">
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-left text-xs">
                         <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
@@ -987,7 +987,7 @@ export default function Employees() {
 
               {/* Attendance Tab */}
               {activeTab === 'Attendance' && (
-                <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4">
+                <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none shadow-none space-y-4">
                   <h3 className="text-sm font-semibold text-text-primary border-b border-surface-low pb-2">Monthly Attendance Calendar</h3>
                   {renderCalendar()}
                 </div>
@@ -1111,7 +1111,7 @@ export default function Employees() {
                   )}
 
                   {/* Payroll History Table */}
-                  <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4">
+                  <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none shadow-none space-y-4">
                     <div className="flex justify-between items-center border-b border-surface-low pb-2">
                       <div>
                         <h3 className="text-sm font-semibold text-text-primary">Salary Payments History</h3>
@@ -1770,9 +1770,9 @@ export default function Employees() {
             value={pag.search}
             onChange={(e) => pag.setSearch(e.target.value)}
             placeholder="Search staff by username/name/phone..."
-            className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+            className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
           />
-          <span className="absolute left-3 top-2.5 text-text-secondary">
+          <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>

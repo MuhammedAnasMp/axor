@@ -3,6 +3,7 @@ from .models import (
     Employee,
     Category,
     Brand,
+    MobileModel,
     Product,
     Stock,
     StockHistory,
@@ -190,3 +191,8 @@ class OTAUpdateBundleAdmin(admin.ModelAdmin):
     list_filter = ('is_testing', 'is_active', 'is_mandatory', 'created_at')
     search_fields = ('version', 'native_version_required')
 
+@admin.register(MobileModel)
+class MobileModelAdmin(admin.ModelAdmin):
+    list_display = ('brand', 'model_name',)
+    list_filter = ('brand',)
+    search_fields = ('brand__name', 'model_name',)

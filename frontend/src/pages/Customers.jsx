@@ -375,19 +375,22 @@ export default function Customers() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Customers Directory</h2>
-          <p className="text-xs text-text-secondary">Configure customer records, outstanding balances, and credit limits.</p>
+    <div className="space-y-4 md:space-y-6">
+      {/* Title */}
+      {!isMobile && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Customers Directory</h2>
+            <p className="text-xs text-text-secondary">Configure customer records, outstanding balances, and credit limits.</p>
+          </div>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="hidden md:inline-block rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
+          >
+            {showForm ? 'Cancel' : 'Add Customer'}
+          </button>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="hidden md:inline-block rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
-        >
-          {showForm ? 'Cancel' : 'Add Customer'}
-        </button>
-      </div>
+      )}
 
       {showForm && (
         <div className="hidden md:block">
@@ -398,16 +401,16 @@ export default function Customers() {
       {/* Directory Table Wrapper */}
       <div className="space-y-4">
         {/* Search & loading bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-t-lg border-t border-x border-surface-low">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 md:bg-white md:p-4 md:rounded-t-lg md:border-t md:border-x md:border-surface-low bg-transparent p-0 border-none">
           <div className="relative w-full sm:w-72">
             <input
               type="text"
               value={pag.search}
               onChange={(e) => pag.setSearch(e.target.value)}
               placeholder="Search customers by name..."
-              className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+              className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
             />
-            <span className="absolute left-3 top-2.5 text-text-secondary">
+            <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -420,157 +423,156 @@ export default function Customers() {
 
         {/* Directory Table */}
         {isMobile ? (
-            <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden">
-              {pag.loading ? (
-                <div className="p-3 space-y-4">
-                  {[1, 2, 3, 4, 5].map((idx) => (
-                    <div key={idx} className="animate-pulse space-y-2">
-                      <div className="h-4 bg-surface-low rounded w-3/4"></div>
-                      <div className="h-3 bg-surface-low rounded w-1/2"></div>
+          <div className="space-y-3 md:pt-2">
+            {pag.loading ? (
+              <div className="p-3 space-y-4">
+                {[1, 2, 3, 4, 5].map((idx) => (
+                  <div key={idx} className="animate-pulse space-y-2">
+                    <div className="h-4 bg-surface-low rounded w-3/4"></div>
+                    <div className="h-3 bg-surface-low rounded w-1/2"></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              pag.data.map((c) => (
+                <div
+                  key={c.id}
+                  onClick={() => setSelectedCustomerDetails(c)}
+                  className="rounded-lg border border-surface-low bg-white p-3.5 shadow-sm active:bg-surface-low transition-colors cursor-pointer space-y-2 text-sm"
+                >
+                  {/* Row 1: Customer Name, Balance */}
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="min-w-0">
+                      <div className="font-bold text-text-primary truncate">{c.name}</div>
+                      <div className="text-xs text-text-secondary mt-0.5">{c.place || 'No Location'}</div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                pag.data.map((c) => (
-                  <div
-                    key={c.id}
-                    onClick={() => setSelectedCustomerDetails(c)}
-                    className="p-3.5 hover:bg-surface-bright transition-colors cursor-pointer space-y-2 text-sm"
-                  >
-                    {/* Row 1: Customer Name, Balance */}
-                    <div className="flex justify-between items-start gap-3">
-                      <div className="min-w-0">
-                        <div className="font-bold text-text-primary truncate">{c.name}</div>
-                        <div className="text-xs text-text-secondary mt-0.5">{c.place || 'No Location'}</div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded ${
-                          parseFloat(c.outstanding_balance) > 0 ? 'bg-amber-50 text-amber-700 border border-amber-700/10' :
-                          parseFloat(c.outstanding_balance) < 0 ? 'bg-green-50 text-green-700 border border-green-700/10' :
+                    <div className="text-right flex-shrink-0">
+                      <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded ${parseFloat(c.outstanding_balance) > 0 ? 'bg-amber-50 text-amber-700 border border-amber-700/10' :
+                        parseFloat(c.outstanding_balance) < 0 ? 'bg-green-50 text-green-700 border border-green-700/10' :
                           'bg-surface-low text-text-secondary border border-surface-dim/20'
                         }`}>
-                          {formatCurrency(c.outstanding_balance)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Row 2: Contact, Action button */}
-                    <div className="flex justify-between items-center pt-2 border-t border-dashed border-surface-low text-xs">
-                      <div className="flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
-                        {c.contact_number && (
-                          <ContactNumber number={c.contact_number} isWhatsapp={false} />
-                        )}
-                        {c.whatsapp_number && (
-                          <ContactNumber number={c.whatsapp_number} isWhatsapp={true} />
-                        )}
-                      </div>
-                      <div onClick={(e) => e.stopPropagation()}>
-                        {parseFloat(c.outstanding_balance) > 0 ? (
-                          <button
-                            onClick={() => openPayModal(c)}
-                            className="rounded bg-brand-blue text-white px-2.5 py-1 text-xs font-semibold"
-                          >
-                            Post Payment
-                          </button>
-                        ) : (
-                          <button
-                            disabled
-                            className="rounded bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-400 cursor-not-allowed"
-                          >
-                            Paid
-                          </button>
-                        )}
-                      </div>
+                        {formatCurrency(c.outstanding_balance)}
+                      </span>
                     </div>
                   </div>
-                ))
-              )}
-              {pag.data.length === 0 && !pag.loading && (
-                <div className="p-8 text-center text-sm text-text-secondary">No customers found.</div>
-              )}
-              <PaginationControls
-                page={pag.page}
-                setPage={pag.setPage}
-                pageSize={pag.pageSize}
-                setPageSize={pag.setPageSize}
-                totalCount={pag.totalCount}
-                totalPages={pag.totalPages}
-                loading={pag.loading}
-              />
-            </div>
-          ) : (
-            <div className="rounded-b-lg bg-white border-x border-b border-surface-low overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
-                  <tr>
-                    {renderSortHeader('Customer Name', 'name')}
-                    <th className="px-4 py-3">Contact Info</th>
-                    {renderSortHeader('Place', 'place')}
-                    {renderSortHeader('Credit Limit', 'credit_limit')}
-                    {renderSortHeader('Receivables', 'outstanding_balance')}
-                    <th className="px-4 py-3 text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-low">
-                  {pag.loading ? (
-                    <SkeletonTable rows={pag.pageSize || 5} columns={6} />
-                  ) : (
-                    pag.data.map((c) => (
-                      <tr key={c.id} className="hover:bg-surface-bright">
-                        <td className="px-4 py-4 font-semibold text-text-primary">{c.name}</td>
-                        <td className="px-4 py-4 text-text-secondary">
-                          <div className="space-y-1">
-                            <div>{c.contact_info}</div>
-                            {(c.contact_number || c.whatsapp_number) && (
-                              <div className="flex flex-wrap gap-2 mt-1">
-                                {c.contact_number && (
-                                  <ContactNumber number={c.contact_number} isWhatsapp={false} />
-                                )}
-                                {c.whatsapp_number && (
-                                  <ContactNumber number={c.whatsapp_number} isWhatsapp={true} />
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-text-secondary font-medium">{c.place || '-'}</td>
-                        <td className="px-4 py-4 text-right text-text-secondary">{formatCurrency(c.credit_limit)}</td>
-                        <td className="px-4 py-4 text-right">
-                          <span className={`font-semibold ${parseFloat(c.outstanding_balance) > 0 ? 'text-amber-600 font-bold' : 'text-text-primary'}`}>
-                            {formatCurrency(c.outstanding_balance)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <button
-                            disabled={parseFloat(c.outstanding_balance) <= 0}
-                            onClick={() => openPayModal(c)}
-                            className="rounded bg-brand-blue/10 px-3 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-blue/20 disabled:opacity-50 disabled:pointer-events-none transition"
-                          >
-                            Post Payment
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                  {pag.data.length === 0 && !pag.loading && (
-                    <tr>
-                      <td colSpan="6" className="px-4 py-8 text-center text-text-secondary">No customers found.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
 
-              <PaginationControls
-                page={pag.page}
-                setPage={pag.setPage}
-                pageSize={pag.pageSize}
-                setPageSize={pag.setPageSize}
-                totalCount={pag.totalCount}
-                totalPages={pag.totalPages}
-                loading={pag.loading}
-              />
-            </div>
-          )}
+                  {/* Row 2: Contact, Action button */}
+                  <div className="flex justify-between items-center pt-2 border-t border-dashed border-surface-low text-xs">
+                    <div className="flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      {c.contact_number && (
+                        <ContactNumber number={c.contact_number} isWhatsapp={false} />
+                      )}
+                      {c.whatsapp_number && (
+                        <ContactNumber number={c.whatsapp_number} isWhatsapp={true} />
+                      )}
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      {parseFloat(c.outstanding_balance) > 0 ? (
+                        <button
+                          onClick={() => openPayModal(c)}
+                          className="rounded bg-brand-blue text-white px-2.5 py-1 text-xs font-semibold"
+                        >
+                          Post Payment
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="rounded bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-400 cursor-not-allowed"
+                        >
+                          Paid
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+            {pag.data.length === 0 && !pag.loading && (
+              <div className="p-8 text-center text-sm text-text-secondary">No customers found.</div>
+            )}
+            <PaginationControls
+              page={pag.page}
+              setPage={pag.setPage}
+              pageSize={pag.pageSize}
+              setPageSize={pag.setPageSize}
+              totalCount={pag.totalCount}
+              totalPages={pag.totalPages}
+              loading={pag.loading}
+            />
+          </div>
+        ) : (
+          <div className="rounded-b-lg bg-white border-x border-b border-surface-low overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
+                <tr>
+                  {renderSortHeader('Customer Name', 'name')}
+                  <th className="px-4 py-3">Contact Info</th>
+                  {renderSortHeader('Place', 'place')}
+                  {renderSortHeader('Credit Limit', 'credit_limit')}
+                  {renderSortHeader('Receivables', 'outstanding_balance')}
+                  <th className="px-4 py-3 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-low">
+                {pag.loading ? (
+                  <SkeletonTable rows={pag.pageSize || 5} columns={6} />
+                ) : (
+                  pag.data.map((c) => (
+                    <tr key={c.id} className="hover:bg-surface-bright">
+                      <td className="px-4 py-4 font-semibold text-text-primary">{c.name}</td>
+                      <td className="px-4 py-4 text-text-secondary">
+                        <div className="space-y-1">
+                          <div>{c.contact_info}</div>
+                          {(c.contact_number || c.whatsapp_number) && (
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {c.contact_number && (
+                                <ContactNumber number={c.contact_number} isWhatsapp={false} />
+                              )}
+                              {c.whatsapp_number && (
+                                <ContactNumber number={c.whatsapp_number} isWhatsapp={true} />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-text-secondary font-medium">{c.place || '-'}</td>
+                      <td className="px-4 py-4 text-right text-text-secondary">{formatCurrency(c.credit_limit)}</td>
+                      <td className="px-4 py-4 text-right">
+                        <span className={`font-semibold ${parseFloat(c.outstanding_balance) > 0 ? 'text-amber-600 font-bold' : 'text-text-primary'}`}>
+                          {formatCurrency(c.outstanding_balance)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <button
+                          disabled={parseFloat(c.outstanding_balance) <= 0}
+                          onClick={() => openPayModal(c)}
+                          className="rounded bg-brand-blue/10 px-3 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-blue/20 disabled:opacity-50 disabled:pointer-events-none transition"
+                        >
+                          Post Payment
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+                {pag.data.length === 0 && !pag.loading && (
+                  <tr>
+                    <td colSpan="6" className="px-4 py-8 text-center text-text-secondary">No customers found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+
+            <PaginationControls
+              page={pag.page}
+              setPage={pag.setPage}
+              pageSize={pag.pageSize}
+              setPageSize={pag.setPageSize}
+              totalCount={pag.totalCount}
+              totalPages={pag.totalPages}
+              loading={pag.loading}
+            />
+          </div>
+        )}
       </div>
 
       {/* Record Payment Modal */}

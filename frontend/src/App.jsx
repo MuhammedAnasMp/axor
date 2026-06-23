@@ -32,7 +32,7 @@ function ERPLayout() {
           <span className="text-xs font-semibold text-text-secondary">Axon Management Platform</span>
           <div className="flex items-center space-x-2">
             <span className="text-xs font-bold text-brand-blue bg-accent-blue/15 px-2.5 py-1 rounded-full">
-              Operator Console
+              {/* Operator Console */}
             </span>
           </div>
         </header>
@@ -84,7 +84,7 @@ export default function App() {
           <p className="text-[11px] text-text-secondary mt-1">
             Version {updateInfo?.version} was downloaded. Apply to reload the system.
           </p>
-          <button 
+          <button
             onClick={applyUpdate}
             className="mt-3 bg-brand-blue text-white text-xs px-3 py-1.5 rounded font-medium shadow hover:bg-brand-blue/90 cursor-pointer"
           >
@@ -100,7 +100,7 @@ export default function App() {
             <p className="text-xs text-text-secondary mt-2">
               This version of the app requires native components that are not present in your current installation.
             </p>
-            <a 
+            <a
               href={updateInfo?.download_url}
               className="mt-4 block text-center bg-brand-blue text-white text-xs py-2 rounded font-medium shadow cursor-pointer"
             >
@@ -119,18 +119,18 @@ export default function App() {
           <Route path="/login" element={<Auth />} />
 
           {/* Mobile POS System */}
-          <Route 
-            path="/pos" 
+          <Route
+            path="/pos"
             element={
               <Protected>
                 <POS />
               </Protected>
-            } 
+            }
           />
 
           {/* ERP System Routing */}
-          <Route 
-            path="/erp" 
+          <Route
+            path="/erp"
             element={
               <Protected>
                 <ERPLayout />

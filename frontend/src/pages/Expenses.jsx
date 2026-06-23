@@ -73,7 +73,10 @@ export default function Expenses() {
         setBankAccounts(b);
         setSuppliers(sup);
 
-        if (c.length > 0) setCategory(c[0].id.toString());
+        if (c.length > 0) {
+          setCategory(c[0].id.toString());
+          setIncomeSource(c[0].name);
+        }
         if (b.length > 0) {
           setBankSource(b[0].id.toString());
           setIncomeBank(b[0].id.toString());
@@ -415,9 +418,9 @@ export default function Expenses() {
                 value={pag.search}
                 onChange={(e) => pag.setSearch(e.target.value)}
                 placeholder="Search expenses by category/desc..."
-                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
               />
-              <span className="absolute left-3 top-2.5 text-text-secondary">
+              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -509,7 +512,7 @@ export default function Expenses() {
       {/* Record Income Tab */}
       {currentTab === 'income' && (
         <div className="hidden md:grid grid-cols-1 gap-6 md:grid-cols-3">
-          <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low h-fit" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+          <div className="md:col-span-2 rounded-lg bg-white p-6 shadow-sm border border-surface-low h-fit" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
             <h3 className="text-sm font-semibold text-text-primary mb-4">Record External Income</h3>
             <form onSubmit={handleIncomeSubmit} className="space-y-4">
               <div>
@@ -519,6 +522,9 @@ export default function Expenses() {
                   onChange={(e) => setIncomeSource(e.target.value)}
                   className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
                 >
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
                   <option value="Interest">Interest</option>
                   <option value="Supplier Rebate">Supplier Rebate</option>
                   <option value="Reward Cash">Reward Cash</option>
@@ -581,6 +587,32 @@ export default function Expenses() {
               </button>
             </form>
           </div>
+
+          {/* Operational Categories for Income */}
+          <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low h-fit space-y-4" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+            <h3 className="text-sm font-semibold text-text-primary">Operational Categories</h3>
+            <form onSubmit={handleCategorySubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary mb-1">Category Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Server Hosting"
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isSavingCategory}
+                className="rounded bg-brand-blue px-6 py-2.5 text-xs font-semibold text-white hover:bg-brand-cobalt transition disabled:opacity-50 flex items-center space-x-1"
+              >
+                {isSavingCategory && <Spinner size="xs" />}
+                <span>Add Category</span>
+              </button>
+            </form>
+          </div>
         </div>
       )}
 
@@ -594,9 +626,9 @@ export default function Expenses() {
                 value={incomePag.search}
                 onChange={(e) => incomePag.setSearch(e.target.value)}
                 placeholder="Search income by source/details..."
-                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
               />
-              <span className="absolute left-3 top-2.5 text-text-secondary">
+              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -764,49 +796,73 @@ export default function Expenses() {
         title="Log Expense"
       >
         <form onSubmit={handleExpenseSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-text-secondary mb-1">Expense Category</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-xs font-semibold text-text-secondary">Expense Category</label>
+                <button
+                  type="button"
+                  onClick={() => setActiveMobileForm('category')}
+                  className="text-xs text-brand-blue font-bold hover:underline"
+                >
+                  + Add
+                </button>
+              </div>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-text-secondary mb-1">Deduct Account</label>
+              <select
+                value={bankSource}
+                onChange={(e) => setBankSource(e.target.value)}
+                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+              >
+                {bankAccounts.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-text-secondary mb-1">Deduct Cash/Bank Account</label>
-            <select
-              value={bankSource}
-              onChange={(e) => setBankSource(e.target.value)}
-              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-            >
-              {bankAccounts.map((b) => (
-                <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
-              ))}
-            </select>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-text-secondary mb-1">Amount (INR)</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-text-secondary mb-1">Description / Notes</label>
+              <input
+                type="text"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none"
+              />
+            </div>
           </div>
+
           <div>
-            <label className="block text-xs font-semibold text-text-secondary mb-1">Expense Amount (INR)</label>
-            <input
-              type="number"
-              step="0.01"
-              required
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-text-secondary mb-1">Upload Receipt Image / Take Photo</label>
-            <div className="flex flex-col gap-2">
-              <label className="flex items-center justify-center space-x-1.5 rounded-lg bg-accent-blue/15 px-3 py-2 text-xs font-semibold text-brand-blue cursor-pointer border border-brand-blue/20 hover:bg-accent-blue/25 transition">
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Receipt Attachment</label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex items-center justify-center space-x-1 rounded-lg bg-accent-blue/15 px-2 py-2 text-xs font-semibold text-brand-blue cursor-pointer border border-brand-blue/20 hover:bg-accent-blue/25 transition">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <span>Choose from Gallery</span>
+                <span className="truncate">Gallery</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -814,12 +870,12 @@ export default function Expenses() {
                   className="hidden"
                 />
               </label>
-              <label className="flex items-center justify-center space-x-1.5 rounded-lg bg-green-600/10 px-3 py-2 text-xs font-semibold text-green-600 cursor-pointer border border-green-600/20 hover:bg-green-600/20 transition">
+              <label className="flex items-center justify-center space-x-1 rounded-lg bg-green-600/10 px-2 py-2 text-xs font-semibold text-green-600 cursor-pointer border border-green-600/20 hover:bg-green-600/20 transition">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span>Take Photo (Camera)</span>
+                <span className="truncate">Camera</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -828,23 +884,13 @@ export default function Expenses() {
                   className="hidden"
                 />
               </label>
-              {uploading && <span className="text-[10px] text-text-secondary text-center">Uploading...</span>}
             </div>
+            {uploading && <div className="text-[10px] text-text-secondary text-center mt-1">Uploading...</div>}
             {receiptUrl && (
               <a href={receiptUrl} target="_blank" rel="noreferrer" className="text-[10px] text-brand-blue hover:underline mt-1 block truncate">
                 View Receipt Link
               </a>
             )}
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-text-secondary mb-1">Description / Notes</label>
-            <input
-              type="text"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none"
-            />
           </div>
           <button
             type="submit"
@@ -907,42 +953,69 @@ export default function Expenses() {
           handleIncomeSubmit(e);
           setActiveMobileForm(null);
         }} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-text-secondary mb-1">Income Category / Source</label>
-            <select
-              value={incomeSource}
-              onChange={(e) => setIncomeSource(e.target.value)}
-              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-            >
-              <option value="Interest">Interest</option>
-              <option value="Supplier Rebate">Supplier Rebate</option>
-              <option value="Reward Cash">Reward Cash</option>
-              <option value="Other Non-Sales Income">Other Non-Sales Income</option>
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-xs font-semibold text-text-secondary">Category / Source</label>
+                <button
+                  type="button"
+                  onClick={() => setActiveMobileForm('category')}
+                  className="text-xs text-brand-blue font-bold hover:underline"
+                >
+                  + Add
+                </button>
+              </div>
+              <select
+                value={incomeSource}
+                onChange={(e) => setIncomeSource(e.target.value)}
+                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
+                ))}
+                <option value="Interest">Interest</option>
+                <option value="Supplier Rebate">Supplier Rebate</option>
+                <option value="Reward Cash">Reward Cash</option>
+                <option value="Other Non-Sales Income">Other Non-Sales Income</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-text-secondary mb-1">Receive Into</label>
+              <select
+                value={incomeBank}
+                onChange={(e) => setIncomeBank(e.target.value)}
+                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+              >
+                {bankAccounts.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-text-secondary mb-1">Income Amount (INR)</label>
-            <input
-              type="number"
-              step="0.01"
-              required
-              value={incomeAmount}
-              onChange={(e) => setIncomeAmount(e.target.value)}
-              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-            />
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-text-secondary mb-1">Amount (INR)</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={incomeAmount}
+                onChange={(e) => setIncomeAmount(e.target.value)}
+                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-text-secondary mb-1">Notes / Description</label>
+              <input
+                type="text"
+                value={incomeDesc}
+                onChange={(e) => setIncomeDesc(e.target.value)}
+                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-text-secondary mb-1">Receive Into Account</label>
-            <select
-              value={incomeBank}
-              onChange={(e) => setIncomeBank(e.target.value)}
-              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-            >
-              {bankAccounts.map((b) => (
-                <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
-              ))}
-            </select>
-          </div>
+
           {incomeSource === 'Supplier Rebate' && (
             <div>
               <label className="block text-xs font-semibold text-text-secondary mb-1">Supplier</label>
@@ -957,15 +1030,6 @@ export default function Expenses() {
               </select>
             </div>
           )}
-          <div>
-            <label className="block text-xs font-semibold text-text-secondary mb-1">Notes / Description</label>
-            <input
-              type="text"
-              value={incomeDesc}
-              onChange={(e) => setIncomeDesc(e.target.value)}
-              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none"
-            />
-          </div>
           <button
             type="submit"
             disabled={isSavingIncome}
@@ -1159,10 +1223,37 @@ export default function Expenses() {
       )}
 
       {/* Floating Action Button for mobile */}
-      {(currentTab === 'add' || currentTab === 'expense' || currentTab === 'history' || currentTab === 'income' || currentTab === 'income-history') && !activeMobileForm && !showCreateMenu && (
+      {(currentTab === 'add' || currentTab === 'expense' || currentTab === 'history' || currentTab === 'income' || currentTab === 'income-history') && !activeMobileForm && (
         <FloatingActionButton
+          icon={
+            (currentTab === 'income' || currentTab === 'income-history') ? (
+              <div className="relative">
+                <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+              </div>
+            ) : (
+              <div className="relative">
+                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                </svg>
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+              </div>
+            )
+          }
           onClick={() => {
-            setShowCreateMenu(true);
+            if (currentTab === 'income' || currentTab === 'income-history') {
+              setIncomeAmount('');
+              setIncomeDesc('');
+              setActiveMobileForm('income');
+            } else {
+              setAmount('');
+              setNotes('');
+              setReceiptUrl('');
+              setIsRecurring(false);
+              setActiveMobileForm('expense');
+            }
           }}
         />
       )}

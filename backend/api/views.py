@@ -150,7 +150,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     pagination_class = OptionalPageNumberPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'barcode', 'description', 'category__name', 'brand__name']
+    search_fields = ['name', 'barcode', 'description', 'category__name', 'brand__name', 'suitable_models__model_name', 'suitable_models__brand__name']
     ordering_fields = ['id', 'name', 'selling_price', 'average_cost', 'status']
 
     def get_queryset(self):
@@ -165,7 +165,7 @@ class StockViewSet(viewsets.ModelViewSet):
     serializer_class = StockSerializer
     pagination_class = OptionalPageNumberPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['product__name', 'product__barcode']
+    search_fields = ['product__name', 'product__barcode', 'product__suitable_models__model_name', 'product__suitable_models__brand__name']
     ordering_fields = ['id', 'product__name', 'quantity']
 
     @action(detail=False, methods=['post'])
@@ -303,7 +303,7 @@ class StockHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = StockHistorySerializer
     pagination_class = OptionalPageNumberPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['product__name', 'action_type', 'description']
+    search_fields = ['product__name', 'product__suitable_models__model_name', 'product__suitable_models__brand__name', 'action_type', 'description']
     ordering_fields = ['id', 'product__name', 'quantity_changed', 'action_type', 'timestamp']
 
     def get_queryset(self):
@@ -967,7 +967,7 @@ class SupplierProductViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierProductSerializer
     pagination_class = OptionalPageNumberPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['product__name', 'product__barcode', 'supplier__name']
+    search_fields = ['product__name', 'product__barcode', 'product__suitable_models__model_name', 'product__suitable_models__brand__name', 'supplier__name']
     ordering_fields = ['id', 'current_cost']
 
     def get_queryset(self):
@@ -984,7 +984,7 @@ class SupplierCostHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = SupplierCostHistorySerializer
     pagination_class = OptionalPageNumberPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['product__name', 'product__barcode', 'supplier__name']
+    search_fields = ['product__name', 'product__barcode', 'product__suitable_models__model_name', 'product__suitable_models__brand__name', 'supplier__name']
     ordering_fields = ['id', 'cost', 'timestamp']
 
     def get_queryset(self):

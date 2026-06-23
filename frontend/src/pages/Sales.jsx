@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
@@ -53,6 +53,106 @@ export default function Sales() {
   const [qty, setQty] = useState('1');
   const [price, setPrice] = useState('0');
 
+  const [productSearch, setProductSearch] = useState('');
+  const [searchedProducts, setSearchedProducts] = useState([]);
+  const [selectedProductObj, setSelectedProductObj] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const dropdownRef = useRef(null);
+  const mobileDropdownRef = useRef(null);
+
+  // View All Popup States
+  const [showViewAllPopup, setShowViewAllPopup] = useState(false);
+  const [popupCategories, setPopupCategories] = useState([]);
+  const [activePopupCategory, setActivePopupCategory] = useState('all');
+  const [popupProducts, setPopupProducts] = useState([]);
+  const [popupLoading, setPopupLoading] = useState(false);
+  const [popupSearchQuery, setPopupSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (!productSearch.trim()) {
+      setSearchedProducts([]);
+      return;
+    }
+    if (selectedProductObj && productSearch === `${selectedProductObj.name} (${selectedProductObj.barcode})`) {
+      return;
+    }
+    setSearching(true);
+    const delayDebounce = setTimeout(() => {
+      api.products.list({ search: productSearch })
+        .then((res) => {
+          if (res && res.results) {
+            setSearchedProducts(res.results);
+          } else if (Array.isArray(res)) {
+            setSearchedProducts(res);
+          } else {
+            setSearchedProducts([]);
+          }
+          setSearching(false);
+        })
+        .catch((err) => {
+          console.error(err);
+          setSearching(false);
+        });
+    }, 300);
+    return () => clearTimeout(delayDebounce);
+  }, [productSearch, selectedProductObj]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+      if (mobileDropdownRef.current && !mobileDropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleOpenViewAllPopup = () => {
+    setShowViewAllPopup(true);
+    setPopupLoading(true);
+    setPopupSearchQuery('');
+
+    Promise.all([
+      api.categories.list(),
+      api.products.list()
+    ])
+      .then(([catsRes, productsRes]) => {
+        const cats = (catsRes && catsRes.results) || (Array.isArray(catsRes) && catsRes) || [];
+        const prods = (productsRes && productsRes.results) || (Array.isArray(productsRes) && productsRes) || [];
+        const allCats = [{ id: 'all', name: 'All Products' }, ...cats];
+        setPopupCategories(allCats);
+        setActivePopupCategory('all');
+        setPopupProducts(prods);
+        setPopupLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setPopupLoading(false);
+      });
+  };
+
+  const handleSelectProductPopup = (prod) => {
+    setSelectedProductObj(prod);
+    setSelectedProduct(prod.id.toString());
+    setProductSearch(`${prod.name} (${prod.barcode})`);
+    setPrice(prod.selling_price.toString());
+    setShowViewAllPopup(false);
+  };
+
+  const filteredProductsList = popupProducts.filter(p => {
+    const matchesCategory = activePopupCategory === 'all' || (p.category && p.category.toString() === activePopupCategory.toString());
+    const matchesSearch = (p.name || '').toLowerCase().includes(popupSearchQuery.toLowerCase()) ||
+      (p.barcode || '').toLowerCase().includes(popupSearchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
   const loadData = () => {
     setLoading(true);
     Promise.all([
@@ -99,7 +199,7 @@ export default function Sales() {
 
   const handleAddLineItem = () => {
     if (!selectedProduct) return;
-    const prod = products.find(p => p.id === parseInt(selectedProduct));
+    const prod = selectedProductObj;
     if (!prod) return;
 
     if (prod.stock_qty < parseInt(qty)) {
@@ -118,6 +218,8 @@ export default function Sales() {
 
     setItems([...items, newItem]);
     setSelectedProduct('');
+    setProductSearch('');
+    setSelectedProductObj(null);
     setQty('1');
     setPrice('0');
     setShowAddProductSheet(false);
@@ -197,49 +299,94 @@ export default function Sales() {
   const renderAddProductForm = () => {
     return (
       <div className="space-y-4">
-        <div>
-          <label className="block text-xs font-semibold text-text-secondary mb-1">Select Product</label>
-          <select
-            value={selectedProduct}
+        <div ref={mobileDropdownRef} className="relative">
+          <div className="flex justify-between items-center mb-1">
+            <label className="block text-xs font-semibold text-text-secondary">Search/Select Product</label>
+            <button
+              type="button"
+              onClick={handleOpenViewAllPopup}
+              className="text-[10px] text-brand-blue hover:underline font-semibold flex items-center"
+              title="View all products"
+            >
+              <span>View All</span>
+            </button>
+          </div>
+          <input
+            type="text"
+            placeholder="Type product name or barcode..."
+            value={productSearch}
             onChange={(e) => {
-              setSelectedProduct(e.target.value);
-              const prod = products.find(p => p.id === parseInt(e.target.value));
-              if (prod) setPrice(prod.selling_price.toString());
+              setProductSearch(e.target.value);
+              setShowDropdown(true);
             }}
-            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-          >
-            <option value="">-- Choose Product --</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id} disabled={p.stock_qty <= 0}>
-                {p.name} ({p.barcode}){p.suitable_models_details && p.suitable_models_details.length > 0 ? ` [${p.suitable_models_details.map(m => `${m.brand_name} ${m.model_name}`).join(', ')}]` : ''} - Stock: {p.stock_qty}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-text-secondary mb-1">Quantity</label>
-          <input
-            type="number"
-            value={qty}
-            onChange={(e) => setQty(e.target.value)}
-            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            onFocus={() => setShowDropdown(true)}
+            className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm text-text-primary outline-none focus:border-brand-blue search-input-mobile"
           />
+          {searching && (
+            <span className="absolute right-3 top-9 text-xs text-brand-blue animate-pulse">Searching...</span>
+          )}
+          {showDropdown && (productSearch.trim() !== '' || searchedProducts.length > 0) && (
+            <div className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-xs shadow-lg ring-1 ring-black/5 focus:outline-none border border-surface-dim">
+              {searchedProducts.length === 0 ? (
+                <div className="px-3 py-2 text-text-secondary">No products found.</div>
+              ) : (
+                searchedProducts.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    disabled={p.stock_qty <= 0}
+                    onClick={() => {
+                      setSelectedProductObj(p);
+                      setSelectedProduct(p.id.toString());
+                      setProductSearch(`${p.name} (${p.barcode})`);
+                      setShowDropdown(false);
+                      setPrice(p.selling_price.toString());
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-surface-low disabled:opacity-50 disabled:bg-surface-lowest border-b border-surface-low last:border-0 font-medium"
+                  >
+                    <div className="font-semibold text-text-primary">
+                      {p.name} ({p.barcode})
+                    </div>
+                    <div className="text-[10px] text-text-secondary mt-0.5">
+                      Stock: {p.stock_qty} | Price: ₹{p.selling_price}
+                      {p.suitable_models_details && p.suitable_models_details.length > 0 && (
+                        <span className="ml-1 text-brand-blue font-semibold">
+                          [{p.suitable_models_details.map(m => `${m.brand_name} ${m.model_name}`).join(', ')}]
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
-        <div>
-          <label className="block text-xs font-semibold text-text-secondary mb-1">Override Unit Selling Price (INR)</label>
-          <input
-            type="number"
-            step="0.01"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-          />
+        <div className="grid grid-cols-2 gap-2.5">
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Quantity</label>
+            <input
+              type="number"
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Unit Price (INR)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            />
+          </div>
         </div>
         <div className="pt-2">
           <button
             type="button"
             onClick={handleAddLineItem}
-            className="w-full rounded bg-brand-blue py-2.5 text-sm font-semibold text-white hover:bg-brand-cobalt transition"
+            className="w-full rounded bg-brand-blue py-3 text-sm font-semibold text-white hover:bg-brand-cobalt transition"
           >
             Add Product to Invoice
           </button>
@@ -256,7 +403,7 @@ export default function Sales() {
           <select
             value={customer}
             onChange={(e) => setCustomer(e.target.value)}
-            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+            className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm outline-none focus:border-brand-blue"
           >
             <option value="">-- Walk-In Customer --</option>
             {customers.map((c) => (
@@ -265,24 +412,11 @@ export default function Sales() {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-text-secondary mb-1">Assigned Cashier / Staff</label>
-          <select
-            value={employee}
-            onChange={(e) => setEmployee(e.target.value)}
-            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-          >
-            <option value="">-- Select Employee --</option>
-            {employees.map((e) => (
-              <option key={e.id} value={e.id}>{e.user?.username || 'admin'} ({e.role})</option>
-            ))}
-          </select>
-        </div>
-        <div>
           <label className="block text-xs font-semibold text-text-secondary mb-1">Payment Method</label>
           <select
             value={paymentType}
             onChange={(e) => setPaymentType(e.target.value)}
-            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+            className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm outline-none focus:border-brand-blue"
           >
             <option value="Cash">Cash Sale</option>
             <option value="Bank">Bank Transfer</option>
@@ -295,7 +429,7 @@ export default function Sales() {
             <select
               value={paidTo}
               onChange={(e) => setPaidTo(e.target.value)}
-              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+              className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm outline-none focus:border-brand-blue"
             >
               {bankAccounts.map((b) => (
                 <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
@@ -304,14 +438,14 @@ export default function Sales() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-semibold text-text-secondary mb-1">Discount (INR)</label>
             <input
               type="number"
               value={discount}
               onChange={(e) => setDiscount(e.target.value)}
-              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+              className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm outline-none focus:border-brand-blue"
             />
           </div>
           <div>
@@ -320,7 +454,7 @@ export default function Sales() {
               type="number"
               value={tax}
               onChange={(e) => setTax(e.target.value)}
-              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+              className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm outline-none focus:border-brand-blue"
             />
           </div>
         </div>
@@ -384,7 +518,7 @@ export default function Sales() {
       {currentTab === 'create' && (
         loading ? (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 animate-pulse">
-            <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4 lg:col-span-2">
+            <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none space-y-4 lg:col-span-2">
               <div className="h-4 w-32 bg-surface-dim/50 rounded" />
               <div className="rounded border border-surface-low p-4 bg-surface-lowest space-y-3">
                 <div className="h-3 w-40 bg-surface-dim/40 rounded" />
@@ -398,7 +532,7 @@ export default function Sales() {
                 <div className="h-8 bg-surface-dim/20 rounded" />
               </div>
             </div>
-            <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4">
+            <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none space-y-4">
               <div className="h-4 w-32 bg-surface-dim/50 rounded" />
               <div className="space-y-3">
                 <div className="h-9 bg-surface-dim/30 rounded" />
@@ -410,7 +544,7 @@ export default function Sales() {
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Main Sale Form */}
-            <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4 lg:col-span-2" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+            <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none space-y-4 lg:col-span-2">
               <h3 className="text-sm font-semibold text-text-primary">New Sales Invoice</h3>
               
               {/* Add Line Item (Desktop only) */}
@@ -418,49 +552,100 @@ export default function Sales() {
                 <div className="rounded border border-surface-low p-4 bg-surface-lowest space-y-3">
                   <span className="text-xs font-semibold text-brand-blue">Add Product to Invoice</span>
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                    <div className="md:col-span-2">
-                      <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Select Product</label>
-                      <select
-                        value={selectedProduct}
+                    <div ref={dropdownRef} className="md:col-span-2 relative">
+                      <div className="flex justify-between items-center mb-0.5">
+                        <label className="block text-[11px] font-semibold text-text-secondary">Search/Select Product</label>
+                        <button
+                          type="button"
+                          onClick={handleOpenViewAllPopup}
+                          className="text-[10px] text-brand-blue hover:underline font-semibold flex items-center"
+                          title="View all products"
+                        >
+                          <span className="hidden sm:inline">View All</span>
+                          <span className="sm:hidden p-1 bg-brand-blue/10 rounded-full text-brand-blue active:bg-brand-blue/20">
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </span>
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Type product name or barcode..."
+                        value={productSearch}
                         onChange={(e) => {
-                          setSelectedProduct(e.target.value);
-                          const prod = products.find(p => p.id === parseInt(e.target.value));
-                          if (prod) setPrice(prod.selling_price.toString());
+                          setProductSearch(e.target.value);
+                          setShowDropdown(true);
                         }}
+                        onFocus={() => setShowDropdown(true)}
                         className="w-full rounded border border-surface-dim bg-white px-2 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue"
-                      >
-                        <option value="">-- Choose Product --</option>
-                        {products.map((p) => (
-                          <option key={p.id} value={p.id} disabled={p.stock_qty <= 0}>
-                            {p.name} ({p.barcode}){p.suitable_models_details && p.suitable_models_details.length > 0 ? ` [${p.suitable_models_details.map(m => `${m.brand_name} ${m.model_name}`).join(', ')}]` : ''} - Stock: {p.stock_qty}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Quantity</label>
-                      <input
-                        type="number"
-                        value={qty}
-                        onChange={(e) => setQty(e.target.value)}
-                        className="w-full rounded border border-surface-dim bg-white px-2 py-1.5 text-xs text-text-primary outline-none"
                       />
+                      {searching && (
+                        <span className="absolute right-2 top-6 text-[10px] text-brand-blue animate-pulse">Searching...</span>
+                      )}
+                      {showDropdown && (productSearch.trim() !== '' || searchedProducts.length > 0) && (
+                        <div className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-xs shadow-lg ring-1 ring-black/5 focus:outline-none border border-surface-dim">
+                          {searchedProducts.length === 0 ? (
+                            <div className="px-3 py-2 text-text-secondary">No products found.</div>
+                          ) : (
+                            searchedProducts.map((p) => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                disabled={p.stock_qty <= 0}
+                                onClick={() => {
+                                  setSelectedProductObj(p);
+                                  setSelectedProduct(p.id.toString());
+                                  setProductSearch(`${p.name} (${p.barcode})`);
+                                  setShowDropdown(false);
+                                  setPrice(p.selling_price.toString());
+                                }}
+                                className="w-full text-left px-3 py-2 hover:bg-surface-low disabled:opacity-50 disabled:bg-surface-lowest border-b border-surface-low last:border-0 font-medium"
+                              >
+                                <div className="font-semibold text-text-primary">
+                                  {p.name} ({p.barcode})
+                                </div>
+                                <div className="text-[10px] text-text-secondary mt-0.5">
+                                  Stock: {p.stock_qty} | Price: ₹{p.selling_price}
+                                  {p.suitable_models_details && p.suitable_models_details.length > 0 && (
+                                    <span className="ml-1 text-brand-blue font-semibold">
+                                      [{p.suitable_models_details.map(m => `${m.brand_name} ${m.model_name}`).join(', ')}]
+                                    </span>
+                                  )}
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Override Unit Selling Price (INR)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        className="w-full rounded border border-surface-dim bg-white px-2 py-1.5 text-xs text-text-primary outline-none"
-                      />
+                    <div className="col-span-full grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Quantity</label>
+                        <input
+                          type="number"
+                          value={qty}
+                          onChange={(e) => setQty(e.target.value)}
+                          className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Override Unit Selling Price (INR)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                          className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue"
+                        />
+                      </div>
                     </div>
-                    <div className="flex items-end">
+                    <div className="col-span-full flex items-end pt-1">
                       <button
                         type="button"
                         onClick={handleAddLineItem}
-                        className="w-full rounded bg-brand-blue py-1.5 text-xs font-semibold text-white hover:bg-brand-cobalt transition"
+                        className="w-full rounded bg-brand-blue py-3 md:py-1.5 text-sm md:text-xs font-semibold text-white hover:bg-brand-cobalt transition"
                       >
                         Add Product
                       </button>
@@ -589,9 +774,9 @@ export default function Sales() {
                 value={salesPag.search}
                 onChange={(e) => salesPag.setSearch(e.target.value)}
                 placeholder="Search sales history..."
-                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
               />
-              <span className="absolute left-3 top-2.5 text-text-secondary">
+              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -710,9 +895,9 @@ export default function Sales() {
                 value={paymentsPag.search}
                 onChange={(e) => paymentsPag.setSearch(e.target.value)}
                 placeholder="Search customer payments..."
-                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
               />
-              <span className="absolute left-3 top-2.5 text-text-secondary">
+              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -1097,6 +1282,119 @@ export default function Sales() {
             </div>
           </div>
         </MobileBottomSheet>
+      )}
+
+      {/* View All Products Popup */}
+      {showViewAllPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6">
+          <div className="w-full max-w-4xl rounded-lg bg-white shadow-xl flex flex-col h-[85vh] relative overflow-hidden border border-surface-low animate-in fade-in duration-200">
+            {/* Header */}
+            <div className="flex justify-between items-center p-4 border-b border-surface-low bg-surface-lowest">
+              <h3 className="text-sm font-bold text-text-primary">
+                Select Product
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowViewAllPopup(false)}
+                className="text-text-secondary hover:text-text-primary text-sm font-bold p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Filter controls: Search and Category Nav */}
+            <div className="p-4 border-b border-surface-low space-y-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search products by name or barcode..."
+                  value={popupSearchQuery}
+                  onChange={(e) => setPopupSearchQuery(e.target.value)}
+                  className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue search-input-mobile"
+                />
+                <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </span>
+              </div>
+
+              {/* Horizontal Category Nav */}
+              <div className="flex border-b border-surface-low overflow-x-auto whitespace-nowrap space-x-4 pb-1 scrollbar-thin">
+                {popupCategories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setActivePopupCategory(cat.id)}
+                    className={`pb-1 text-xs font-semibold px-2 transition-all border-b-2 ${activePopupCategory.toString() === cat.id.toString()
+                      ? 'border-brand-blue text-brand-blue'
+                      : 'border-transparent text-text-secondary hover:text-text-primary'
+                      }`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-4 bg-surface-lowest">
+              {popupLoading ? (
+                <div className="text-center py-12 text-sm text-brand-blue animate-pulse">Loading products...</div>
+              ) : filteredProductsList.length === 0 ? (
+                <div className="text-center py-12 text-xs text-text-secondary">No products found in this category.</div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {filteredProductsList.map((p) => {
+                    const firstImage = p.image_url ? p.image_url.split(',')[0] : '';
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        disabled={p.stock_qty <= 0}
+                        onClick={() => handleSelectProductPopup(p)}
+                        className="text-left p-2.5 rounded-lg border border-surface-dim hover:border-brand-blue bg-white hover:bg-surface-light shadow-sm transition flex items-center w-full disabled:opacity-50 disabled:bg-surface-lowest"
+                      >
+                        <div className="h-12 w-12 rounded bg-surface border border-surface-low overflow-hidden flex-shrink-0 mr-3">
+                          {firstImage ? (
+                            <img src={firstImage} alt={p.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center text-[10px] text-text-secondary">No img</div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="font-semibold text-xs text-text-primary line-clamp-1 block">{p.name}</span>
+                          {p.suitable_models_details && p.suitable_models_details.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1 font-normal">
+                              {p.suitable_models_details.map((m) => (
+                                <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
+                                  {m.brand_name} {m.model_name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <span className="text-[10px] text-text-secondary font-mono block">{p.barcode}</span>
+                          <span className="text-brand-blue font-bold text-xs pt-0.5 block">Price: ₹{p.selling_price} | Stock: {p.stock_qty}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-3 border-t border-surface-low bg-surface-lowest flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowViewAllPopup(false)}
+                className="rounded border border-surface-dim px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-low transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

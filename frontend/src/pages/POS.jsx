@@ -358,7 +358,7 @@ export default function POS() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             disabled={loading || isSubmittingCheckout}
-            className="w-full rounded border border-surface-dim bg-surface-lowest px-3 py-2 text-xs outline-none focus:border-brand-blue disabled:opacity-50"
+            className="w-full rounded border border-surface-dim bg-surface-lowest px-3 py-2.5 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue disabled:opacity-50 search-input-mobile"
           />
         </div>
 

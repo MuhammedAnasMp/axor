@@ -25,7 +25,7 @@ export default function Purchases() {
 
   // Pagination hooks for each list tab
   const receivePag = usePagination(api.purchases.list, 10, currentTab === 'receive', { is_received: 'false' });
-  const historyPag = usePagination(api.purchases.list, 10, currentTab === 'history');
+  const historyPag = usePagination(api.purchases.list, 10, currentTab === 'history', { is_received: 'true' });
 
   // Purchase Form states
   const [supplier, setSupplier] = useState('');
@@ -83,6 +83,7 @@ export default function Purchases() {
   const [expandedReturnRows, setExpandedReturnRows] = useState({});
   const [showMobileCart, setShowMobileCart] = useState(false);
   const [showMobileBilling, setShowMobileBilling] = useState(false);
+  const [activeBillingSupplierTab, setActiveBillingSupplierTab] = useState(null);
 
 
   // Auto-complete inside receiving modal
@@ -1045,7 +1046,7 @@ export default function Purchases() {
                 type="text"
                 value={invoiceNumber}
                 onChange={(e) => setInvoiceNumber(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+                className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm outline-none focus:border-brand-blue"
               />
             </div>
             <div>
@@ -1057,7 +1058,7 @@ export default function Purchases() {
                 step="0.01"
                 value={additionalCosts}
                 onChange={(e) => setAdditionalCosts(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+                className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm outline-none focus:border-brand-blue"
               />
             </div>
             <div>
@@ -1065,7 +1066,7 @@ export default function Purchases() {
               <select
                 value={paymentType}
                 onChange={(e) => setPaymentType(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+                className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm outline-none focus:border-brand-blue"
               >
                 <option value="Cash">Immediate Cash Payment</option>
                 <option value="Bank">Immediate Bank Transfer</option>
@@ -1089,7 +1090,7 @@ export default function Purchases() {
                 <select
                   value={paidFrom}
                   onChange={(e) => setPaidFrom(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+                  className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm outline-none focus:border-brand-blue"
                 >
                   {bankAccounts.map((b) => (
                     <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
@@ -1161,7 +1162,7 @@ export default function Purchases() {
                                 setDeductAmount(e.target.value);
                               }
                             }}
-                            className="w-full max-w-[150px] rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none text-text-primary focus:border-brand-blue"
+                            className="w-full max-w-[150px] rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs outline-none text-text-primary focus:border-brand-blue"
                           />
                         </div>
                       )}
@@ -1220,35 +1221,72 @@ export default function Purchases() {
             </button>
           </form>
         ) : (
-          <form onSubmit={handleSubmitPO} className="space-y-6">
-            {items.length === 0 ? (
-              <p className="text-xs text-text-secondary text-center py-4">Add products to see billing details.</p>
-            ) : (
-              Object.keys(supplierBilling).map((supId) => {
-                const billing = supplierBilling[supId];
-                if (!billing) return null;
-                const supplierItems = items.filter(item => item.supplier_id.toString() === supId);
-                const supplierName = supplierItems[0]?.supplier_name || 'Unknown Supplier';
-                const itemsSubtotal = supplierItems.reduce((acc, curr) => acc + (curr.quantity * curr.purchase_cost), 0);
-                const additional = parseFloat(billing.additionalCosts || 0);
+          <form onSubmit={handleSubmitPO} className="space-y-4">
+            {(() => {
+              const supplierIds = Object.keys(supplierBilling);
+              if (supplierIds.length === 0) {
+                return <p className="text-xs text-text-secondary text-center py-4">Add products to see billing details.</p>;
+              }
 
-                const selectedSupplierObj = suppliers.find(s => s.id.toString() === supId.toString());
-                const oldCreditVal = selectedSupplierObj && parseFloat(selectedSupplierObj.outstanding_balance) > 0
-                  ? parseFloat(selectedSupplierObj.outstanding_balance)
-                  : 0;
+              // Ensure we have a valid active tab
+              let currentActiveTab = activeBillingSupplierTab;
+              if (!currentActiveTab || !supplierIds.includes(currentActiveTab)) {
+                currentActiveTab = supplierIds[0];
+              }
 
-                const updateBillingField = (field, val) => {
-                  setSupplierBilling(prev => ({
-                    ...prev,
-                    [supId]: {
-                      ...prev[supId],
-                      [field]: val
-                    }
-                  }));
-                };
+              const supId = currentActiveTab;
+              const billing = supplierBilling[supId];
+              if (!billing) return null;
 
-                return (
-                  <div key={supId} className="border border-surface-low rounded-xl p-3 bg-surface-lowest space-y-3">
+              const supplierItems = items.filter(item => item.supplier_id.toString() === supId);
+              const supplierName = supplierItems[0]?.supplier_name || 'Unknown Supplier';
+              const itemsSubtotal = supplierItems.reduce((acc, curr) => acc + (curr.quantity * curr.purchase_cost), 0);
+              const additional = parseFloat(billing.additionalCosts || 0);
+
+              const selectedSupplierObj = suppliers.find(s => s.id.toString() === supId.toString());
+              const oldCreditVal = selectedSupplierObj && parseFloat(selectedSupplierObj.outstanding_balance) > 0
+                ? parseFloat(selectedSupplierObj.outstanding_balance)
+                : 0;
+
+              const updateBillingField = (field, val) => {
+                setSupplierBilling(prev => ({
+                  ...prev,
+                  [supId]: {
+                    ...prev[supId],
+                    [field]: val
+                  }
+                }));
+              };
+
+              return (
+                <div className="space-y-4">
+                  {/* Supplier Tabs Navigation */}
+                  {supplierIds.length > 1 && (
+                    <div className="flex border-b border-surface-low overflow-x-auto whitespace-nowrap space-x-2 pb-1.5 scrollbar-thin">
+                      {supplierIds.map((id) => {
+                        const sItems = items.filter(item => item.supplier_id.toString() === id);
+                        const sName = sItems[0]?.supplier_name || 'Supplier #' + id;
+                        const isActive = currentActiveTab === id;
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => setActiveBillingSupplierTab(id)}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition ${
+                              isActive
+                                ? 'bg-brand-blue border-brand-blue text-white shadow-sm'
+                                : 'bg-white border-surface-dim hover:bg-surface-low text-text-secondary'
+                            }`}
+                          >
+                            {sName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Active Supplier Form */}
+                  <div className="border border-surface-low rounded-xl p-3 bg-surface-lowest space-y-3">
                     <div className="flex justify-between items-center border-b border-surface-low pb-1.5">
                       <span className="text-xs font-bold text-brand-blue">{supplierName}</span>
                       <span className="text-[10px] text-text-secondary">{supplierItems.length} item(s)</span>
@@ -1259,7 +1297,7 @@ export default function Purchases() {
                         type="text"
                         value={billing.invoiceNumber}
                         onChange={(e) => updateBillingField('invoiceNumber', e.target.value)}
-                        className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue"
+                        className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs outline-none focus:border-brand-blue"
                       />
                     </div>
                     <div>
@@ -1269,7 +1307,7 @@ export default function Purchases() {
                         step="0.01"
                         value={billing.additionalCosts}
                         onChange={(e) => updateBillingField('additionalCosts', e.target.value)}
-                        className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue"
+                        className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs outline-none focus:border-brand-blue"
                       />
                     </div>
                     <div>
@@ -1277,7 +1315,7 @@ export default function Purchases() {
                       <select
                         value={billing.paymentType}
                         onChange={(e) => updateBillingField('paymentType', e.target.value)}
-                        className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue"
+                        className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs outline-none focus:border-brand-blue"
                       >
                         <option value="Cash">Immediate Cash Payment</option>
                         <option value="Bank">Immediate Bank Transfer</option>
@@ -1301,7 +1339,7 @@ export default function Purchases() {
                         <select
                           value={billing.paidFrom}
                           onChange={(e) => updateBillingField('paidFrom', e.target.value)}
-                          className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none focus:border-brand-blue"
+                          className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs outline-none focus:border-brand-blue"
                         >
                           {bankAccounts.map((b) => (
                             <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
@@ -1365,7 +1403,7 @@ export default function Purchases() {
                                         updateBillingField('deductAmount', e.target.value);
                                       }
                                     }}
-                                    className="w-full max-w-[150px] rounded border border-surface-dim bg-white px-2 py-1 text-xs outline-none text-text-primary focus:border-brand-blue"
+                                    className="w-full max-w-[150px] rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs outline-none text-text-primary focus:border-brand-blue"
                                   />
                                 </div>
                               )}
@@ -1429,9 +1467,9 @@ export default function Purchases() {
                       <span>Post Purchase Order</span>
                     </button>
                   </div>
-                );
-              })
-            )}
+                </div>
+              );
+            })()}
           </form>
         )}
       </>
@@ -1514,10 +1552,10 @@ export default function Purchases() {
       {currentTab === 'create' && poMode && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Main PO Info */}
-          <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4 lg:col-span-2" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+          <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none space-y-4 lg:col-span-2">
             <div className="flex justify-between items-center">
-              <h3 className="text-sm font-semibold text-text-primary">
-                New Purchase Invoice / PO ({poMode === 'product' ? 'Product-Based' : 'Supplier-Based'})
+              <h3 className="text-base md:text-lg font-bold text-text-primary">
+                {poMode === 'product' ? 'Product-Based PO' : 'Supplier-Based PO'}
               </h3>
               <button
                 type="button"
@@ -1531,9 +1569,12 @@ export default function Purchases() {
                   setItems([]);
                   setSupplier('');
                 }}
-                className="text-xs text-brand-blue hover:underline font-semibold"
+                className="text-xs text-brand-blue hover:underline font-semibold flex items-center"
               >
-                Change Mode
+                <svg className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                <span>Change Mode</span>
               </button>
             </div>
 
@@ -1554,12 +1595,12 @@ export default function Purchases() {
                       setSupplierSearch('');
                       setShowSupplierDropdown(true);
                     }}
-                    className="w-full rounded border border-surface-dim bg-white pl-3 pr-8 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+                    className="w-full rounded border border-surface-dim bg-white pl-3 pr-8 py-3 md:py-2 text-sm text-text-primary outline-none focus:border-brand-blue search-input-mobile"
                   />
                   {supplierSearching && (
-                    <span className="absolute right-8 top-2.5 text-[10px] text-brand-blue animate-pulse">Searching...</span>
+                    <span className="absolute right-8 top-3.5 md:top-2.5 text-[10px] text-brand-blue animate-pulse">Searching...</span>
                   )}
-                  <span className="absolute right-2.5 top-2.5 text-text-secondary pointer-events-none">
+                  <span className="absolute right-2.5 top-3.5 md:top-2.5 text-text-secondary pointer-events-none">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
@@ -1623,10 +1664,10 @@ export default function Purchases() {
                         setShowDropdown(true);
                       }}
                       onFocus={() => setShowDropdown(true)}
-                      className="w-full rounded border border-surface-dim bg-white pl-3 pr-8 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue"
+                      className="w-full rounded border border-surface-dim bg-white pl-3 pr-8 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue search-input-mobile"
                     />
                     {searching && (
-                      <span className="absolute right-2.5 top-2 text-[10px] text-brand-blue animate-pulse">Searching...</span>
+                      <span className="absolute right-2.5 top-3 md:top-2 text-[10px] text-brand-blue animate-pulse">Searching...</span>
                     )}
                   </div>
                   {showDropdown && (productSearch.trim() !== '' || searchedProducts.length > 0) && (
@@ -1692,7 +1733,7 @@ export default function Purchases() {
                                 <div className="flex flex-wrap gap-0.5 mt-0.5">
                                   {p.suitable_models_details.map((m) => (
                                     <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
-                                    {m.brand_name} {m.model_name}
+                                      {m.brand_name} {m.model_name}
                                     </span>
                                   ))}
                                 </div>
@@ -1718,7 +1759,7 @@ export default function Purchases() {
                           setCost(mapped.current_cost.toString());
                         }
                       }}
-                      className="w-full rounded border border-surface-dim bg-white px-2 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue"
+                      className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue"
                       disabled={!selectedProductObj}
                     >
                       {!selectedProductObj ? (
@@ -1737,41 +1778,43 @@ export default function Purchases() {
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Quantity</label>
-                  <input
-                    type="number"
-                    value={qty}
-                    onChange={(e) => setQty(e.target.value)}
-                    className="w-full rounded border border-surface-dim bg-white px-2 py-1.5 text-xs text-text-primary outline-none"
-                  />
+                <div className="col-span-full grid grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Quantity</label>
+                    <input
+                      type="number"
+                      value={qty}
+                      onChange={(e) => setQty(e.target.value)}
+                      className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Unit Cost (INR)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={cost}
+                      onChange={(e) => setCost(e.target.value)}
+                      className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-text-secondary mb-0.5 truncate" title="New Retail Selling Price">New Retail Price</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Same"
+                      value={newSellingPrice}
+                      onChange={(e) => setNewSellingPrice(e.target.value)}
+                      className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Unit Cost (INR)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={cost}
-                    onChange={(e) => setCost(e.target.value)}
-                    className="w-full rounded border border-surface-dim bg-white px-2 py-1.5 text-xs text-text-primary outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">New Retail Selling Price (Optional)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Leave blank to keep same"
-                    value={newSellingPrice}
-                    onChange={(e) => setNewSellingPrice(e.target.value)}
-                    className="w-full rounded border border-surface-dim bg-white px-2 py-1.5 text-xs text-text-primary outline-none"
-                  />
-                </div>
-                <div className="flex items-end">
+                <div className="col-span-full flex items-end pt-1">
                   <button
                     type="button"
                     onClick={handleAddLineItem}
-                    className="w-full rounded bg-brand-blue py-1.5 text-xs font-semibold text-white hover:bg-brand-cobalt transition"
+                    className="w-full rounded bg-brand-blue py-3 md:py-1.5 text-sm md:text-xs font-semibold text-white hover:bg-brand-cobalt transition"
                   >
                     Add to Cart
                   </button>
@@ -1879,9 +1922,9 @@ export default function Purchases() {
                 value={receivePag.search}
                 onChange={(e) => receivePag.setSearch(e.target.value)}
                 placeholder="Search POs by supplier/invoice ref..."
-                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
               />
-              <span className="absolute left-3 top-2.5 text-text-secondary">
+              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -2030,9 +2073,9 @@ export default function Purchases() {
                 value={historyPag.search}
                 onChange={(e) => historyPag.setSearch(e.target.value)}
                 placeholder="Search history by supplier/invoice ref..."
-                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
               />
-              <span className="absolute left-3 top-2.5 text-text-secondary">
+              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -2068,11 +2111,10 @@ export default function Purchases() {
                       <td className="px-4 py-4 text-right text-text-secondary">{formatCurrency(p.additional_costs)}</td>
                       <td className="px-4 py-4 text-right font-semibold text-text-primary">{formatCurrency(p.total_amount)}</td>
                       <td className="px-4 py-4 text-center">
-                        <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold ${
-                          p.status === 'Returned' ? 'bg-red-100 text-red-800' :
-                          p.status === 'Partially Returned' ? 'bg-orange-100 text-orange-800' :
-                          p.status === 'Received' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                        }`}>
+                        <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold ${p.status === 'Returned' ? 'bg-red-100 text-red-800' :
+                            p.status === 'Partially Returned' ? 'bg-orange-100 text-orange-800' :
+                              p.status === 'Received' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                          }`}>
                           {p.status || (p.is_received ? 'Received' : 'Pending')}
                         </span>
                       </td>
@@ -2148,11 +2190,10 @@ export default function Purchases() {
                     </div>
                     <div>
                       <span className="block font-semibold">Status</span>
-                      <span className={`inline-block rounded px-1.5 py-0.5 text-[9px] font-bold mt-0.5 ${
-                        p.status === 'Returned' ? 'bg-red-100 text-red-800' :
-                        p.status === 'Partially Returned' ? 'bg-orange-100 text-orange-800' :
-                        p.status === 'Received' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
+                      <span className={`inline-block rounded px-1.5 py-0.5 text-[9px] font-bold mt-0.5 ${p.status === 'Returned' ? 'bg-red-100 text-red-800' :
+                          p.status === 'Partially Returned' ? 'bg-orange-100 text-orange-800' :
+                            p.status === 'Received' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
                         {p.status || (p.is_received ? 'Received' : 'Pending')}
                       </span>
                     </div>
@@ -2195,7 +2236,7 @@ export default function Purchases() {
 
       {showViewAllPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6">
-          <div className="w-full max-w-4xl rounded-lg bg-white shadow-xl flex flex-col max-h-[85vh] relative overflow-hidden border border-surface-low animate-in fade-in duration-200">
+          <div className="w-full max-w-4xl rounded-lg bg-white shadow-xl flex flex-col h-[85vh] relative overflow-hidden border border-surface-low animate-in fade-in duration-200">
             {/* Header */}
             <div className="flex justify-between items-center p-4 border-b border-surface-low bg-surface-lowest">
               <h3 className="text-sm font-bold text-text-primary">
@@ -2253,9 +2294,9 @@ export default function Purchases() {
                   placeholder="Search products by name or barcode..."
                   value={popupSearchQuery}
                   onChange={(e) => setPopupSearchQuery(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue"
+                  className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue search-input-mobile"
                 />
-                <span className="absolute left-3 top-2 text-text-secondary">
+                <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
@@ -2550,7 +2591,7 @@ export default function Purchases() {
                                 setRecShowDropdown(true);
                               }}
                               onFocus={() => setRecShowDropdown(true)}
-                              className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue"
+                              className="w-full rounded border border-surface-dim bg-white px-3 py-2.5 md:py-1 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue search-input-mobile"
                             />
                             {recShowDropdown && (recProductSearch.trim() !== '' || recSearching) && (
                               <div className="absolute left-0 right-0 z-30 mt-1 max-h-48 overflow-y-auto rounded-md bg-white border border-surface-low shadow-lg">
@@ -2584,7 +2625,7 @@ export default function Purchases() {
                                           <div className="flex flex-wrap gap-0.5 mt-0.5">
                                             {p.suitable_models_details.map((m) => (
                                               <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
-                                              {m.brand_name} {m.model_name}
+                                                {m.brand_name} {m.model_name}
                                               </span>
                                             ))}
                                           </div>
@@ -2770,7 +2811,7 @@ export default function Purchases() {
                           setRecShowDropdown(true);
                         }}
                         onFocus={() => setRecShowDropdown(true)}
-                        className="w-full rounded border border-surface-dim bg-white px-3 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue"
+                        className="w-full rounded border border-surface-dim bg-white px-3 py-2.5 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue search-input-mobile"
                       />
                       {recShowDropdown && (recProductSearch.trim() !== '' || recSearching) && (
                         <div className="absolute left-0 right-0 z-30 mt-1 max-h-48 overflow-y-auto rounded-md bg-white border border-surface-low shadow-lg">
@@ -2825,7 +2866,7 @@ export default function Purchases() {
                           placeholder="Qty"
                           value={recQty}
                           onChange={(e) => setRecQty(e.target.value)}
-                          className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs text-right text-text-primary outline-none focus:border-brand-blue"
+                          className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs text-right text-text-primary outline-none focus:border-brand-blue"
                         />
                       </div>
                       <div>
@@ -2836,7 +2877,7 @@ export default function Purchases() {
                           placeholder="Cost"
                           value={recCost}
                           onChange={(e) => setRecCost(e.target.value)}
-                          className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs text-right text-text-primary outline-none focus:border-brand-blue"
+                          className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs text-right text-text-primary outline-none focus:border-brand-blue"
                         />
                       </div>
                       <div>
@@ -2847,7 +2888,7 @@ export default function Purchases() {
                           placeholder="Selling"
                           value={recNewSellingPrice}
                           onChange={(e) => setRecNewSellingPrice(e.target.value)}
-                          className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs text-right text-text-primary outline-none focus:border-brand-blue"
+                          className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs text-right text-text-primary outline-none focus:border-brand-blue"
                         />
                       </div>
                     </div>
@@ -3062,7 +3103,7 @@ export default function Purchases() {
 
       {showRecViewAllPopup && receivingPO && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6">
-          <div className="w-full max-w-4xl rounded-lg bg-white shadow-xl flex flex-col max-h-[85vh] relative overflow-hidden border border-surface-low animate-in fade-in duration-200">
+          <div className="w-full max-w-4xl rounded-lg bg-white shadow-xl flex flex-col h-[85vh] relative overflow-hidden border border-surface-low animate-in fade-in duration-200">
             {/* Header */}
             <div className="flex justify-between items-center p-4 border-b border-surface-low bg-surface-lowest">
               <h3 className="text-sm font-bold text-text-primary">
@@ -3085,9 +3126,9 @@ export default function Purchases() {
                   placeholder="Search products by name or barcode..."
                   value={recPopupSearchQuery}
                   onChange={(e) => setRecPopupSearchQuery(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue"
+                  className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue search-input-mobile"
                 />
-                <span className="absolute left-3 top-2 text-text-secondary">
+                <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
@@ -3461,11 +3502,10 @@ export default function Purchases() {
               <div>
                 <h3 className="text-sm font-bold text-text-primary flex items-center space-x-2">
                   <span>Purchase Order Details (PO-{detailsPO.id})</span>
-                  <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold ${
-                    detailsPO.status === 'Returned' ? 'bg-red-100 text-red-800' :
-                    detailsPO.status === 'Partially Returned' ? 'bg-orange-100 text-orange-800' :
-                    detailsPO.status === 'Received' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                  }`}>
+                  <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold ${detailsPO.status === 'Returned' ? 'bg-red-100 text-red-800' :
+                      detailsPO.status === 'Partially Returned' ? 'bg-orange-100 text-orange-800' :
+                        detailsPO.status === 'Received' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
                     {detailsPO.status || (detailsPO.is_received ? 'Received' : 'Pending')}
                   </span>
                 </h3>
@@ -3543,14 +3583,14 @@ export default function Purchases() {
                           <td className="px-3 py-2 font-medium">
                             <div>{item.product_name}</div>
                             {item.suitable_models_details && item.suitable_models_details.length > 0 && (
-                               <div className="flex flex-wrap gap-1 mt-1 font-normal">
-                                 {item.suitable_models_details.map((m) => (
-                                   <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
-                                   {m.brand_name} {m.model_name}
-                                   </span>
-                                 ))}
-                               </div>
-                             )}
+                              <div className="flex flex-wrap gap-1 mt-1 font-normal">
+                                {item.suitable_models_details.map((m) => (
+                                  <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
+                                    {m.brand_name} {m.model_name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                             <div className="text-[10px] text-text-secondary font-mono">{item.barcode}</div>
                           </td>
                           <td className="px-3 py-2 text-right">{item.quantity}</td>
@@ -3580,14 +3620,14 @@ export default function Purchases() {
                         <div>
                           <div className="font-semibold text-text-primary">{item.product_name}</div>
                           {item.suitable_models_details && item.suitable_models_details.length > 0 && (
-                             <div className="flex flex-wrap gap-1 mt-1 font-normal">
-                               {item.suitable_models_details.map((m) => (
-                                 <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
-                                   {m.brand_name} {m.model_name}
-                                 </span>
-                               ))}
-                             </div>
-                           )}
+                            <div className="flex flex-wrap gap-1 mt-1 font-normal">
+                              {item.suitable_models_details.map((m) => (
+                                <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
+                                  {m.brand_name} {m.model_name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           <div className="text-[10px] text-text-secondary font-mono">{item.barcode}</div>
                         </div>
                         <div className="text-right font-semibold text-brand-blue">
@@ -3629,7 +3669,7 @@ export default function Purchases() {
                       <div key={ret.id} className="relative text-xs">
                         {/* Timeline dot */}
                         <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-error border border-white" />
-                        
+
                         <div className="bg-red-50/30 border border-error/15 rounded-lg p-3 space-y-2">
                           <div className="flex justify-between items-center border-b border-error/10 pb-1.5">
                             <div>
@@ -3641,7 +3681,7 @@ export default function Purchases() {
                               <span className="font-bold text-error">{formatCurrency(ret.refund_amount)}</span>
                             </div>
                           </div>
-                          
+
                           <div className="grid grid-cols-2 gap-2 text-text-secondary text-[11px] mb-2">
                             <div><span className="font-semibold">Credited Account:</span> {ret.credit_account_name || 'N/A'}</div>
                             <div><span className="font-semibold">Return Adjustment Fee:</span> {formatCurrency(ret.adjustment)}</div>
@@ -3734,10 +3774,10 @@ export default function Purchases() {
                       const sell = item.new_selling_price !== null && item.new_selling_price !== undefined && item.new_selling_price !== '' ? parseFloat(item.new_selling_price) : parseFloat(item.selling_price || 0);
                       const itemProfit = item.quantity * (sell - item.purchase_cost);
                       return (
-                        <div key={item.originalIndex} className="py-2 flex items-center justify-between text-xs gap-3">
+                        <div key={item.originalIndex} className="py-2.5 flex items-center justify-between text-sm gap-3">
                           <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-text-primary truncate">{item.name}</div>
-                            <div className="text-[10px] text-text-secondary mt-0.5">
+                            <div className="font-bold text-text-primary truncate">{item.name}</div>
+                            <div className="text-xs text-text-secondary mt-0.5">
                               Qty: <span className="font-bold text-text-primary">{item.quantity}</span> | Cost: <span className="font-semibold">{formatCurrency(item.purchase_cost)}</span> | Profit: <span className={`font-semibold ${itemProfit >= 0 ? 'text-green-600' : 'text-error'}`}>{formatCurrency(itemProfit)}</span>
                             </div>
                           </div>
@@ -3746,7 +3786,7 @@ export default function Purchases() {
                             <button
                               type="button"
                               onClick={() => handleRemoveLineItem(item.originalIndex)}
-                              className="text-error font-bold p-1 hover:underline cursor-pointer"
+                              className="text-error font-bold p-1 hover:underline cursor-pointer text-xs"
                             >
                               Remove
                             </button>

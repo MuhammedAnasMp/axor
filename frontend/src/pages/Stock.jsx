@@ -141,17 +141,17 @@ export default function Stock() {
       quantity: parseInt(adjustQty),
       description: adjustReason
     })
-    .then(() => {
-      setShowAdjustModal(false);
-      resetFormStates();
-      stockPag.refresh();
-      historyPag.refresh();
-      setIsSavingAdjust(false);
-    })
-    .catch((err) => {
-      alert(err.message);
-      setIsSavingAdjust(false);
-    });
+      .then(() => {
+        setShowAdjustModal(false);
+        resetFormStates();
+        stockPag.refresh();
+        historyPag.refresh();
+        setIsSavingAdjust(false);
+      })
+      .catch((err) => {
+        alert(err.message);
+        setIsSavingAdjust(false);
+      });
   };
 
   const handleTransferSubmit = (e) => {
@@ -164,17 +164,17 @@ export default function Stock() {
       from_desc: transferFrom,
       to_desc: transferTo
     })
-    .then(() => {
-      setShowTransferModal(false);
-      resetFormStates();
-      stockPag.refresh();
-      historyPag.refresh();
-      setIsSavingTransfer(false);
-    })
-    .catch((err) => {
-      alert(err.message);
-      setIsSavingTransfer(false);
-    });
+      .then(() => {
+        setShowTransferModal(false);
+        resetFormStates();
+        stockPag.refresh();
+        historyPag.refresh();
+        setIsSavingTransfer(false);
+      })
+      .catch((err) => {
+        alert(err.message);
+        setIsSavingTransfer(false);
+      });
   };
 
   const handleDamageSubmit = (e) => {
@@ -187,18 +187,18 @@ export default function Stock() {
       description: damageReason,
       bank_account_id: parseInt(damageBank)
     })
-    .then(() => {
-      setShowDamageModal(false);
-      resetFormStates();
-      stockPag.refresh();
-      historyPag.refresh();
-      loadDropdowns();
-      setIsSavingDamage(false);
-    })
-    .catch((err) => {
-      alert(err.message);
-      setIsSavingDamage(false);
-    });
+      .then(() => {
+        setShowDamageModal(false);
+        resetFormStates();
+        stockPag.refresh();
+        historyPag.refresh();
+        loadDropdowns();
+        setIsSavingDamage(false);
+      })
+      .catch((err) => {
+        alert(err.message);
+        setIsSavingDamage(false);
+      });
   };
 
   const openModal = (stock, type) => {
@@ -217,7 +217,7 @@ export default function Stock() {
     const isSorted = pag.ordering === field || pag.ordering === `-${field}`;
     const isDesc = pag.ordering === `-${field}`;
     return (
-      <th 
+      <th
         onClick={() => pag.handleSort(field)}
         className="px-4 py-3 cursor-pointer hover:bg-surface-low select-none transition-colors"
       >
@@ -231,12 +231,12 @@ export default function Stock() {
     );
   };
 
-  const activeLoading = 
-    currentTab === 'current' 
-      ? stockPag.loading 
-      : currentTab === 'damaged' 
-      ? damagedPag.loading 
-      : historyPag.loading;
+  const activeLoading =
+    currentTab === 'current'
+      ? stockPag.loading
+      : currentTab === 'damaged'
+        ? damagedPag.loading
+        : historyPag.loading;
 
   const renderProductSelector = () => (
     <div ref={prodDropdownRef} className="relative">
@@ -280,7 +280,7 @@ export default function Stock() {
                   <div className="flex flex-wrap gap-0.5 mt-0.5">
                     {s.suitable_models_details.map((m) => (
                       <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
-                      {m.brand_name} {m.model_name}
+                        {m.brand_name} {m.model_name}
                       </span>
                     ))}
                   </div>
@@ -461,40 +461,44 @@ export default function Stock() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Title */}
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Stock & Inventory</h2>
-        <p className="text-xs text-text-secondary">Track real-time inventory levels, adjust stock counts, record transfers and damages.</p>
-      </div>
+      {!isMobile && (
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Stock & Inventory</h2>
+          <p className="text-xs text-text-secondary">Track real-time inventory levels, adjust stock counts, record transfers and damages.</p>
+        </div>
+      )}
 
       {/* Tabs Menu */}
-      <div className="hidden md:block tabs-container border-b border-surface-low">
-        <div className="tabs-scrollable space-x-6 text-sm font-medium">
-          <Link 
-            to="/erp/stock" 
-            className={`pb-2 ${currentTab === 'current' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-          >
-            Current Stock
-          </Link>
-          <Link 
-            to="/erp/stock?tab=history" 
-            className={`pb-2 ${currentTab === 'history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-          >
-            Stock History Log
-          </Link>
-          <Link 
-            to="/erp/stock?tab=damaged" 
-            className={`pb-2 ${currentTab === 'damaged' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-          >
-            Damaged Items
-          </Link>
+      {!isMobile && (
+        <div className="hidden md:block tabs-container border-b border-surface-low">
+          <div className="tabs-scrollable space-x-6 text-sm font-medium">
+            <Link
+              to="/erp/stock"
+              className={`pb-2 ${currentTab === 'current' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+            >
+              Current Stock
+            </Link>
+            <Link
+              to="/erp/stock?tab=history"
+              className={`pb-2 ${currentTab === 'history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+            >
+              Stock History Log
+            </Link>
+            <Link
+              to="/erp/stock?tab=damaged"
+              className={`pb-2 ${currentTab === 'damaged' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+            >
+              Damaged Items
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Current Stock Tab */}
       {currentTab === 'current' && (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {/* Low Stock Banner Alert */}
           {stockPag.data.some(s => s.quantity < 10) && (
             <div className="rounded border-l-4 border-error bg-error-container/20 p-4 text-xs font-semibold text-error">
@@ -503,16 +507,16 @@ export default function Stock() {
           )}
 
           {/* Search bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-t-lg border-t border-x border-surface-low">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 md:bg-white md:p-4 md:rounded-t-lg md:border-t md:border-x md:border-surface-low bg-transparent p-0 border-none">
             <div className="relative w-full sm:w-72">
               <input
                 type="text"
                 value={stockPag.search}
                 onChange={(e) => stockPag.setSearch(e.target.value)}
                 placeholder="Search stock by product/barcode..."
-                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
               />
-              <span className="absolute left-3 top-2.5 text-text-secondary">
+              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -524,7 +528,7 @@ export default function Stock() {
           </div>
 
           {isMobile ? (
-            <div className="divide-y divide-surface-low bg-white border-x border-b border-surface-low rounded-b-lg">
+            <div className="space-y-3 md:pt-2">
               {stockPag.loading ? (
                 <div className="p-3 space-y-4">
                   {[1, 2, 3, 4, 5].map((idx) => (
@@ -539,7 +543,7 @@ export default function Stock() {
                   <div
                     key={s.id}
                     onClick={() => setSelectedStockDetails(s)}
-                    className="p-3.5 hover:bg-surface-bright transition-colors cursor-pointer space-y-2 text-sm"
+                    className="rounded-lg border border-surface-low bg-white p-3.5 shadow-sm active:bg-surface-low transition-colors cursor-pointer space-y-2 text-sm"
                   >
                     {/* Row 1: Product Name, Stock Qty */}
                     <div className="flex justify-between items-start gap-3">
@@ -556,9 +560,8 @@ export default function Stock() {
                         )}
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded ${
-                          s.quantity < 10 ? 'bg-red-50 text-error border border-error/10' : 'bg-green-50 text-green-700 border border-green-700/10'
-                        }`}>
+                        <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded ${s.quantity < 10 ? 'bg-red-50 text-error border border-error/10' : 'bg-green-50 text-green-700 border border-green-700/10'
+                          }`}>
                           Qty: {s.quantity}
                         </span>
                       </div>
@@ -688,18 +691,18 @@ export default function Stock() {
 
       {/* Stock History Tab */}
       {currentTab === 'history' && (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {/* Search bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-t-lg border-t border-x border-surface-low">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 md:bg-white md:p-4 md:rounded-t-lg md:border-t md:border-x md:border-surface-low bg-transparent p-0 border-none">
             <div className="relative w-full sm:w-72">
               <input
                 type="text"
                 value={historyPag.search}
                 onChange={(e) => historyPag.setSearch(e.target.value)}
                 placeholder="Search history by product/details..."
-                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
               />
-              <span className="absolute left-3 top-2.5 text-text-secondary">
+              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -711,7 +714,7 @@ export default function Stock() {
           </div>
 
           {isMobile ? (
-            <div className="divide-y divide-surface-low bg-white border-x border-b border-surface-low rounded-b-lg">
+            <div className="space-y-3 md:pt-2">
               {historyPag.loading ? (
                 <div className="p-3 space-y-4">
                   {[1, 2, 3, 4, 5].map((idx) => (
@@ -726,7 +729,7 @@ export default function Stock() {
                   <div
                     key={h.id}
                     onClick={() => setSelectedStockDetails({ ...h, isHistory: true })}
-                    className="p-3.5 hover:bg-surface-bright transition-colors cursor-pointer space-y-2 text-sm"
+                    className="rounded-lg border border-surface-low bg-white p-3.5 shadow-sm active:bg-surface-low transition-colors cursor-pointer space-y-2 text-sm"
                   >
                     {/* Row 1: Product Name, Qty Changed */}
                     <div className="flex justify-between items-start gap-3">
@@ -743,9 +746,8 @@ export default function Stock() {
                         )}
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded ${
-                          h.quantity_changed > 0 ? 'bg-green-50 text-green-700 border border-green-700/10' : 'bg-red-50 text-error border border-error/10'
-                        }`}>
+                        <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded ${h.quantity_changed > 0 ? 'bg-green-50 text-green-700 border border-green-700/10' : 'bg-red-50 text-error border border-error/10'
+                          }`}>
                           {h.quantity_changed > 0 ? `+${h.quantity_changed}` : h.quantity_changed}
                         </span>
                       </div>
@@ -754,12 +756,11 @@ export default function Stock() {
                     {/* Row 2: Action Type, Timestamp, Details */}
                     <div className="flex justify-between items-center pt-2 border-t border-dashed border-surface-low text-xs text-text-secondary">
                       <div className="flex items-center space-x-2">
-                        <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                          h.action_type === 'Add' ? 'bg-green-100 text-green-800' :
+                        <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${h.action_type === 'Add' ? 'bg-green-100 text-green-800' :
                           h.action_type === 'Damage' ? 'bg-red-100 text-red-800' :
-                          h.action_type === 'Adjustment' ? 'bg-amber-100 text-amber-800' :
-                          'bg-blue-100 text-brand-blue'
-                        }`}>
+                            h.action_type === 'Adjustment' ? 'bg-amber-100 text-amber-800' :
+                              'bg-blue-100 text-brand-blue'
+                          }`}>
                           {h.action_type}
                         </span>
                         <span className="text-[11px]">
@@ -818,12 +819,11 @@ export default function Stock() {
                           </div>
                         </td>
                         <td className="px-4 py-4">
-                          <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold ${
-                            h.action_type === 'Add' ? 'bg-green-100 text-green-800' :
+                          <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold ${h.action_type === 'Add' ? 'bg-green-100 text-green-800' :
                             h.action_type === 'Damage' ? 'bg-red-100 text-red-800' :
-                            h.action_type === 'Adjustment' ? 'bg-amber-100 text-amber-800' :
-                            'bg-blue-100 text-brand-blue'
-                          }`}>
+                              h.action_type === 'Adjustment' ? 'bg-amber-100 text-amber-800' :
+                                'bg-blue-100 text-brand-blue'
+                            }`}>
                             {h.action_type}
                           </span>
                         </td>
@@ -858,18 +858,18 @@ export default function Stock() {
 
       {/* Damaged Stock Tab */}
       {currentTab === 'damaged' && (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {/* Search bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-t-lg border-t border-x border-surface-low">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 md:bg-white md:p-4 md:rounded-t-lg md:border-t md:border-x md:border-surface-low bg-transparent p-0 border-none">
             <div className="relative w-full sm:w-72">
               <input
                 type="text"
                 value={damagedPag.search}
                 onChange={(e) => damagedPag.setSearch(e.target.value)}
                 placeholder="Search damages by product/details..."
-                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
               />
-              <span className="absolute left-3 top-2.5 text-text-secondary">
+              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -881,7 +881,7 @@ export default function Stock() {
           </div>
 
           {isMobile ? (
-            <div className="divide-y divide-surface-low bg-white border-x border-b border-surface-low rounded-b-lg">
+            <div className="space-y-3 md:pt-2">
               {damagedPag.loading ? (
                 <div className="p-3 space-y-4">
                   {[1, 2, 3, 4, 5].map((idx) => (
@@ -896,7 +896,7 @@ export default function Stock() {
                   <div
                     key={h.id}
                     onClick={() => setSelectedStockDetails({ ...h, isDamageLog: true })}
-                    className="p-3.5 hover:bg-surface-bright transition-colors cursor-pointer space-y-2 text-sm"
+                    className="rounded-lg border border-surface-low bg-white p-3.5 shadow-sm active:bg-surface-low transition-colors cursor-pointer space-y-2 text-sm"
                   >
                     {/* Row 1: Product Name, Qty Damaged */}
                     <div className="flex justify-between items-start gap-3">
@@ -962,19 +962,19 @@ export default function Stock() {
                         <tr key={h.id} className="hover:bg-surface-bright">
                           <td className="px-4 py-4 text-text-secondary">{new Date(h.timestamp).toLocaleString()}</td>
                           <td className="px-4 py-4 font-semibold text-text-primary">
-                           <div>
-                             <span>{h.product_name}</span>
-                             {h.suitable_models_details && h.suitable_models_details.length > 0 && (
-                               <div className="flex flex-wrap gap-1 mt-1">
-                                 {h.suitable_models_details.map((m) => (
-                                   <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[10px] font-semibold">
-                                     {m.brand_name} {m.model_name}
-                                   </span>
-                                 ))}
-                               </div>
-                             )}
-                           </div>
-                         </td>
+                            <div>
+                              <span>{h.product_name}</span>
+                              {h.suitable_models_details && h.suitable_models_details.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {h.suitable_models_details.map((m) => (
+                                    <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[10px] font-semibold">
+                                      {m.brand_name} {m.model_name}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-4 py-4 text-right font-semibold text-error">
                             {h.quantity_changed}
                           </td>
@@ -1104,32 +1104,37 @@ export default function Stock() {
             </div>
           </button>
 
-          <button
-            onClick={() => {
-              setShowStockMenu(false);
-              resetFormStates();
-              setShowDamageModal(true);
-            }}
-            className="w-full flex items-center space-x-3 p-4 rounded-xl border border-surface-low hover:bg-surface-low text-left text-sm font-medium text-text-primary transition"
-          >
-            <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-red-600/10 text-red-600">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <div>
-              <div className="font-semibold">Log Damaged Items</div>
-              <div className="text-xs text-text-secondary">Write off lost or damaged inventory as an expense</div>
-            </div>
-          </button>
         </div>
       </MobileBottomSheet>
 
       {/* Floating Action Button for mobile */}
-      {currentTab === 'current' && !showAdjustModal && !showTransferModal && !showDamageModal && !showStockMenu && (
+      {((currentTab === 'current' && !showAdjustModal && !showTransferModal && !showDamageModal && !showStockMenu) ||
+        (currentTab === 'damaged' && !showDamageModal)) && (
         <FloatingActionButton
+          icon={
+            currentTab === 'current' ? (
+              <div className="relative">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+              </div>
+            ) : currentTab === 'damaged' ? (
+              <div className="relative">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+              </div>
+            ) : null
+          }
           onClick={() => {
-            setShowStockMenu(true);
+            if (currentTab === 'current') {
+              setShowStockMenu(true);
+            } else if (currentTab === 'damaged') {
+              resetFormStates();
+              setShowDamageModal(true);
+            }
           }}
         />
       )}
@@ -1167,12 +1172,11 @@ export default function Stock() {
                   <div>
                     <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Action Type</span>
                     <div className="mt-1">
-                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${
-                        selectedStockDetails.action_type === 'Add' ? 'bg-green-100 text-green-800' :
+                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${selectedStockDetails.action_type === 'Add' ? 'bg-green-100 text-green-800' :
                         selectedStockDetails.action_type === 'Damage' ? 'bg-red-100 text-red-800' :
-                        selectedStockDetails.action_type === 'Adjustment' ? 'bg-amber-100 text-amber-800' :
-                        'bg-blue-100 text-brand-blue'
-                      }`}>
+                          selectedStockDetails.action_type === 'Adjustment' ? 'bg-amber-100 text-amber-800' :
+                            'bg-blue-100 text-brand-blue'
+                        }`}>
                         {selectedStockDetails.action_type}
                       </span>
                     </div>

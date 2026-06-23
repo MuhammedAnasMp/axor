@@ -133,7 +133,7 @@ export default function MoneyAccounts() {
   return (
     <div className="space-y-6">
       {/* Title */}
-      <div>
+      <div className="hidden md:block">
         <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Money & Accounts</h2>
         <p className="text-xs text-text-secondary">Manage capital settings, owner equity, bank accounts, and non-sales income.</p>
       </div>
@@ -301,9 +301,9 @@ export default function MoneyAccounts() {
                 value={transferPag.search}
                 onChange={(e) => transferPag.setSearch(e.target.value)}
                 placeholder="Search transfers by account name..."
-                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
               />
-              <span className="absolute left-3 top-2.5 text-text-secondary">
+              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -678,10 +678,38 @@ export default function MoneyAccounts() {
       )}
 
       {/* Floating Action Button for mobile */}
-      {currentTab === 'accounts' && !activeMobileForm && !showCreateMenu && (
+      {((currentTab === 'accounts' || currentTab === 'transfers') && !activeMobileForm) && (
         <FloatingActionButton
+          icon={
+            currentTab === 'accounts' ? (
+              <div className="relative">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+              </div>
+            ) : currentTab === 'transfers' ? (
+              <div className="relative">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+              </div>
+            ) : null
+          }
           onClick={() => {
-            setShowCreateMenu(true);
+            if (currentTab === 'accounts') {
+              setBankName('');
+              setBankBalance('0');
+              setActiveMobileForm('bank');
+            } else if (currentTab === 'transfers') {
+              setTransferAmount('');
+              if (accounts.length > 0) {
+                setTransferSource(accounts[0].id.toString());
+                setTransferDest(accounts.length > 1 ? accounts[1].id.toString() : accounts[0].id.toString());
+              }
+              setActiveMobileForm('transfer');
+            }
           }}
         />
       )}

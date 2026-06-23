@@ -13,10 +13,10 @@ function ContactNumber({ number, isWhatsapp }) {
   const [copied, setCopied] = useState(false);
 
   const cleanNumber = number.replace(/[^\d]/g, '');
-  
+
   let displayVal = number;
   let waNumber = cleanNumber;
-  
+
   if (cleanNumber.length === 10) {
     displayVal = `+91 ${cleanNumber}`;
     waNumber = `91${cleanNumber}`;
@@ -278,8 +278,8 @@ export default function Suppliers() {
       cleanWhatsapp = has91 ? whatsappDigits.slice(2) : whatsappDigits;
     }
 
-    api.suppliers.create({ 
-      name, 
+    api.suppliers.create({
+      name,
       contact_info: contactInfo,
       whatsapp_number: cleanWhatsapp,
       contact_number: cleanContact,
@@ -601,13 +601,13 @@ export default function Suppliers() {
             onFocus={() => {
               setShowMapProductDropdown(true);
             }}
-            className="w-full rounded border border-surface-dim bg-white pl-3 pr-8 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            className="w-full rounded border border-surface-dim bg-white pl-3 pr-8 py-3 md:py-2 text-sm text-text-primary outline-none focus:border-brand-blue search-input-mobile"
             required={!mapProduct}
           />
           {mapProductSearching && (
-            <span className="absolute right-8 top-2.5 text-[10px] text-brand-blue animate-pulse">Searching...</span>
+            <span className="absolute right-8 top-3.5 md:top-2.5 text-[10px] text-brand-blue animate-pulse">Searching...</span>
           )}
-          <span className="absolute right-2.5 top-2.5 text-text-secondary pointer-events-none">
+          <span className="absolute right-2.5 top-3.5 md:top-2.5 text-text-secondary pointer-events-none">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
@@ -650,13 +650,13 @@ export default function Suppliers() {
             onFocus={() => {
               setShowMapSupplierDropdown(true);
             }}
-            className="w-full rounded border border-surface-dim bg-white pl-3 pr-8 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            className="w-full rounded border border-surface-dim bg-white pl-3 pr-8 py-3 md:py-2 text-sm text-text-primary outline-none focus:border-brand-blue search-input-mobile"
             required={!mapSupplier}
           />
           {mapSupplierSearching && (
-            <span className="absolute right-8 top-2.5 text-[10px] text-brand-blue animate-pulse">Searching...</span>
+            <span className="absolute right-8 top-3.5 md:top-2.5 text-[10px] text-brand-blue animate-pulse">Searching...</span>
           )}
-          <span className="absolute right-2.5 top-2.5 text-text-secondary pointer-events-none">
+          <span className="absolute right-2.5 top-3.5 md:top-2.5 text-text-secondary pointer-events-none">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
@@ -708,47 +708,52 @@ export default function Suppliers() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Suppliers Directory</h2>
-          <p className="text-xs text-text-secondary">Manage suppliers, track outstanding balances, and record payments.</p>
+    <div className="space-y-4 md:space-y-6">
+      {/* Title */}
+      {!isMobile && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Suppliers Directory</h2>
+            <p className="text-xs text-text-secondary">Manage suppliers, track outstanding balances, and record payments.</p>
+          </div>
+          {currentTab === 'directory' && (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="hidden md:inline-block rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
+            >
+              {showForm ? 'Cancel' : 'Add Supplier'}
+            </button>
+          )}
+          {currentTab === 'mappings' && (
+            <button
+              onClick={() => setShowMappingForm(!showMappingForm)}
+              className="hidden md:inline-block rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
+            >
+              {showMappingForm ? 'Cancel' : 'Link Supplier'}
+            </button>
+          )}
         </div>
-        {currentTab === 'directory' && (
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="hidden md:inline-block rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
-          >
-            {showForm ? 'Cancel' : 'Add Supplier'}
-          </button>
-        )}
-        {currentTab === 'mappings' && (
-          <button
-            onClick={() => setShowMappingForm(!showMappingForm)}
-            className="hidden md:inline-block rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
-          >
-            {showMappingForm ? 'Cancel' : 'Link Supplier'}
-          </button>
-        )}
-      </div>
+      )}
 
       {/* Tabs Menu */}
-      <div className="hidden md:block tabs-container border-b border-surface-low">
-        <div className="tabs-scrollable space-x-6 text-sm font-medium">
-          <Link
-            to="/erp/suppliers"
-            className={`pb-2 ${currentTab === 'directory' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-          >
-            Supplier Directory
-          </Link>
-          <Link
-            to="/erp/suppliers?tab=mappings"
-            className={`pb-2 ${currentTab === 'mappings' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-          >
-            Supplier Mappings
-          </Link>
+      {!isMobile && (
+        <div className="hidden md:block tabs-container border-b border-surface-low">
+          <div className="tabs-scrollable space-x-6 text-sm font-medium">
+            <Link
+              to="/erp/suppliers"
+              className={`pb-2 ${currentTab === 'directory' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+            >
+              Supplier Directory
+            </Link>
+            <Link
+              to="/erp/suppliers?tab=mappings"
+              className={`pb-2 ${currentTab === 'mappings' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+            >
+              Supplier Mappings
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
 
       {currentTab === 'directory' && showForm && (
         <div className="hidden md:block">
@@ -760,16 +765,16 @@ export default function Suppliers() {
       {currentTab === 'directory' && (
         <div className="space-y-4">
           {/* Search & loading bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-t-lg border-t border-x border-surface-low">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 md:bg-white md:p-4 md:rounded-t-lg md:border-t md:border-x md:border-surface-low bg-transparent p-0 border-none">
             <div className="relative w-full sm:w-72">
               <input
                 type="text"
                 value={pag.search}
                 onChange={(e) => pag.setSearch(e.target.value)}
                 placeholder="Search suppliers by name..."
-                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
               />
-              <span className="absolute left-3 top-2.5 text-text-secondary">
+              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -782,7 +787,7 @@ export default function Suppliers() {
 
           {/* Directory Table */}
           {isMobile ? (
-            <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden">
+            <div className="space-y-3 md:pt-2">
               {pag.loading ? (
                 <div className="p-3 space-y-4">
                   {[1, 2, 3, 4, 5].map((idx) => (
@@ -797,7 +802,7 @@ export default function Suppliers() {
                   <div
                     key={s.id}
                     onClick={() => setSelectedSupplierDetails(s)}
-                    className="p-3.5 hover:bg-surface-bright transition-colors cursor-pointer space-y-2 text-sm"
+                    className="rounded-lg border border-surface-low bg-white p-3.5 shadow-sm active:bg-surface-low transition-colors cursor-pointer space-y-2 text-sm"
                   >
                     {/* Row 1: Supplier Name, Balance */}
                     <div className="flex justify-between items-start gap-3">
@@ -808,11 +813,10 @@ export default function Suppliers() {
                         <div className="text-xs text-text-secondary mt-0.5">{s.place || 'No Location'}</div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded ${
-                          parseFloat(s.outstanding_balance) > 0 ? 'bg-red-50 text-error border border-error/10' :
+                        <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded ${parseFloat(s.outstanding_balance) > 0 ? 'bg-red-50 text-error border border-error/10' :
                           parseFloat(s.outstanding_balance) < 0 ? 'bg-green-50 text-green-700 border border-green-700/10' :
-                          'bg-surface-low text-text-secondary border border-surface-dim/20'
-                        }`}>
+                            'bg-surface-low text-text-secondary border border-surface-dim/20'
+                          }`}>
                           {formatCurrency(s.outstanding_balance)}
                         </span>
                       </div>
@@ -984,7 +988,7 @@ export default function Suppliers() {
 
           {/* Mappings List */}
           <div className={`md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm ${showMappingForm ? 'md:col-span-2' : 'md:col-span-3'}`} style={isMobile ? {} : { boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
-            <h3 className="text-sm font-semibold text-text-primary mb-4">Supplier-Product Matrix</h3>
+            {/* <h3 className="text-sm font-semibold text-text-primary mb-4">Supplier-Product Matrix</h3> */}
 
             {/* Search and Loading */}
             <div className="flex items-center justify-between mb-4 gap-4">
@@ -993,13 +997,13 @@ export default function Suppliers() {
                 value={mappingPag.search}
                 onChange={(e) => mappingPag.setSearch(e.target.value)}
                 placeholder="Search matrix by product/supplier..."
-                className="w-full sm:w-64 rounded border border-surface-dim bg-white px-3 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue"
+                className="w-full sm:w-64 rounded border border-surface-dim bg-white px-3 py-2.5 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue search-input-mobile"
               />
               {mappingPag.loading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
             </div>
 
             {isMobile ? (
-              <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden">
+              <div className="space-y-3 pt-2">
                 {mappingPag.loading ? (
                   <div className="p-3 space-y-4">
                     {[1, 2, 3, 4, 5].map((idx) => (
@@ -1014,7 +1018,7 @@ export default function Suppliers() {
                     <div
                       key={m.id}
                       onClick={() => setSelectedSupplierDetails({ ...m, isMapping: true })}
-                      className="p-3.5 hover:bg-surface-bright transition-colors cursor-pointer space-y-2 text-sm"
+                      className="rounded-lg border border-surface-low bg-white p-3.5 shadow-sm active:bg-surface-low transition-colors cursor-pointer space-y-2 text-sm"
                     >
                       {/* Row 1: Product Name, Negotiated Cost */}
                       <div className="flex justify-between items-start gap-3">
@@ -1250,10 +1254,43 @@ export default function Suppliers() {
       </MobileBottomSheet>
 
       {/* Floating Action Button for mobile */}
-      {(currentTab === 'directory' || currentTab === 'mappings') && !showForm && !showMappingForm && !showPayModal && !showReceiveModal && !showMenu && (
+      {((currentTab === 'directory' && !showForm) ||
+        (currentTab === 'mappings' && !showMappingForm)) &&
+        !showPayModal && !showReceiveModal && !showMenu && (
         <FloatingActionButton
+          icon={
+            currentTab === 'directory' ? (
+              <div className="relative">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+              </div>
+            ) : currentTab === 'mappings' ? (
+              <div className="relative">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+              </div>
+            ) : null
+          }
           onClick={() => {
-            setShowMenu(true);
+            if (currentTab === 'directory') {
+              setName('');
+              setContactInfo('');
+              setWhatsappNumber('');
+              setContactNumber('');
+              setPlace('');
+              setShowForm(true);
+            } else if (currentTab === 'mappings') {
+              setMapProduct('');
+              setMapSupplier('');
+              setMapProductSearch('');
+              setMapSupplierSearch('');
+              setMapCost('0');
+              setShowMappingForm(true);
+            }
           }}
         />
       )}
@@ -1274,7 +1311,7 @@ export default function Suppliers() {
             <p className="text-[11px] text-text-secondary mb-4">
               Below are the products and their negotiated purchase costs with this supplier.
             </p>
-            
+
             <div className="flex-1 overflow-y-auto border border-surface-dim rounded-md">
               <table className="min-w-full text-left text-xs">
                 <thead className="bg-surface-low text-text-secondary font-semibold uppercase sticky top-0">
@@ -1317,7 +1354,7 @@ export default function Suppliers() {
                 </tbody>
               </table>
             </div>
-            
+
             <div className="mt-4 flex justify-end">
               <button
                 onClick={() => setSelectedSupplierForProducts(null)}

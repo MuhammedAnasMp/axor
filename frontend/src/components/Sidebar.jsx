@@ -12,6 +12,31 @@ export default function Sidebar() {
   const [currentUser, setCurrentUser] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const handleFocusChange = () => {
+      setTimeout(() => {
+        const activeEl = document.activeElement;
+        const isInput = activeEl && (
+          activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          activeEl.getAttribute('contenteditable') === 'true'
+        );
+        setIsKeyboardVisible(!!isInput);
+      }, 50);
+    };
+
+    handleFocusChange();
+
+    window.addEventListener('focus', handleFocusChange, true);
+    window.addEventListener('blur', handleFocusChange, true);
+
+    return () => {
+      window.removeEventListener('focus', handleFocusChange, true);
+      window.removeEventListener('blur', handleFocusChange, true);
+    };
+  }, []);
 
   useEffect(() => {
     api.auth.me()
@@ -59,7 +84,7 @@ export default function Sidebar() {
         </svg>
       ),
       subItems: [
-        { title: 'Product List', path: '/erp/products' },
+        { title: 'Products', path: '/erp/products' },
         { title: 'Cost History', path: '/erp/products?tab=cost-history' },
         { title: 'Categories', path: '/erp/products?tab=categories' },
         { title: 'Brands', path: '/erp/products?tab=brands' },
@@ -91,8 +116,8 @@ export default function Sidebar() {
         </svg>
       ),
       subItems: [
-        { title: 'Directory', path: '/erp/suppliers' },
-        { title: 'Mappings', path: '/erp/suppliers?tab=mappings' }
+        { title: 'Supplier', path: '/erp/suppliers' },
+        { title: 'Mapping', path: '/erp/suppliers?tab=mappings' }
       ]
     },
     {
@@ -116,8 +141,8 @@ export default function Sidebar() {
       ),
       subItems: [
         { title: 'Create Purchase', path: '/erp/purchases' },
-        { title: 'Purchase History', path: '/erp/purchases?tab=history' },
-        { title: 'Receive Products', path: '/erp/purchases?tab=receive' }
+        { title: 'Receive Products', path: '/erp/purchases?tab=receive' },
+        { title: 'Purchase History', path: '/erp/purchases?tab=history' }
       ]
     },
     {
@@ -223,10 +248,10 @@ export default function Sidebar() {
   const getScreenTitle = () => {
     const path = location.pathname;
     if (path === '/erp' || path === '/erp/') return 'Dashboard';
-    if (path.startsWith('/erp/products')) return 'Products Catalog';
+    if (path.startsWith('/erp/products')) return 'Products';
     if (path.startsWith('/erp/stock')) return 'Stock & Inventory';
-    if (path.startsWith('/erp/suppliers')) return 'Suppliers Ledger';
-    if (path.startsWith('/erp/customers')) return 'Customers Ledger';
+    if (path.startsWith('/erp/suppliers')) return 'Suppliers';
+    if (path.startsWith('/erp/customers')) return 'Customers';
     if (path.startsWith('/erp/purchases')) return 'Purchase Orders';
     if (path.startsWith('/erp/accounts')) return 'Cash & Bank';
     if (path.startsWith('/erp/expenses')) return 'Income & Expense';
@@ -234,6 +259,54 @@ export default function Sidebar() {
     if (path.startsWith('/erp/reports')) return 'Visual Reports';
     if (path.startsWith('/erp/sales')) return 'Sales Billing';
     return 'Axon Console';
+  };
+
+  const getSelectedTabName = () => {
+    const path = location.pathname;
+    const searchParams = new URLSearchParams(location.search);
+    const tab = searchParams.get('tab');
+
+    if (path.startsWith('/erp/products')) {
+      if (tab === 'cost-history') return 'Product Cost History';
+      if (tab === 'categories') return 'Product Categories';
+      if (tab === 'brands') return 'All Brands';
+      if (tab === 'model') return 'Suitable Mobile Models';
+      return 'Products';
+    }
+    if (path.startsWith('/erp/stock')) {
+      if (tab === 'history') return 'Stock History Log';
+      if (tab === 'damaged') return 'Damaged Items';
+      return 'Current Stock';
+    }
+    if (path.startsWith('/erp/suppliers')) {
+      if (tab === 'mappings') return 'Supplier Mapping';
+      return 'All Suppliers';
+    }
+    if (path.startsWith('/erp/customers')) {
+      return 'All Customers';
+    }
+    if (path.startsWith('/erp/purchases')) {
+      if (tab === 'receive') return 'Receive PO';
+      if (tab === 'history') return 'Purchase History';
+      return 'New PO';
+    }
+    if (path.startsWith('/erp/accounts')) {
+      if (tab === 'transfers') return 'Transfers Log';
+      return 'Cash & Banks';
+    }
+    if (path.startsWith('/erp/expenses')) {
+      if (tab === 'expense') return 'Expenses Log';
+      if (tab === 'income-history') return 'Income History Log';
+      if (tab === 'history') return 'Expenses History Log';
+      if (tab === 'income') return 'Incomes Log';
+      return 'Income & Expenses';
+    }
+    if (path.startsWith('/erp/sales')) {
+      if (tab === 'history') return 'Sales History';
+      if (tab === 'payments') return 'Customer Payments';
+      return 'Create Invoice';
+    }
+    return '';
   };
 
 
@@ -302,6 +375,13 @@ export default function Sidebar() {
         </svg>
       );
     }
+    if (title === 'Supplier' || title === 'Suppliers') {
+      return (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      );
+    }
     if (title === 'Customers') {
       return (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -332,19 +412,17 @@ export default function Sidebar() {
 
   const renderMobileBottomNav = () => {
     const isDashboard = location.pathname === '/erp' || location.pathname === '/erp/';
-    
+
     if (isDashboard) {
       return (
         <div className="flex justify-around items-center h-16">
-          <Link 
+          <Link
             to="/erp"
-            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-              location.pathname === '/erp' || location.pathname === '/erp/' ? 'text-brand-blue' : 'text-text-secondary'
-            }`}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${location.pathname === '/erp' || location.pathname === '/erp/' ? 'text-brand-blue' : 'text-text-secondary'
+              }`}
           >
-            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
-              location.pathname === '/erp' || location.pathname === '/erp/' ? 'bg-accent-blue/15' : 'bg-transparent'
-            }`}>
+            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${location.pathname === '/erp' || location.pathname === '/erp/' ? 'bg-accent-blue/15 text-brand-blue' : 'bg-transparent text-text-secondary'
+              }`}>
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
@@ -352,15 +430,13 @@ export default function Sidebar() {
             <span className="text-[9px] font-bold tracking-tight">Home</span>
           </Link>
 
-          <Link 
+          <Link
             to="/erp/products"
-            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-              location.pathname.startsWith('/erp/products') ? 'text-brand-blue' : 'text-text-secondary'
-            }`}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${location.pathname.startsWith('/erp/products') ? 'text-brand-blue' : 'text-text-secondary'
+              }`}
           >
-            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
-              location.pathname.startsWith('/erp/products') ? 'bg-accent-blue/15' : 'bg-transparent'
-            }`}>
+            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${location.pathname.startsWith('/erp/products') ? 'bg-accent-blue/15 text-brand-blue' : 'bg-transparent text-text-secondary'
+              }`}>
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
@@ -368,7 +444,7 @@ export default function Sidebar() {
             <span className="text-[9px] font-bold tracking-tight">Products</span>
           </Link>
 
-          <Link 
+          <Link
             to="/pos"
             className="flex flex-col items-center justify-center flex-1 py-1 text-tertiary"
           >
@@ -380,15 +456,13 @@ export default function Sidebar() {
             <span className="text-[9px] font-bold tracking-tight mt-0.5">POS</span>
           </Link>
 
-          <Link 
+          <Link
             to="/erp/sales"
-            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-              location.pathname.startsWith('/erp/sales') ? 'text-brand-blue' : 'text-text-secondary'
-            }`}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${location.pathname.startsWith('/erp/sales') ? 'text-brand-blue' : 'text-text-secondary'
+              }`}
           >
-            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
-              location.pathname.startsWith('/erp/sales') ? 'bg-accent-blue/15' : 'bg-transparent'
-            }`}>
+            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${location.pathname.startsWith('/erp/sales') ? 'bg-accent-blue/15 text-brand-blue' : 'bg-transparent text-text-secondary'
+              }`}>
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
               </svg>
@@ -396,7 +470,7 @@ export default function Sidebar() {
             <span className="text-[9px] font-bold tracking-tight">Sales</span>
           </Link>
 
-          <button 
+          <button
             onClick={() => setDrawerOpen(true)}
             className="flex flex-col items-center justify-center flex-1 py-1 text-text-secondary cursor-pointer"
           >
@@ -419,20 +493,18 @@ export default function Sidebar() {
       <div className="flex justify-around items-center h-16">
 
         {itemsToShow.map((sub, idx) => {
-          const isSubActive = location.pathname + location.search === sub.path || 
-                              (sub.path.includes('?') && (location.pathname + location.search).startsWith(sub.path)) ||
-                              (!sub.path.includes('?') && location.pathname === sub.path && !location.search);
+          const isSubActive = location.pathname + location.search === sub.path ||
+            (sub.path.includes('?') && (location.pathname + location.search).startsWith(sub.path)) ||
+            (!sub.path.includes('?') && location.pathname === sub.path && !location.search);
           return (
-            <Link 
+            <Link
               key={idx}
               to={sub.path}
-              className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-                isSubActive ? 'text-brand-blue' : 'text-text-secondary'
-              }`}
+              className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${isSubActive ? 'text-brand-blue' : 'text-text-secondary'
+                }`}
             >
-              <div className={`flex items-center justify-center rounded-2xl px-3 py-1 mb-0.5 transition-colors ${
-                isSubActive ? 'bg-accent-blue/15' : 'bg-transparent'
-              }`}>
+              <div className={`flex items-center justify-center rounded-2xl px-3 py-1 mb-0.5 transition-colors ${isSubActive ? 'bg-accent-blue/15 text-brand-blue' : 'bg-transparent text-text-secondary'
+                }`}>
                 {getSubItemIcon(sub.title)}
               </div>
               <span className="text-[9px] font-bold tracking-tight text-center max-w-[65px] truncate">
@@ -443,7 +515,7 @@ export default function Sidebar() {
         })}
 
         {!isEmployeesPage && (
-          <button 
+          <button
             onClick={() => setDrawerOpen(true)}
             className="flex flex-col items-center justify-center flex-1 py-1 text-text-secondary cursor-pointer"
           >
@@ -464,10 +536,9 @@ export default function Sidebar() {
       {/* ========================================================================= */}
       {/* 1. DESKTOP SIDEBAR                                                        */}
       {/* ========================================================================= */}
-      <div 
-        className={`hidden md:flex flex-col border-r border-surface-dim bg-white text-text-primary transition-all duration-300 ${
-          collapsed ? 'w-16' : 'w-64'
-        }`}
+      <div
+        className={`hidden md:flex flex-col border-r border-surface-dim bg-white text-text-primary transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'
+          }`}
         style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}
       >
         {/* Brand Header */}
@@ -478,7 +549,7 @@ export default function Sidebar() {
               <span className="font-semibold text-lg tracking-tight">Axon ERP</span>
             </div>
           )}
-          <button 
+          <button
             onClick={() => setCollapsed(!collapsed)}
             className="rounded p-1 text-text-secondary hover:bg-surface-low hover:text-text-primary transition cursor-pointer"
           >
@@ -503,11 +574,10 @@ export default function Sidebar() {
               <div key={item.id} className="px-2">
                 <button
                   onClick={() => handleTabClick(item, false)}
-                  className={`flex w-full items-center justify-between rounded px-3 py-2 text-sm font-medium transition cursor-pointer ${
-                    active 
-                      ? 'bg-accent-blue/15 text-brand-blue' 
-                      : 'text-text-secondary hover:bg-surface-low hover:text-text-primary'
-                  }`}
+                  className={`flex w-full items-center justify-between rounded px-3 py-2 text-sm font-medium transition cursor-pointer ${active
+                    ? 'bg-accent-blue/15 text-brand-blue'
+                    : 'text-text-secondary hover:bg-surface-low hover:text-text-primary'
+                    }`}
                 >
                   <div className="flex items-center space-x-3">
                     <span className={`${active ? 'text-brand-blue' : 'text-text-secondary'}`}>
@@ -520,10 +590,10 @@ export default function Sidebar() {
                     )}
                   </div>
                   {!collapsed && hasSub && (
-                    <svg 
+                    <svg
                       className={`h-4 w-4 transform transition-transform ${open ? 'rotate-180' : ''}`}
-                      fill="none" 
-                      viewBox="0 0 24 24" 
+                      fill="none"
+                      viewBox="0 0 24 24"
                       stroke="currentColor"
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -553,11 +623,10 @@ export default function Sidebar() {
                         <Link
                           key={sIdx}
                           to={sub.path}
-                          className={`block rounded px-3 py-1.5 text-xs font-medium transition ${
-                            subActive
-                              ? 'text-brand-blue bg-accent-blue/5'
-                              : 'text-text-secondary hover:text-text-primary hover:bg-surface-low'
-                          }`}
+                          className={`block rounded px-3 py-1.5 text-xs font-medium transition ${subActive
+                            ? 'text-brand-blue bg-accent-blue/5'
+                            : 'text-text-secondary hover:text-text-primary hover:bg-surface-low'
+                            }`}
                         >
                           {sub.title}
                         </Link>
@@ -613,15 +682,22 @@ export default function Sidebar() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h1 className="text-base font-bold tracking-tight text-text-primary">
-              {getScreenTitle()}
-            </h1>
+            <div className="flex flex-col">
+              <h1 className="text-sm font-bold tracking-tight text-text-primary leading-tight">
+                {getScreenTitle()}
+              </h1>
+              {getSelectedTabName() && (
+                <span className="text-[10px] text-text-secondary font-medium leading-none mt-0.5">
+                  {getSelectedTabName()}
+                </span>
+              )}
+            </div>
           </div>
-          
+
           {/* Operator Badge on Right */}
           <div className="flex items-center">
             <span className="text-[10px] font-bold text-brand-blue bg-accent-blue/10 px-2 py-0.5 rounded-full">
-              Console
+              {/* Console */}
             </span>
           </div>
         </div>
@@ -630,8 +706,8 @@ export default function Sidebar() {
       {/* ========================================================================= */}
       {/* 3. MOBILE BOTTOM NAVIGATION BAR                                           */}
       {/* ========================================================================= */}
-      {!location.pathname.startsWith('/erp/employees') && (
-        <nav 
+      {!location.pathname.startsWith('/erp/employees') && !isKeyboardVisible && (
+        <nav
           className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-surface-low safe-pb"
           style={{ boxShadow: '0px -2px 10px rgba(0,0,0,0.06)' }}
         >
@@ -668,7 +744,7 @@ export default function Sidebar() {
                   <img src="/icon_for_website-removebg-preview_no_border.png" alt="Axon Logo" className="h-10 w-10 object-contain filter drop-shadow-sm" />
                   <div>
                     <span className="font-extrabold text-base tracking-tight text-text-primary">Axon Business</span>
-                    <span className="block text-[10px] font-semibold text-text-secondary">Enterprise Resource Console</span>
+                    <span className="block text-[10px] font-semibold text-text-secondary">Enterprise Resource</span>
                   </div>
                 </div>
                 <button
@@ -692,11 +768,10 @@ export default function Sidebar() {
                   return (
                     <div key={item.id}>
                       <div
-                        className={`flex w-full items-center justify-between rounded-xl transition ${
-                          active 
-                            ? 'bg-accent-blue/15 text-brand-blue' 
-                            : 'text-text-secondary hover:bg-surface-low active:bg-surface-low'
-                        }`}
+                        className={`flex w-full items-center justify-between rounded-xl transition ${active
+                          ? 'bg-accent-blue/15 text-brand-blue'
+                          : 'text-text-secondary hover:bg-surface-low active:bg-surface-low'
+                          }`}
                       >
                         <button
                           onClick={() => {
@@ -728,10 +803,10 @@ export default function Sidebar() {
                             className="p-3 hover:bg-black/5 active:bg-black/10 rounded-r-xl transition cursor-pointer"
                             aria-label={`Toggle ${item.title} sub-menu`}
                           >
-                            <svg 
+                            <svg
                               className={`h-4 w-4 transform transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-                              fill="none" 
-                              viewBox="0 0 24 24" 
+                              fill="none"
+                              viewBox="0 0 24 24"
                               stroke="currentColor"
                             >
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
@@ -756,7 +831,7 @@ export default function Sidebar() {
                                   className="block rounded-lg px-3 py-2 text-xs font-bold transition text-text-secondary hover:text-text-primary active:bg-surface-low"
                                 >
                                   {sub.title}
-                                  </a>
+                                </a>
                               );
                             }
                             return (
@@ -764,11 +839,10 @@ export default function Sidebar() {
                                 key={sIdx}
                                 to={sub.path}
                                 onClick={() => setDrawerOpen(false)}
-                                className={`block rounded-lg px-3 py-2 text-xs font-bold transition ${
-                                  subActive
-                                    ? 'text-brand-blue bg-accent-blue/5'
-                                    : 'text-text-secondary hover:text-text-primary active:bg-surface-low'
-                                }`}
+                                className={`block rounded-lg px-3 py-2 text-xs font-bold transition ${subActive
+                                  ? 'text-brand-blue bg-accent-blue/5'
+                                  : 'text-text-secondary hover:text-text-primary active:bg-surface-low'
+                                  }`}
                               >
                                 {sub.title}
                               </Link>
