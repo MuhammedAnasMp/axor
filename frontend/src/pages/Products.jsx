@@ -126,7 +126,7 @@ export default function Products() {
         parsedModelName = words.slice(1).join(' ').trim();
       } else {
         // 3. Check if we have a selected brand for the product
-        const currentBrandObj = brandsDropdown.find(b => b.id.toString() === brand.toString());
+        const currentBrandObj = brand ? brandsDropdown.find(b => b.id.toString() === brand.toString()) : null;
         if (currentBrandObj) {
           parsedBrand = currentBrandObj;
           parsedModelName = query;
@@ -149,7 +149,7 @@ export default function Products() {
     }
 
     // If we have a current brand, and it is NOT the parsed one, also offer to create under the current brand
-    const currentBrandObj = brandsDropdown.find(b => b.id.toString() === brand.toString());
+    const currentBrandObj = brand ? brandsDropdown.find(b => b.id.toString() === brand.toString()) : null;
     if (currentBrandObj && (!parsedBrand || parsedBrand.id !== currentBrandObj.id)) {
       options.push({
         brand: currentBrandObj,
@@ -165,17 +165,48 @@ export default function Products() {
     let brandId = option.brand.id;
     try {
       if (brandId === 'new') {
-        const brandRes = await api.brands.create({ name: option.brand.name });
-        setBrandsDropdown(prev => [...prev, brandRes].sort((x, y) => x.name.localeCompare(y.name)));
-        brandId = brandRes.id;
+        const existingBrand = brandsDropdown.find(b => b.name.toLowerCase() === option.brand.name.toLowerCase());
+        if (existingBrand) {
+          brandId = existingBrand.id;
+        } else {
+          try {
+            const brandRes = await api.brands.create({ name: option.brand.name });
+            setBrandsDropdown(prev => [...prev, brandRes].sort((x, y) => x.name.localeCompare(y.name)));
+            brandId = brandRes.id;
+          } catch (brandErr) {
+            const existingBrands = await api.brands.list({ search: option.brand.name });
+            const list = existingBrands.results || existingBrands || [];
+            const exactBrand = list.find(b => b.name.toLowerCase() === option.brand.name.toLowerCase());
+            if (exactBrand) {
+              brandId = exactBrand.id;
+            } else {
+              throw brandErr;
+            }
+          }
+        }
       }
 
-      const modelRes = await api.mobileModels.create({
-        brand: brandId,
-        model_name: option.modelName
-      });
-      setMobileModelsDropdown(prev => [...prev, modelRes].sort((x, y) => x.brand_name.localeCompare(y.brand_name) || x.model_name.localeCompare(y.model_name)));
-      setSuitableModels(prev => [...prev, modelRes.id]);
+      let modelRes;
+      try {
+        modelRes = await api.mobileModels.create({
+          brand: brandId,
+          model_name: option.modelName
+        });
+        setMobileModelsDropdown(prev => [...prev, modelRes].sort((x, y) => x.brand_name.localeCompare(y.brand_name) || x.model_name.localeCompare(y.model_name)));
+      } catch (modelErr) {
+        const existingModels = await api.mobileModels.list({ brand: brandId });
+        const list = existingModels.results || existingModels || [];
+        const exactModel = list.find(m => m.model_name.toLowerCase() === option.modelName.toLowerCase());
+        if (exactModel) {
+          modelRes = exactModel;
+        } else {
+          throw modelErr;
+        }
+      }
+
+      if (modelRes) {
+        setSuitableModels(prev => [...prev, modelRes.id]);
+      }
       setSearchModelQuery('');
       setShowModelDropdown(false);
     } catch (err) {
@@ -380,17 +411,39 @@ export default function Products() {
       if (matched) {
         brandId = matched.id;
       } else {
-        const brandRes = await api.brands.create({ name: typedBrand });
-        setBrandsDropdown(prev => [...prev, brandRes].sort((x, y) => x.name.localeCompare(y.name)));
-        brandId = brandRes.id;
+        try {
+          const brandRes = await api.brands.create({ name: typedBrand });
+          setBrandsDropdown(prev => [...prev, brandRes].sort((x, y) => x.name.localeCompare(y.name)));
+          brandId = brandRes.id;
+        } catch (brandErr) {
+          const existing = await api.brands.list({ search: typedBrand });
+          const list = existing.results || existing || [];
+          const exact = list.find(b => b.name.toLowerCase() === typedBrand.toLowerCase());
+          if (exact) {
+            brandId = exact.id;
+          } else {
+            throw brandErr;
+          }
+        }
       }
 
-      const modelRes = await api.mobileModels.create({
-        brand: brandId,
-        model_name: tabNewModelName.trim()
-      });
-
-      setMobileModelsDropdown(prev => [...prev, modelRes].sort((x, y) => x.brand_name.localeCompare(y.brand_name) || x.model_name.localeCompare(y.model_name)));
+      let modelRes;
+      try {
+        modelRes = await api.mobileModels.create({
+          brand: brandId,
+          model_name: tabNewModelName.trim()
+        });
+        setMobileModelsDropdown(prev => [...prev, modelRes].sort((x, y) => x.brand_name.localeCompare(y.brand_name) || x.model_name.localeCompare(y.model_name)));
+      } catch (modelErr) {
+        const existingModels = await api.mobileModels.list({ brand: brandId });
+        const list = existingModels.results || existingModels || [];
+        const exactModel = list.find(m => m.model_name.toLowerCase() === tabNewModelName.trim().toLowerCase());
+        if (exactModel) {
+          modelRes = exactModel;
+        } else {
+          throw modelErr;
+        }
+      }
 
       setTabModelBrand('');
       setTabSearchBrandQuery('');
@@ -399,7 +452,7 @@ export default function Products() {
       setIsSavingTabModel(false);
       alert('Mobile model created successfully!');
     } catch (err) {
-      alert('Error creating mobile model: ' + err.message);
+      alert('Error saving mobile model: ' + err.message);
       setIsSavingTabModel(false);
     }
   };
@@ -452,8 +505,8 @@ export default function Products() {
       {!isMobile && (
         <h3 className="text-sm font-semibold text-text-primary">{editingProduct ? `Edit Product: ${editingProduct.name}` : 'Add New Product'}</h3>
       )}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
+      <div className="grid grid-cols-2 gap-3 md:gap-4">
+        <div className="col-span-2">
           <label className="block text-xs font-semibold text-text-secondary mb-1">Product Name</label>
           <input
             type="text"
@@ -510,7 +563,8 @@ export default function Products() {
                 .map(b => (
                   <div
                     key={b.id}
-                    onClick={() => {
+                    onMouseDown={(e) => {
+                      e.preventDefault();
                       setBrand(b.id);
                       setSearchBrandQuery(b.name);
                       setShowBrandDropdown(false);
@@ -522,11 +576,24 @@ export default function Products() {
                 ))}
               {searchBrandQuery.trim() && !brandsDropdown.some(b => b.name.toLowerCase() === searchBrandQuery.trim().toLowerCase()) && (
                 <div
-                  onClick={async () => {
+                  onMouseDown={async (e) => {
+                    e.preventDefault();
                     const typed = searchBrandQuery.trim();
                     try {
-                      const res = await api.brands.create({ name: typed });
-                      setBrandsDropdown(prev => [...prev, res].sort((x, y) => x.name.localeCompare(y.name)));
+                      let res;
+                      try {
+                        res = await api.brands.create({ name: typed });
+                        setBrandsDropdown(prev => [...prev, res].sort((x, y) => x.name.localeCompare(y.name)));
+                      } catch (brandErr) {
+                        const existing = await api.brands.list({ search: typed });
+                        const list = existing.results || existing || [];
+                        const exact = list.find(b => b.name.toLowerCase() === typed.toLowerCase());
+                        if (exact) {
+                          res = exact;
+                        } else {
+                          throw brandErr;
+                        }
+                      }
                       setBrand(res.id);
                       setSearchBrandQuery(res.name);
                       setShowBrandDropdown(false);
@@ -556,15 +623,8 @@ export default function Products() {
             className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
           />
         </div>
-        <div className="md:col-span-2">
-          <label className="block text-xs font-semibold text-text-secondary mb-1">Description</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-          />
-        </div>
-        <div ref={modelDropdownRef} className="md:col-span-2 relative">
+
+        <div ref={modelDropdownRef} className="col-span-2 relative">
           <label className="block text-xs font-semibold text-text-secondary mb-1">Suitable Mobile Models (Tags)</label>
 
           {/* Selected tags */}
@@ -613,7 +673,8 @@ export default function Products() {
                   .map(m => (
                     <div
                       key={m.id}
-                      onClick={() => {
+                      onMouseDown={(e) => {
+                        e.preventDefault();
                         setSuitableModels(prev => [...prev, m.id]);
                         setSearchModelQuery('');
                         setShowModelDropdown(false);
@@ -628,7 +689,10 @@ export default function Products() {
                 {searchModelQuery.trim() && getCreateModelOptions().map((opt, idx) => (
                   <div
                     key={`create-${idx}`}
-                    onClick={() => handleCreateAndAddMobileModel(opt)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleCreateAndAddMobileModel(opt);
+                    }}
                     className="px-3 py-2 hover:bg-brand-blue/10 text-xs cursor-pointer text-brand-blue font-semibold border-b border-surface-low last:border-b-0"
                   >
                     {opt.label}
@@ -646,16 +710,59 @@ export default function Products() {
           </div>
         </div>
 
-        <div className="md:col-span-2">
+        <div className="col-span-2">
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+          />
+        </div>
+
+        <div className="col-span-2">
           <label className="block text-xs font-semibold text-text-secondary mb-1">Product Images</label>
           <div className="space-y-3">
+            {/* Hidden inputs */}
             <input
+              id="img-gallery-input"
               type="file"
               accept="image/*"
               multiple
+              className="hidden"
               onChange={handleImageUpload}
-              className="text-xs text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-accent-blue/10 file:text-brand-blue hover:file:bg-accent-blue/20"
             />
+            <input
+              id="img-camera-input"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleImageUpload}
+            />
+            {/* Buttons */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => document.getElementById('img-gallery-input').click()}
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-surface-dim bg-white px-3 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-low active:bg-surface-low transition"
+              >
+                <svg className="h-4 w-4 text-brand-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Gallery
+              </button>
+              <button
+                type="button"
+                onClick={() => document.getElementById('img-camera-input').click()}
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-surface-dim bg-white px-3 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-low active:bg-surface-low transition"
+              >
+                <svg className="h-4 w-4 text-brand-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Camera
+              </button>
+            </div>
             {uploading && <span className="text-xs text-brand-blue animate-pulse">Uploading to Cloudinary...</span>}
 
             {imageUrls.length > 0 && (
@@ -1342,7 +1449,8 @@ export default function Products() {
                       .map(b => (
                         <div
                           key={b.id}
-                          onClick={() => {
+                          onMouseDown={(e) => {
+                            e.preventDefault();
                             setTabModelBrand(b.id);
                             setTabSearchBrandQuery(b.name);
                             setTabShowBrandDropdown(false);
@@ -1354,7 +1462,8 @@ export default function Products() {
                       ))}
                     {tabSearchBrandQuery.trim() && !brandsDropdown.some(b => b.name.toLowerCase() === tabSearchBrandQuery.trim().toLowerCase()) && (
                       <div
-                        onClick={() => {
+                        onMouseDown={(e) => {
+                          e.preventDefault();
                           setTabShowBrandDropdown(false);
                         }}
                         className="px-3 py-2 hover:bg-brand-blue/10 text-xs cursor-pointer text-brand-blue font-semibold border-b border-surface-low last:border-b-0"
@@ -1883,7 +1992,8 @@ export default function Products() {
                   .map(b => (
                     <div
                       key={b.id}
-                      onClick={() => {
+                      onMouseDown={(e) => {
+                        e.preventDefault();
                         setTabModelBrand(b.id);
                         setTabSearchBrandQuery(b.name);
                         setTabShowBrandDropdown(false);
@@ -1895,7 +2005,8 @@ export default function Products() {
                   ))}
                 {tabSearchBrandQuery.trim() && !brandsDropdown.some(b => b.name.toLowerCase() === tabSearchBrandQuery.trim().toLowerCase()) && (
                   <div
-                    onClick={() => {
+                    onMouseDown={(e) => {
+                      e.preventDefault();
                       setTabShowBrandDropdown(false);
                     }}
                     className="px-3 py-2 hover:bg-brand-blue/10 text-xs cursor-pointer text-brand-blue font-semibold border-b border-surface-low last:border-b-0"
@@ -2021,58 +2132,58 @@ export default function Products() {
       {/* Floating Action Button for mobile */}
       {((currentTab === 'products' && !showForm) ||
         ((currentTab === 'categories' || currentTab === 'brands' || currentTab === 'model') && !activeMobileForm)) && (
-        <FloatingActionButton
-          icon={
-            currentTab === 'products' ? (
-              <div className="relative">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
-              </div>
-            ) : currentTab === 'categories' ? (
-              <div className="relative">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
-                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
-              </div>
-            ) : currentTab === 'brands' ? (
-              <div className="relative">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M6 20h12a2 2 0 002-2V9a2 2 0 00-2-2h-1a2 2 0 00-2-2H9a2 2 0 00-2 2H6a2 2 0 00-2 2v9a2 2 0 002 2z" />
-                </svg>
-                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
-              </div>
-            ) : currentTab === 'model' ? (
-              <div className="relative">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
-              </div>
-            ) : null
-          }
-          onClick={() => {
-            if (currentTab === 'products') {
-              setEditingProduct(null);
-              resetProductForm();
-              setShowForm(true);
-            } else if (currentTab === 'categories') {
-              setCatName('');
-              setActiveMobileForm('category');
-            } else if (currentTab === 'brands') {
-              setBrandName('');
-              setActiveMobileForm('brand');
-            } else if (currentTab === 'model') {
-              setTabModelBrand('');
-              setTabSearchBrandQuery('');
-              setTabNewModelName('');
-              setActiveMobileForm('model');
+          <FloatingActionButton
+            icon={
+              currentTab === 'products' ? (
+                <div className="relative">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                  <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+                </div>
+              ) : currentTab === 'categories' ? (
+                <div className="relative">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
+                  <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+                </div>
+              ) : currentTab === 'brands' ? (
+                <div className="relative">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M6 20h12a2 2 0 002-2V9a2 2 0 00-2-2h-1a2 2 0 00-2-2H9a2 2 0 00-2 2H6a2 2 0 00-2 2v9a2 2 0 002 2z" />
+                  </svg>
+                  <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+                </div>
+              ) : currentTab === 'model' ? (
+                <div className="relative">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+                </div>
+              ) : null
             }
-          }}
-        />
-      )}
+            onClick={() => {
+              if (currentTab === 'products') {
+                setEditingProduct(null);
+                resetProductForm();
+                setShowForm(true);
+              } else if (currentTab === 'categories') {
+                setCatName('');
+                setActiveMobileForm('category');
+              } else if (currentTab === 'brands') {
+                setBrandName('');
+                setActiveMobileForm('brand');
+              } else if (currentTab === 'model') {
+                setTabModelBrand('');
+                setTabSearchBrandQuery('');
+                setTabNewModelName('');
+                setActiveMobileForm('model');
+              }
+            }}
+          />
+        )}
 
       {/* Full-screen Image Gallery Overlay */}
       {galleryImages.length > 0 && (

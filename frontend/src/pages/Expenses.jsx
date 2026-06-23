@@ -605,10 +605,10 @@ export default function Expenses() {
               </div>
               <button
                 type="submit"
-                disabled={isSavingCategory}
+                disabled={isAddingCategory}
                 className="rounded bg-brand-blue px-6 py-2.5 text-xs font-semibold text-white hover:bg-brand-cobalt transition disabled:opacity-50 flex items-center space-x-1"
               >
-                {isSavingCategory && <Spinner size="xs" />}
+                {isAddingCategory && <Spinner size="xs" />}
                 <span>Add Category</span>
               </button>
             </form>
