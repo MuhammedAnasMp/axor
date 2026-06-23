@@ -10,31 +10,37 @@ import { SkeletonTable, Spinner } from '../components/Skeleton';
 export default function Products() {
   const [searchParams] = useSearchParams();
   const currentTab = searchParams.get('tab') || 'products';
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [selectedProductDetails, setSelectedProductDetails] = useState(null);
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
+
+  const openGallery = (imgUrlStr, startIndex = 0) => {
+    if (!imgUrlStr) return;
+    const urls = imgUrlStr.split(',');
+    setGalleryImages(urls);
+    setActiveGalleryIndex(startIndex);
+  };
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Dropdown states (unpaginated list)
   const [categoriesDropdown, setCategoriesDropdown] = useState([]);
   const [brandsDropdown, setBrandsDropdown] = useState([]);
+  const [mobileModelsDropdown, setMobileModelsDropdown] = useState([]);
   const [dropdownsLoading, setDropdownsLoading] = useState(true);
-
-  // Supplier mapping Form states (with search)
-  const [mapProductSearch, setMapProductSearch] = useState('');
-  const [mapProductResults, setMapProductResults] = useState([]);
-  const [mapProductSearching, setMapProductSearching] = useState(false);
-  const [showMapProductDropdown, setShowMapProductDropdown] = useState(false);
-  const mapProductDropdownRef = useRef(null);
-
-  const [mapSupplierSearch, setMapSupplierSearch] = useState('');
-  const [mapSupplierResults, setMapSupplierResults] = useState([]);
-  const [mapSupplierSearching, setMapSupplierSearching] = useState(false);
-  const [showMapSupplierDropdown, setShowMapSupplierDropdown] = useState(false);
-  const mapSupplierDropdownRef = useRef(null);
 
   // Pagination hooks for each tab
   const prodPag = usePagination(api.products.list, 10, currentTab === 'products');
   const catPag = usePagination(api.categories.list, 10, currentTab === 'categories');
   const brandPag = usePagination(api.brands.list, 10, currentTab === 'brands');
-  const mappingPag = usePagination(api.supplierProducts.list, 10, currentTab === 'mappings');
+
   const costHistoryPag = usePagination(api.supplierCostHistory.list, 10, currentTab === 'cost-history');
+  const modelPag = usePagination(api.mobileModels.list, 10, currentTab === 'model');
 
   // Form states
   const [showForm, setShowForm] = useState(false);
@@ -49,9 +55,33 @@ export default function Products() {
   const [uploading, setUploading] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
-  const [isSavingMapping, setIsSavingMapping] = useState(false);
+
+  const [suitableModels, setSuitableModels] = useState([]);
+  const [searchModelQuery, setSearchModelQuery] = useState('');
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const modelDropdownRef = useRef(null);
+
+  const [searchBrandQuery, setSearchBrandQuery] = useState('');
+  const [showBrandDropdown, setShowBrandDropdown] = useState(false);
+  const brandDropdownRef = useRef(null);
+
   const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [isSavingBrand, setIsSavingBrand] = useState(false);
+
+  const resetProductForm = () => {
+    setName('');
+    setBarcode('');
+    setDescription('');
+    setCategory('');
+    setBrand('');
+    setSellingPrice('0');
+    setImageUrls([]);
+    setSuitableModels([]);
+    setSearchModelQuery('');
+    setShowModelDropdown(false);
+    setSearchBrandQuery('');
+    setShowBrandDropdown(false);
+  };
 
   const handleStartEdit = (p) => {
     setEditingProduct(p);
@@ -60,31 +90,134 @@ export default function Products() {
     setDescription(p.description || '');
     setCategory(p.category || '');
     setBrand(p.brand || '');
+    const foundBrand = brandsDropdown.find(b => b.id === p.brand);
+    setSearchBrandQuery(foundBrand ? foundBrand.name : '');
     setSellingPrice(p.selling_price.toString());
     setImageUrls(p.image_url ? p.image_url.split(',') : []);
+    setSuitableModels(p.suitable_models || []);
+    setSearchModelQuery('');
+    setShowModelDropdown(false);
+    setShowBrandDropdown(false);
     setShowForm(true);
+  };
+
+  const getCreateModelOptions = () => {
+    const query = searchModelQuery.trim();
+    if (!query) return [];
+
+    const options = [];
+
+    // Parse by brand prefix
+    let parsedBrand = null;
+    let parsedModelName = "";
+
+    // 1. Check if query starts with an existing brand name
+    const matchedBrand = brandsDropdown.find(b => query.toLowerCase().startsWith(b.name.toLowerCase() + " "));
+    if (matchedBrand) {
+      parsedBrand = matchedBrand;
+      parsedModelName = query.substring(matchedBrand.name.length).trim();
+    } else {
+      // 2. Check if first word is a brand name
+      const words = query.split(/\s+/);
+      const firstWord = words[0];
+      const matchedBrandFirstWord = brandsDropdown.find(b => b.name.toLowerCase() === firstWord.toLowerCase());
+      if (matchedBrandFirstWord) {
+        parsedBrand = matchedBrandFirstWord;
+        parsedModelName = words.slice(1).join(' ').trim();
+      } else {
+        // 3. Check if we have a selected brand for the product
+        const currentBrandObj = brandsDropdown.find(b => b.id.toString() === brand.toString());
+        if (currentBrandObj) {
+          parsedBrand = currentBrandObj;
+          parsedModelName = query;
+        } else {
+          // 4. Default: first word is a new brand, rest is model
+          parsedBrand = { id: 'new', name: firstWord };
+          parsedModelName = words.slice(1).join(' ').trim();
+        }
+      }
+    }
+
+    if (parsedBrand && parsedModelName) {
+      options.push({
+        brand: parsedBrand,
+        modelName: parsedModelName,
+        label: parsedBrand.id === 'new'
+          ? `+ Create Brand "${parsedBrand.name}" & Model "${parsedModelName}"`
+          : `+ Create Model "${parsedModelName}" under Brand "${parsedBrand.name}"`
+      });
+    }
+
+    // If we have a current brand, and it is NOT the parsed one, also offer to create under the current brand
+    const currentBrandObj = brandsDropdown.find(b => b.id.toString() === brand.toString());
+    if (currentBrandObj && (!parsedBrand || parsedBrand.id !== currentBrandObj.id)) {
+      options.push({
+        brand: currentBrandObj,
+        modelName: query,
+        label: `+ Create Model "${query}" under selected Brand "${currentBrandObj.name}"`
+      });
+    }
+
+    return options;
+  };
+
+  const handleCreateAndAddMobileModel = async (option) => {
+    let brandId = option.brand.id;
+    try {
+      if (brandId === 'new') {
+        const brandRes = await api.brands.create({ name: option.brand.name });
+        setBrandsDropdown(prev => [...prev, brandRes].sort((x, y) => x.name.localeCompare(y.name)));
+        brandId = brandRes.id;
+      }
+
+      const modelRes = await api.mobileModels.create({
+        brand: brandId,
+        model_name: option.modelName
+      });
+      setMobileModelsDropdown(prev => [...prev, modelRes].sort((x, y) => x.brand_name.localeCompare(y.brand_name) || x.model_name.localeCompare(y.model_name)));
+      setSuitableModels(prev => [...prev, modelRes.id]);
+      setSearchModelQuery('');
+      setShowModelDropdown(false);
+    } catch (err) {
+      alert('Error creating mobile model: ' + err.message);
+    }
   };
 
   // Category Form
   const [catName, setCatName] = useState('');
   // Brand Form
   const [brandName, setBrandName] = useState('');
+  // Mobile Model Form
+  const [modelBrand, setModelBrand] = useState('');
+  const [newModelName, setNewModelName] = useState('');
+  const [isSavingMobileModel, setIsSavingMobileModel] = useState(false);
 
-  // Supplier mapping Form states
-  const [mapProduct, setMapProduct] = useState('');
-  const [mapSupplier, setMapSupplier] = useState('');
-  const [mapCost, setMapCost] = useState('0');
+  // tab=model Form states
+  const [tabModelBrand, setTabModelBrand] = useState('');
+  const [tabSearchBrandQuery, setTabSearchBrandQuery] = useState('');
+  const [tabShowBrandDropdown, setTabShowBrandDropdown] = useState(false);
+  const [tabNewModelName, setTabNewModelName] = useState('');
+  const [isSavingTabModel, setIsSavingTabModel] = useState(false);
+  const tabBrandDropdownRef = useRef(null);
+
+  // Mobile FAB options states
+  const [showCreateMenu, setShowCreateMenu] = useState(false);
+  const [activeMobileForm, setActiveMobileForm] = useState(null); // 'category', 'brand', 'model'
+
+
 
   const loadDropdowns = () => {
     setDropdownsLoading(true);
     // Call list without params so DRF does not paginate
     Promise.all([
       api.categories.list(),
-      api.brands.list()
+      api.brands.list(),
+      api.mobileModels.list()
     ])
-      .then(([c, b]) => {
+      .then(([c, b, m]) => {
         setCategoriesDropdown(c);
         setBrandsDropdown(b);
+        setMobileModelsDropdown(m || []);
         setDropdownsLoading(false);
       })
       .catch((err) => {
@@ -95,15 +228,16 @@ export default function Products() {
 
   useEffect(() => {
     loadDropdowns();
-  }, []);
 
-  useEffect(() => {
     function handleClickOutside(event) {
-      if (mapProductDropdownRef.current && !mapProductDropdownRef.current.contains(event.target)) {
-        setShowMapProductDropdown(false);
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(event.target)) {
+        setShowModelDropdown(false);
       }
-      if (mapSupplierDropdownRef.current && !mapSupplierDropdownRef.current.contains(event.target)) {
-        setShowMapSupplierDropdown(false);
+      if (brandDropdownRef.current && !brandDropdownRef.current.contains(event.target)) {
+        setShowBrandDropdown(false);
+      }
+      if (tabBrandDropdownRef.current && !tabBrandDropdownRef.current.contains(event.target)) {
+        setTabShowBrandDropdown(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -112,41 +246,7 @@ export default function Products() {
     };
   }, []);
 
-  useEffect(() => {
-    setMapProductSearching(true);
-    const delayDebounce = setTimeout(() => {
-      const params = mapProductSearch.trim() ? { search: mapProductSearch } : {};
-      api.products.list(params)
-        .then((res) => {
-          const list = (res && res.results) || (Array.isArray(res) && res) || [];
-          setMapProductResults(list);
-          setMapProductSearching(false);
-        })
-        .catch((err) => {
-          console.error(err);
-          setMapProductSearching(false);
-        });
-    }, 300);
-    return () => clearTimeout(delayDebounce);
-  }, [mapProductSearch]);
 
-  useEffect(() => {
-    setMapSupplierSearching(true);
-    const delayDebounce = setTimeout(() => {
-      const params = mapSupplierSearch.trim() ? { search: mapSupplierSearch } : {};
-      api.suppliers.list(params)
-        .then((res) => {
-          const list = (res && res.results) || (Array.isArray(res) && res) || [];
-          setMapSupplierResults(list);
-          setMapSupplierSearching(false);
-        })
-        .catch((err) => {
-          console.error(err);
-          setMapSupplierSearching(false);
-        });
-    }, 300);
-    return () => clearTimeout(delayDebounce);
-  }, [mapSupplierSearch]);
 
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
@@ -192,7 +292,8 @@ export default function Products() {
       category: category || null,
       brand: brand || null,
       selling_price: parseFloat(sellingPrice),
-      image_url: imageUrls.length > 0 ? imageUrls.join(',') : null
+      image_url: imageUrls.length > 0 ? imageUrls.join(',') : null,
+      suitable_models: suitableModels
     };
 
     const action = editingProduct
@@ -203,13 +304,7 @@ export default function Products() {
       .then(() => {
         setShowForm(false);
         setEditingProduct(null);
-        setName('');
-        setBarcode('');
-        setDescription('');
-        setCategory('');
-        setBrand('');
-        setSellingPrice('0');
-        setImageUrls([]);
+        resetProductForm();
         prodPag.refresh();
         loadDropdowns();
         setIsSavingProduct(false);
@@ -221,39 +316,7 @@ export default function Products() {
       });
   };
 
-  const handleMappingSubmit = (e) => {
-    e.preventDefault();
-    if (!mapProduct || !mapSupplier) return;
-    setIsSavingMapping(true);
-    const payload = {
-      product: parseInt(mapProduct),
-      supplier: parseInt(mapSupplier),
-      current_cost: parseFloat(mapCost)
-    };
-    api.supplierProducts.create(payload)
-      .then(() => {
-        setMapProduct('');
-        setMapSupplier('');
-        setMapProductSearch('');
-        setMapSupplierSearch('');
-        setMapCost('0');
-        mappingPag.refresh();
-        setIsSavingMapping(false);
-        alert('Supplier mapping saved successfully!');
-      })
-      .catch((err) => {
-        alert(err.message);
-        setIsSavingMapping(false);
-      });
-  };
 
-  const deleteMapping = (id) => {
-    if (confirm('Remove this supplier product mapping?')) {
-      api.supplierProducts.delete(id)
-        .then(() => mappingPag.refresh())
-        .catch((err) => alert(err.message));
-    }
-  };
 
   const handleCategorySubmit = (e) => {
     e.preventDefault();
@@ -297,6 +360,61 @@ export default function Products() {
     }
   };
 
+  const handleTabModelSubmit = async (e) => {
+    e.preventDefault();
+    let brandId = tabModelBrand;
+    const typedBrand = tabSearchBrandQuery.trim();
+    if (!typedBrand) {
+      alert('Please select or enter a brand');
+      return;
+    }
+    if (!tabNewModelName.trim()) {
+      alert('Please enter a model name');
+      return;
+    }
+
+    setIsSavingTabModel(true);
+
+    try {
+      const matched = brandsDropdown.find(b => b.name.toLowerCase() === typedBrand.toLowerCase());
+      if (matched) {
+        brandId = matched.id;
+      } else {
+        const brandRes = await api.brands.create({ name: typedBrand });
+        setBrandsDropdown(prev => [...prev, brandRes].sort((x, y) => x.name.localeCompare(y.name)));
+        brandId = brandRes.id;
+      }
+
+      const modelRes = await api.mobileModels.create({
+        brand: brandId,
+        model_name: tabNewModelName.trim()
+      });
+
+      setMobileModelsDropdown(prev => [...prev, modelRes].sort((x, y) => x.brand_name.localeCompare(y.brand_name) || x.model_name.localeCompare(y.model_name)));
+
+      setTabModelBrand('');
+      setTabSearchBrandQuery('');
+      setTabNewModelName('');
+      modelPag.refresh();
+      setIsSavingTabModel(false);
+      alert('Mobile model created successfully!');
+    } catch (err) {
+      alert('Error creating mobile model: ' + err.message);
+      setIsSavingTabModel(false);
+    }
+  };
+
+  const deleteMobileModel = (id) => {
+    if (confirm('Delete this mobile model?')) {
+      api.mobileModels.delete(id)
+        .then(() => {
+          modelPag.refresh();
+          loadDropdowns();
+        })
+        .catch((err) => alert(err.message));
+    }
+  };
+
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -326,7 +444,7 @@ export default function Products() {
     currentTab === 'products' ? prodPag.loading :
       currentTab === 'categories' ? catPag.loading :
         currentTab === 'brands' ? brandPag.loading :
-          currentTab === 'mappings' ? mappingPag.loading :
+          currentTab === 'model' ? modelPag.loading :
             costHistoryPag.loading;
 
   const renderProductForm = (isMobile = false) => (
@@ -368,18 +486,64 @@ export default function Products() {
             ))}
           </select>
         </div>
-        <div>
-          <label className="block text-xs font-semibold text-text-secondary mb-1">Brand</label>
-          <select
-            value={brand}
-            onChange={(e) => setBrand(e.target.value)}
+        <div ref={brandDropdownRef} className="relative">
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Product Brand</label>
+          <input
+            type="text"
+            placeholder="Search or add brand..."
+            value={searchBrandQuery}
+            onChange={(e) => {
+              setSearchBrandQuery(e.target.value);
+              setShowBrandDropdown(true);
+              if (!e.target.value) {
+                setBrand('');
+              }
+            }}
+            onFocus={() => setShowBrandDropdown(true)}
             className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-          >
-            <option value="">Select Brand</option>
-            {brandsDropdown.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
+          />
+          {showBrandDropdown && (
+            <div className="absolute z-30 w-full mt-1 bg-white border border-surface-dim rounded shadow-lg max-h-48 overflow-y-auto">
+              {brandsDropdown
+                .filter(b => b.name.toLowerCase().includes(searchBrandQuery.toLowerCase()))
+                .slice(0, 10)
+                .map(b => (
+                  <div
+                    key={b.id}
+                    onClick={() => {
+                      setBrand(b.id);
+                      setSearchBrandQuery(b.name);
+                      setShowBrandDropdown(false);
+                    }}
+                    className="px-3 py-2 hover:bg-surface-low text-xs cursor-pointer text-text-primary border-b border-surface-low last:border-b-0"
+                  >
+                    {b.name}
+                  </div>
+                ))}
+              {searchBrandQuery.trim() && !brandsDropdown.some(b => b.name.toLowerCase() === searchBrandQuery.trim().toLowerCase()) && (
+                <div
+                  onClick={async () => {
+                    const typed = searchBrandQuery.trim();
+                    try {
+                      const res = await api.brands.create({ name: typed });
+                      setBrandsDropdown(prev => [...prev, res].sort((x, y) => x.name.localeCompare(y.name)));
+                      setBrand(res.id);
+                      setSearchBrandQuery(res.name);
+                      setShowBrandDropdown(false);
+                    } catch (err) {
+                      alert('Error adding brand: ' + err.message);
+                    }
+                  }}
+                  className="px-3 py-2 hover:bg-brand-blue/10 text-xs cursor-pointer text-brand-blue font-semibold border-b border-surface-low last:border-b-0"
+                >
+                  + Add Brand "{searchBrandQuery.trim()}"
+                </div>
+              )}
+              {brandsDropdown.filter(b => b.name.toLowerCase().includes(searchBrandQuery.toLowerCase())).length === 0 && !searchBrandQuery.trim() && (
+                <div className="px-3 py-2 text-xs text-text-secondary">No brands found.</div>
+              )}
+            </div>
+          )}
         </div>
         <div>
           <label className="block text-xs font-semibold text-text-secondary mb-1">Default Selling Price (RRP)</label>
@@ -400,6 +564,88 @@ export default function Products() {
             className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
           />
         </div>
+        <div ref={modelDropdownRef} className="md:col-span-2 relative">
+          <label className="block text-xs font-semibold text-text-secondary mb-1">Suitable Mobile Models (Tags)</label>
+
+          {/* Selected tags */}
+          {suitableModels.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2 max-h-32 overflow-y-auto p-1.5 border border-surface-lowest rounded bg-surface-lowest">
+              {suitableModels.map((modelId) => {
+                const modelObj = mobileModelsDropdown.find(m => m.id === modelId);
+                if (!modelObj) return null;
+                return (
+                  <span key={modelId} className="inline-flex items-center px-2 py-1 rounded bg-brand-blue/15 text-brand-blue text-xs font-medium border border-brand-blue/20">
+                    {modelObj.brand_name} {modelObj.model_name}
+                    <button
+                      type="button"
+                      onClick={() => setSuitableModels(prev => prev.filter(id => id !== modelId))}
+                      className="ml-1.5 text-brand-blue hover:text-brand-cobalt font-bold focus:outline-none"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Search/select input */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search brand or model name to link models..."
+              value={searchModelQuery}
+              onChange={(e) => {
+                setSearchModelQuery(e.target.value);
+                setShowModelDropdown(true);
+              }}
+              onFocus={() => setShowModelDropdown(true)}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            />
+            {showModelDropdown && (
+              <div className="absolute z-30 w-full mt-1 bg-white border border-surface-dim rounded shadow-lg max-h-48 overflow-y-auto">
+                {mobileModelsDropdown
+                  .filter(m => {
+                    const fullName = `${m.brand_name} ${m.model_name}`.toLowerCase();
+                    return fullName.includes(searchModelQuery.toLowerCase()) && !suitableModels.includes(m.id);
+                  })
+                  .slice(0, 30) // Limit display to 30 items for performance
+                  .map(m => (
+                    <div
+                      key={m.id}
+                      onClick={() => {
+                        setSuitableModels(prev => [...prev, m.id]);
+                        setSearchModelQuery('');
+                        setShowModelDropdown(false);
+                      }}
+                      className="px-3 py-2 hover:bg-surface-low text-xs cursor-pointer text-text-primary border-b border-surface-low last:border-b-0"
+                    >
+                      <span className="font-semibold text-brand-blue">{m.brand_name}</span> {m.model_name}
+                    </div>
+                  ))}
+
+                {/* Instant Create Options */}
+                {searchModelQuery.trim() && getCreateModelOptions().map((opt, idx) => (
+                  <div
+                    key={`create-${idx}`}
+                    onClick={() => handleCreateAndAddMobileModel(opt)}
+                    className="px-3 py-2 hover:bg-brand-blue/10 text-xs cursor-pointer text-brand-blue font-semibold border-b border-surface-low last:border-b-0"
+                  >
+                    {opt.label}
+                  </div>
+                ))}
+
+                {mobileModelsDropdown.filter(m => {
+                  const fullName = `${m.brand_name} ${m.model_name}`.toLowerCase();
+                  return fullName.includes(searchModelQuery.toLowerCase()) && !suitableModels.includes(m.id);
+                }).length === 0 && !searchModelQuery.trim() && (
+                    <div className="px-3 py-2 text-xs text-text-secondary">No matching models found.</div>
+                  )}
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="md:col-span-2">
           <label className="block text-xs font-semibold text-text-secondary mb-1">Product Images</label>
           <div className="space-y-3">
@@ -456,13 +702,7 @@ export default function Products() {
             onClick={() => {
               if (showForm) {
                 setEditingProduct(null);
-                setName('');
-                setBarcode('');
-                setDescription('');
-                setCategory('');
-                setBrand('');
-                setSellingPrice('0');
-                setImageUrls([]);
+                resetProductForm();
               }
               setShowForm(!showForm);
             }}
@@ -474,7 +714,7 @@ export default function Products() {
       </div>
 
       {/* Tabs Menu */}
-      <div className="tabs-container border-b border-surface-low">
+      <div className="hidden md:block tabs-container border-b border-surface-low">
         <div className="tabs-scrollable space-x-6 text-sm font-medium">
           <Link
             to="/erp/products"
@@ -482,12 +722,7 @@ export default function Products() {
           >
             Product Catalog
           </Link>
-          <Link
-            to="/erp/products?tab=mappings"
-            className={`pb-2 ${currentTab === 'mappings' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-          >
-            Supplier Mappings
-          </Link>
+
           <Link
             to="/erp/products?tab=cost-history"
             className={`pb-2 ${currentTab === 'cost-history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
@@ -505,6 +740,12 @@ export default function Products() {
             className={`pb-2 ${currentTab === 'brands' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Brands
+          </Link>
+          <Link
+            to="/erp/products?tab=model"
+            className={`pb-2 ${currentTab === 'model' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Mobile Models
           </Link>
         </div>
       </div>
@@ -541,29 +782,37 @@ export default function Products() {
           </div>
 
           {/* Product Grid / List */}
-          <div className="rounded-b-lg bg-white border-x border-b border-surface-low overflow-x-auto">
-            <table className="min-w-full text-left text-xs">
-              <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
-                <tr>
-                  <th className="px-4 py-2">Image</th>
-                  {renderSortHeader('Barcode', 'barcode', prodPag)}
-                  {renderSortHeader('Name', 'name', prodPag)}
-                  <th className="px-4 py-2">Category / Brand</th>
-                  {renderSortHeader('RRP Selling', 'selling_price', prodPag)}
-                  {renderSortHeader('Average Cost', 'average_cost', prodPag)}
-                  {renderSortHeader('Last Landed Cost', 'last_landed_cost', prodPag)}
-                  <th className="px-4 py-2 text-right">Stock</th>
-                  <th className="px-4 py-2 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-low">
-                {prodPag.loading ? (
-                  <SkeletonTable rows={prodPag.pageSize || 5} columns={9} />
-                ) : (
-                  prodPag.data.map((p) => (
-                    <tr key={p.id} className="hover:bg-surface-bright">
-                      <td className="px-4 py-3">
-                        <div className="h-10 w-10 rounded bg-surface border border-surface-low overflow-hidden">
+          {isMobile ? (
+            <div className="divide-y divide-surface-low bg-white border-x border-b border-surface-low rounded-b-lg">
+              {prodPag.loading ? (
+                <div className="p-4 space-y-4">
+                  {[1, 2, 3, 4, 5].map((idx) => (
+                    <div key={idx} className="animate-pulse flex space-x-3">
+                      <div className="rounded bg-surface-low h-12 w-12"></div>
+                      <div className="flex-1 space-y-2 py-1">
+                        <div className="h-4 bg-surface-low rounded w-3/4"></div>
+                        <div className="h-3 bg-surface-low rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                prodPag.data.map((p) => (
+                  <div
+                    key={p.id}
+                    onClick={() => setSelectedProductDetails(p)}
+                    className="p-4 hover:bg-surface-bright transition-colors cursor-pointer space-y-2.5"
+                  >
+                    {/* Row 1: Image, Name, and Stock */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center space-x-3 min-w-0">
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openGallery(p.image_url, 0);
+                          }}
+                          className="h-12 w-12 flex-shrink-0 rounded bg-surface border border-surface-low overflow-hidden cursor-pointer hover:opacity-85 transition-opacity"
+                        >
                           {p.image_url ? (
                             (() => {
                               const urls = p.image_url.split(',');
@@ -582,63 +831,180 @@ export default function Products() {
                             <div className="h-full w-full flex items-center justify-center text-[10px] text-text-secondary">No img</div>
                           )}
                         </div>
-                      </td>
-                      <td className="px-4 py-3 font-mono font-medium">{p.barcode}</td>
-                      <td className="px-4 py-3 font-semibold text-text-primary">{p.name}</td>
-                      <td className="px-4 py-3 text-text-secondary">
-                        {p.category_name || '-'} / {p.brand_name || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-text-primary">{formatCurrency(p.selling_price)}</td>
-                      <td className="px-4 py-3 text-right text-text-secondary">{formatCurrency(p.average_cost)}</td>
-                      <td className="px-4 py-3 text-right text-text-secondary">{formatCurrency(p.last_landed_cost)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <span className={`font-semibold ${p.stock_qty < 10 ? 'text-error' : 'text-text-primary'}`}>
-                          {p.stock_qty}
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs text-text-primary truncate">{p.name}</div>
+                          <div className="text-[10px] text-text-secondary truncate mt-0.5">
+                            {p.category_name || '-'} / {p.brand_name || '-'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded ${p.stock_qty < 10 ? 'bg-red-50 text-error border border-error/10' : 'bg-green-50 text-green-700 border border-green-700/10'
+                          }`}>
+                          Qty: {p.stock_qty}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-center space-x-2 whitespace-nowrap">
-                        <button
-                          onClick={() => handleStartEdit(p)}
-                          className="inline-flex items-center justify-center rounded bg-brand-blue/10 p-1 sm:px-2 sm:py-1 text-[11px] font-semibold text-brand-blue hover:bg-brand-blue/20 transition font-medium"
-                          title="Edit Product"
-                        >
-                          <svg className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                          <span className="hidden sm:inline">Edit</span>
-                        </button>
-                        <button
-                          onClick={() => deleteProduct(p.id)}
-                          className="inline-flex items-center justify-center rounded bg-error-container/10 p-1 sm:px-2 sm:py-1 text-[11px] font-semibold text-error hover:bg-error-container/20 transition"
-                          title="Delete Product"
-                        >
-                          <svg className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          <span className="hidden sm:inline">Delete</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-                {prodPag.data.length === 0 && !prodPag.loading && (
-                  <tr>
-                    <td colSpan="9" className="px-4 py-8 text-center text-text-secondary">No products found.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
 
-            <PaginationControls
-              page={prodPag.page}
-              setPage={prodPag.setPage}
-              pageSize={prodPag.pageSize}
-              setPageSize={prodPag.setPageSize}
-              totalCount={prodPag.totalCount}
-              totalPages={prodPag.totalPages}
-              loading={prodPag.loading}
-            />
-          </div>
+                    {/* Row 2: Selling Price, Average Cost, Last Landed Cost */}
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-dashed border-surface-low text-[10px]">
+                      <div>
+                        <span className="block text-[9px] text-text-secondary">RRP Selling</span>
+                        <span className="font-semibold text-text-primary">{formatCurrency(p.selling_price)}</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="block text-[9px] text-text-secondary">Avg Cost</span>
+                        <span className="font-medium text-text-secondary">{formatCurrency(p.average_cost)}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="block text-[9px] text-text-secondary">Last Landed Cost</span>
+                        <span className="font-medium text-text-secondary">{formatCurrency(p.last_landed_cost)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+              {prodPag.data.length === 0 && !prodPag.loading && (
+                <div className="p-8 text-center text-xs text-text-secondary">No products found.</div>
+              )}
+
+              <PaginationControls
+                page={prodPag.page}
+                setPage={prodPag.setPage}
+                pageSize={prodPag.pageSize}
+                setPageSize={prodPag.setPageSize}
+                totalCount={prodPag.totalCount}
+                totalPages={prodPag.totalPages}
+                loading={prodPag.loading}
+              />
+            </div>
+          ) : (
+            <div className="rounded-b-lg bg-white border-x border-b border-surface-low overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
+                  <tr>
+                    <th className="px-4 py-2">Image</th>
+                    {!isMobile && renderSortHeader('Barcode', 'barcode', prodPag)}
+                    {renderSortHeader('Name', 'name', prodPag)}
+                    <th className="px-4 py-2">Category / Brand</th>
+                    {renderSortHeader('RRP Selling', 'selling_price', prodPag)}
+                    {renderSortHeader('Average Cost', 'average_cost', prodPag)}
+                    {renderSortHeader('Last Landed Cost', 'last_landed_cost', prodPag)}
+                    <th className="px-4 py-2 text-right">Stock</th>
+                    {!isMobile && <th className="px-4 py-2 text-center">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-low">
+                  {prodPag.loading ? (
+                    <SkeletonTable rows={prodPag.pageSize || 5} columns={isMobile ? 7 : 9} />
+                  ) : (
+                    prodPag.data.map((p) => (
+                      <tr
+                        key={p.id}
+                        onClick={() => {
+                          if (isMobile) {
+                            setSelectedProductDetails(p);
+                          }
+                        }}
+                        className={`hover:bg-surface-bright transition-colors ${isMobile ? 'cursor-pointer' : ''}`}
+                      >
+                        <td className={`px-4 ${isMobile ? 'py-5' : 'py-3'}`}>
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openGallery(p.image_url, 0);
+                            }}
+                            className="h-10 w-10 rounded bg-surface border border-surface-low overflow-hidden cursor-pointer hover:opacity-85 transition-opacity"
+                          >
+                            {p.image_url ? (
+                              (() => {
+                                const urls = p.image_url.split(',');
+                                return (
+                                  <div className="relative h-full w-full">
+                                    <img src={urls[0]} alt={p.name} className="h-full w-full object-cover" />
+                                    {urls.length > 1 && (
+                                      <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-[8px] px-1 rounded-sm font-bold">
+                                        +{urls.length - 1}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-[10px] text-text-secondary">No img</div>
+                            )}
+                          </div>
+                        </td>
+                        {!isMobile && <td className="px-4 py-3 font-mono font-medium">{p.barcode}</td>}
+                        <td className={`px-4 ${isMobile ? 'py-5' : 'py-3'} font-semibold text-text-primary`}>
+                          <div>{p.name}</div>
+                          {p.suitable_models_details && p.suitable_models_details.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1 font-normal">
+                              {p.suitable_models_details.map((m) => (
+                                <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
+                                  {m.brand_name} {m.model_name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className={`px-4 ${isMobile ? 'py-5' : 'py-3'} text-text-secondary`}>
+                          {p.category_name || '-'} / {p.brand_name || '-'}
+                        </td>
+                        <td className={`px-4 ${isMobile ? 'py-5' : 'py-3'} text-right font-semibold text-text-primary`}>{formatCurrency(p.selling_price)}</td>
+                        <td className={`px-4 ${isMobile ? 'py-5' : 'py-3'} text-right text-text-secondary`}>{formatCurrency(p.average_cost)}</td>
+                        <td className={`px-4 ${isMobile ? 'py-5' : 'py-3'} text-right text-text-secondary`}>{formatCurrency(p.last_landed_cost)}</td>
+                        <td className={`px-4 ${isMobile ? 'py-5' : 'py-3'} text-right`}>
+                          <span className={`font-semibold ${p.stock_qty < 10 ? 'text-error' : 'text-text-primary'}`}>
+                            {p.stock_qty}
+                          </span>
+                        </td>
+                        {!isMobile && (
+                          <td className="px-4 py-3 text-center space-x-2 whitespace-nowrap">
+                            <button
+                              onClick={() => handleStartEdit(p)}
+                              className="inline-flex items-center justify-center rounded bg-brand-blue/10 p-1 sm:px-2 sm:py-1 text-[11px] font-semibold text-brand-blue hover:bg-brand-blue/20 transition font-medium"
+                              title="Edit Product"
+                            >
+                              <svg className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                              <span className="hidden sm:inline">Edit</span>
+                            </button>
+                            <button
+                              onClick={() => deleteProduct(p.id)}
+                              className="inline-flex items-center justify-center rounded bg-error-container/10 p-1 sm:px-2 sm:py-1 text-[11px] font-semibold text-error hover:bg-error-container/20 transition"
+                              title="Delete Product"
+                            >
+                              <svg className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              <span className="hidden sm:inline">Delete</span>
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))
+                  )}
+                  {prodPag.data.length === 0 && !prodPag.loading && (
+                    <tr>
+                      <td colSpan={isMobile ? 7 : 9} className="px-4 py-8 text-center text-text-secondary">No products found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+
+              <PaginationControls
+                page={prodPag.page}
+                setPage={prodPag.setPage}
+                pageSize={prodPag.pageSize}
+                setPageSize={prodPag.setPageSize}
+                totalCount={prodPag.totalCount}
+                totalPages={prodPag.totalPages}
+                loading={prodPag.loading}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -646,7 +1012,7 @@ export default function Products() {
       {currentTab === 'categories' && (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {/* Add Category */}
-          <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low h-fit" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+          <div className="hidden md:block rounded-lg bg-white p-6 shadow-sm border border-surface-low h-fit" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
             <h3 className="text-sm font-semibold text-text-primary mb-4">Add Product Category</h3>
             <form onSubmit={handleCategorySubmit} className="space-y-4">
               <div>
@@ -686,61 +1052,107 @@ export default function Products() {
               {activeLoading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
             </div>
 
-            <div className="divide-y divide-surface-low text-xs border border-surface-low rounded-lg bg-white overflow-hidden">
-              <table className="min-w-full text-left text-xs">
-                <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
-                  <tr>
-                    {renderSortHeader('Category Name', 'name', catPag)}
-                    <th className="px-4 py-2 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-low">
-                  {catPag.loading ? (
-                    <SkeletonTable rows={catPag.pageSize || 5} columns={2} />
-                  ) : (
-                    catPag.data.map((c) => (
-                      <tr key={c.id} className="hover:bg-surface-bright">
-                        <td className="px-4 py-3 font-semibold text-text-primary">{c.name}</td>
-                        <td className="px-4 py-3 text-right whitespace-nowrap">
-                          <button
-                            onClick={() => {
-                              if (confirm('Delete category?')) {
-                                api.categories.delete(c.id).then(() => {
-                                  catPag.refresh();
-                                  loadDropdowns();
-                                }).catch((e) => alert(e.message));
-                              }
-                            }}
-                            className="inline-flex items-center justify-center rounded bg-error-container/10 p-1 sm:px-2 sm:py-1 text-[11px] font-semibold text-error hover:bg-error-container/20 transition"
-                            title="Delete Category"
-                          >
-                            <svg className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            <span className="hidden sm:inline">Delete</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                  {catPag.data.length === 0 && !catPag.loading && (
+            {isMobile ? (
+              <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden">
+                {catPag.loading ? (
+                  <div className="p-4 space-y-4">
+                    {[1, 2, 3, 4, 5].map((idx) => (
+                      <div key={idx} className="animate-pulse h-10 bg-surface-low rounded w-full"></div>
+                    ))}
+                  </div>
+                ) : (
+                  catPag.data.map((c) => (
+                    <div key={c.id} className="p-4 flex items-center justify-between">
+                      <span className="font-semibold text-xs text-text-primary">{c.name}</span>
+                      <button
+                        onClick={() => {
+                          if (confirm('Delete category?')) {
+                            api.categories.delete(c.id).then(() => {
+                              catPag.refresh();
+                              loadDropdowns();
+                            }).catch((e) => alert(e.message));
+                          }
+                        }}
+                        className="rounded bg-error-container/10 p-1.5 text-error hover:bg-error-container/20 transition cursor-pointer"
+                        title="Delete Category"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))
+                )}
+                {catPag.data.length === 0 && !catPag.loading && (
+                  <div className="p-8 text-center text-xs text-text-secondary">No categories found.</div>
+                )}
+                <PaginationControls
+                  page={catPag.page}
+                  setPage={catPag.setPage}
+                  pageSize={catPag.pageSize}
+                  setPageSize={catPag.setPageSize}
+                  totalCount={catPag.totalCount}
+                  totalPages={catPag.totalPages}
+                  loading={catPag.loading}
+                />
+              </div>
+            ) : (
+              <div className="divide-y divide-surface-low text-sm border border-surface-low rounded-lg bg-white overflow-hidden">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
                     <tr>
-                      <td colSpan="2" className="px-4 py-8 text-center text-text-secondary">No categories found.</td>
+                      {renderSortHeader('Category Name', 'name', catPag)}
+                      <th className="px-4 py-2 text-right">Actions</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-surface-low">
+                    {catPag.loading ? (
+                      <SkeletonTable rows={catPag.pageSize || 5} columns={2} />
+                    ) : (
+                      catPag.data.map((c) => (
+                        <tr key={c.id} className="hover:bg-surface-bright">
+                          <td className="px-4 py-3 font-semibold text-text-primary">{c.name}</td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            <button
+                              onClick={() => {
+                                if (confirm('Delete category?')) {
+                                  api.categories.delete(c.id).then(() => {
+                                    catPag.refresh();
+                                    loadDropdowns();
+                                  }).catch((e) => alert(e.message));
+                                }
+                              }}
+                              className="inline-flex items-center justify-center rounded bg-error-container/10 p-1 sm:px-2 sm:py-1 text-[11px] font-semibold text-error hover:bg-error-container/20 transition"
+                              title="Delete Category"
+                            >
+                              <svg className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              <span className="hidden sm:inline">Delete</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                    {catPag.data.length === 0 && !catPag.loading && (
+                      <tr>
+                        <td colSpan="2" className="px-4 py-8 text-center text-text-secondary">No categories found.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
 
-              <PaginationControls
-                page={catPag.page}
-                setPage={catPag.setPage}
-                pageSize={catPag.pageSize}
-                setPageSize={catPag.setPageSize}
-                totalCount={catPag.totalCount}
-                totalPages={catPag.totalPages}
-                loading={catPag.loading}
-              />
-            </div>
+                <PaginationControls
+                  page={catPag.page}
+                  setPage={catPag.setPage}
+                  pageSize={catPag.pageSize}
+                  setPageSize={catPag.setPageSize}
+                  totalCount={catPag.totalCount}
+                  totalPages={catPag.totalPages}
+                  loading={catPag.loading}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -749,7 +1161,7 @@ export default function Products() {
       {currentTab === 'brands' && (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {/* Add Brand */}
-          <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low h-fit" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+          <div className="hidden md:block rounded-lg bg-white p-6 shadow-sm border border-surface-low h-fit" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
             <h3 className="text-sm font-semibold text-text-primary mb-4">Add Brand</h3>
             <form onSubmit={handleBrandSubmit} className="space-y-4">
               <div>
@@ -789,269 +1201,310 @@ export default function Products() {
               {activeLoading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
             </div>
 
-            <div className="divide-y divide-surface-low text-xs border border-surface-low rounded-lg bg-white overflow-hidden">
-              <table className="min-w-full text-left text-xs">
-                <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
-                  <tr>
-                    {renderSortHeader('Brand Name', 'name', brandPag)}
-                    <th className="px-4 py-2 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-low">
-                  {brandPag.loading ? (
-                    <SkeletonTable rows={brandPag.pageSize || 5} columns={2} />
-                  ) : (
-                    brandPag.data.map((b) => (
-                      <tr key={b.id} className="hover:bg-surface-bright">
-                        <td className="px-4 py-3 font-semibold text-text-primary">{b.name}</td>
-                        <td className="px-4 py-3 text-right whitespace-nowrap">
-                          <button
-                            onClick={() => {
-                              if (confirm('Delete brand?')) {
-                                api.brands.delete(b.id).then(() => {
-                                  brandPag.refresh();
-                                  loadDropdowns();
-                                }).catch((e) => alert(e.message));
-                              }
-                            }}
-                            className="inline-flex items-center justify-center rounded bg-error-container/10 p-1 sm:px-2 sm:py-1 text-[11px] font-semibold text-error hover:bg-error-container/20 transition"
-                            title="Delete Brand"
-                          >
-                            <svg className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            <span className="hidden sm:inline">Delete</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                  {brandPag.data.length === 0 && !brandPag.loading && (
+            {isMobile ? (
+              <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden">
+                {brandPag.loading ? (
+                  <div className="p-4 space-y-4">
+                    {[1, 2, 3, 4, 5].map((idx) => (
+                      <div key={idx} className="animate-pulse h-10 bg-surface-low rounded w-full"></div>
+                    ))}
+                  </div>
+                ) : (
+                  brandPag.data.map((b) => (
+                    <div key={b.id} className="p-4 flex items-center justify-between">
+                      <span className="font-semibold text-xs text-text-primary">{b.name}</span>
+                      <button
+                        onClick={() => {
+                          if (confirm('Delete brand?')) {
+                            api.brands.delete(b.id).then(() => {
+                              brandPag.refresh();
+                              loadDropdowns();
+                            }).catch((e) => alert(e.message));
+                          }
+                        }}
+                        className="rounded bg-error-container/10 p-1.5 text-error hover:bg-error-container/20 transition cursor-pointer"
+                        title="Delete Brand"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))
+                )}
+                {brandPag.data.length === 0 && !brandPag.loading && (
+                  <div className="p-8 text-center text-xs text-text-secondary">No brands found.</div>
+                )}
+                <PaginationControls
+                  page={brandPag.page}
+                  setPage={brandPag.setPage}
+                  pageSize={brandPag.pageSize}
+                  setPageSize={brandPag.setPageSize}
+                  totalCount={brandPag.totalCount}
+                  totalPages={brandPag.totalPages}
+                  loading={brandPag.loading}
+                />
+              </div>
+            ) : (
+              <div className="divide-y divide-surface-low text-sm border border-surface-low rounded-lg bg-white overflow-hidden">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
                     <tr>
-                      <td colSpan="2" className="px-4 py-8 text-center text-text-secondary">No brands found.</td>
+                      {renderSortHeader('Brand Name', 'name', brandPag)}
+                      <th className="px-4 py-2 text-right">Actions</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-surface-low">
+                    {brandPag.loading ? (
+                      <SkeletonTable rows={brandPag.pageSize || 5} columns={2} />
+                    ) : (
+                      brandPag.data.map((b) => (
+                        <tr key={b.id} className="hover:bg-surface-bright">
+                          <td className="px-4 py-3 font-semibold text-text-primary">{b.name}</td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            <button
+                              onClick={() => {
+                                if (confirm('Delete brand?')) {
+                                  api.brands.delete(b.id).then(() => {
+                                    brandPag.refresh();
+                                    loadDropdowns();
+                                  }).catch((e) => alert(e.message));
+                                }
+                              }}
+                              className="inline-flex items-center justify-center rounded bg-error-container/10 p-1 sm:px-2 sm:py-1 text-[11px] font-semibold text-error hover:bg-error-container/20 transition"
+                              title="Delete Brand"
+                            >
+                              <svg className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              <span className="hidden sm:inline">Delete</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                    {brandPag.data.length === 0 && !brandPag.loading && (
+                      <tr>
+                        <td colSpan="2" className="px-4 py-8 text-center text-text-secondary">No brands found.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
 
-              <PaginationControls
-                page={brandPag.page}
-                setPage={brandPag.setPage}
-                pageSize={brandPag.pageSize}
-                setPageSize={brandPag.setPageSize}
-                totalCount={brandPag.totalCount}
-                totalPages={brandPag.totalPages}
-                loading={brandPag.loading}
-              />
-            </div>
+                <PaginationControls
+                  page={brandPag.page}
+                  setPage={brandPag.setPage}
+                  pageSize={brandPag.pageSize}
+                  setPageSize={brandPag.setPageSize}
+                  totalCount={brandPag.totalCount}
+                  totalPages={brandPag.totalPages}
+                  loading={brandPag.loading}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
-      {/* Supplier Mappings Tab */}
-      {currentTab === 'mappings' && (
+
+      {/* Mobile Models Tab */}
+      {currentTab === 'model' && (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          {/* Add Supplier Product Mapping */}
-          <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low h-fit" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
-            <h3 className="text-sm font-semibold text-text-primary mb-4">Link Supplier to SKU</h3>
-            <form onSubmit={handleMappingSubmit} className="space-y-4">
-              <div ref={mapProductDropdownRef} className="relative">
-                <label className="block text-xs font-semibold text-text-secondary mb-1">Select Product SKU</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search product by name or barcode..."
-                    value={mapProductSearch}
-                    onChange={(e) => {
-                      setMapProductSearch(e.target.value);
-                      setShowMapProductDropdown(true);
-                    }}
-                    onFocus={() => {
-                      setShowMapProductDropdown(true);
-                    }}
-                    className="w-full rounded border border-surface-dim bg-white pl-3 pr-8 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-                    required={!mapProduct}
-                  />
-                  {mapProductSearching && (
-                    <span className="absolute right-8 top-2.5 text-[10px] text-brand-blue animate-pulse">Searching...</span>
-                  )}
-                  <span className="absolute right-2.5 top-2.5 text-text-secondary pointer-events-none">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </span>
-                </div>
-                {showMapProductDropdown && (
-                  <div className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-sm shadow-lg ring-1 ring-black/5 focus:outline-none border border-surface-dim">
-                    {mapProductResults.length === 0 ? (
-                      <div className="px-3 py-2 text-text-secondary">No products found. Please type to search.</div>
-                    ) : (
-                      mapProductResults.map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            setMapProduct(p.id.toString());
-                            setMapProductSearch(`${p.name} (${p.barcode})`);
-                            setShowMapProductDropdown(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 hover:bg-surface-low text-text-primary font-medium border-b border-surface-lowest last:border-0 ${mapProduct === p.id.toString() ? 'bg-surface-low font-semibold' : ''}`}
-                        >
-                          {p.name} ({p.barcode})
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-              <div ref={mapSupplierDropdownRef} className="relative">
-                <label className="block text-xs font-semibold text-text-secondary mb-1">Select Supplier</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search supplier..."
-                    value={mapSupplierSearch}
-                    onChange={(e) => {
-                      setMapSupplierSearch(e.target.value);
-                      setShowMapSupplierDropdown(true);
-                    }}
-                    onFocus={() => {
-                      setShowMapSupplierDropdown(true);
-                    }}
-                    className="w-full rounded border border-surface-dim bg-white pl-3 pr-8 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
-                    required={!mapSupplier}
-                  />
-                  {mapSupplierSearching && (
-                    <span className="absolute right-8 top-2.5 text-[10px] text-brand-blue animate-pulse">Searching...</span>
-                  )}
-                  <span className="absolute right-2.5 top-2.5 text-text-secondary pointer-events-none">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </span>
-                </div>
-                {showMapSupplierDropdown && (
-                  <div className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-sm shadow-lg ring-1 ring-black/5 focus:outline-none border border-surface-dim">
-                    {mapSupplierResults.length === 0 ? (
-                      <div className="px-3 py-2 text-text-secondary">No suppliers found. Please type to search.</div>
-                    ) : (
-                      mapSupplierResults.map((s) => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => {
-                            setMapSupplier(s.id.toString());
-                            setMapSupplierSearch(s.name);
-                            setShowMapSupplierDropdown(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 hover:bg-surface-low text-text-primary font-medium border-b border-surface-lowest last:border-0 ${mapSupplier === s.id.toString() ? 'bg-surface-low font-semibold' : ''}`}
-                        >
-                          {s.name}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1">Purchase Cost (Negotiated Price, INR)</label>
+          {/* Add Mobile Model Form */}
+          <div className="hidden md:block rounded-lg bg-white p-6 shadow-sm border border-surface-low h-fit" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+            <h3 className="text-sm font-semibold text-text-primary mb-4">Add Mobile Model</h3>
+            <form onSubmit={handleTabModelSubmit} className="space-y-4">
+              <div ref={tabBrandDropdownRef} className="relative">
+                <label className="block text-xs font-semibold text-text-secondary mb-1">Mobile Brand</label>
                 <input
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  placeholder="Search or type brand..."
                   required
-                  value={mapCost}
-                  onChange={(e) => setMapCost(e.target.value)}
+                  value={tabSearchBrandQuery}
+                  onChange={(e) => {
+                    setTabSearchBrandQuery(e.target.value);
+                    setTabShowBrandDropdown(true);
+                    if (!e.target.value) {
+                      setTabModelBrand('');
+                    }
+                  }}
+                  onFocus={() => setTabShowBrandDropdown(true)}
+                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+                />
+                {tabShowBrandDropdown && (
+                  <div className="absolute z-30 w-full mt-1 bg-white border border-surface-dim rounded shadow-lg max-h-48 overflow-y-auto">
+                    {brandsDropdown
+                      .filter(b => b.name.toLowerCase().includes(tabSearchBrandQuery.toLowerCase()))
+                      .slice(0, 10)
+                      .map(b => (
+                        <div
+                          key={b.id}
+                          onClick={() => {
+                            setTabModelBrand(b.id);
+                            setTabSearchBrandQuery(b.name);
+                            setTabShowBrandDropdown(false);
+                          }}
+                          className="px-3 py-2 hover:bg-surface-low text-xs cursor-pointer text-text-primary border-b border-surface-low last:border-b-0"
+                        >
+                          {b.name}
+                        </div>
+                      ))}
+                    {tabSearchBrandQuery.trim() && !brandsDropdown.some(b => b.name.toLowerCase() === tabSearchBrandQuery.trim().toLowerCase()) && (
+                      <div
+                        onClick={() => {
+                          setTabShowBrandDropdown(false);
+                        }}
+                        className="px-3 py-2 hover:bg-brand-blue/10 text-xs cursor-pointer text-brand-blue font-semibold border-b border-surface-low last:border-b-0"
+                      >
+                        + Use Brand "{tabSearchBrandQuery.trim()}" (will be created)
+                      </div>
+                    )}
+                    {brandsDropdown.filter(b => b.name.toLowerCase().includes(tabSearchBrandQuery.toLowerCase())).length === 0 && !tabSearchBrandQuery.trim() && (
+                      <div className="px-3 py-2 text-xs text-text-secondary">No brands found.</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary mb-1">Model Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. S23 Ultra"
+                  value={tabNewModelName}
+                  onChange={(e) => setTabNewModelName(e.target.value)}
                   className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
                 />
               </div>
+
               <button
                 type="submit"
-                disabled={isSavingMapping}
+                disabled={isSavingTabModel}
                 className="w-full rounded bg-brand-blue py-2 text-sm font-semibold text-white hover:bg-brand-cobalt transition flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
               >
-                {isSavingMapping && <Spinner size="sm" />}
-                <span>{isSavingMapping ? 'Linking...' : 'Save Supplier Mapping'}</span>
+                {isSavingTabModel && <Spinner size="sm" />}
+                <span>{isSavingTabModel ? 'Adding...' : 'Add Mobile Model'}</span>
               </button>
             </form>
           </div>
 
-          {/* Mappings List */}
+          {/* Mobile Models List */}
           <div className="rounded-lg bg-white p-6 shadow-sm md:col-span-2" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
-            <h3 className="text-sm font-semibold text-text-primary mb-4">Supplier-Product Matrix</h3>
+            <h3 className="text-sm font-semibold text-text-primary mb-4">Mobile Models Directory</h3>
 
             {/* Search and Loading */}
             <div className="flex items-center justify-between mb-4 gap-4">
               <input
                 type="text"
-                value={mappingPag.search}
-                onChange={(e) => mappingPag.setSearch(e.target.value)}
-                placeholder="Search matrix by product/supplier..."
+                value={modelPag.search}
+                onChange={(e) => modelPag.setSearch(e.target.value)}
+                placeholder="Search models or brands..."
                 className="rounded border border-surface-dim bg-white px-3 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue w-64"
               />
               {activeLoading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
             </div>
 
-            <div className="divide-y divide-surface-low text-xs border border-surface-low rounded-lg bg-white overflow-hidden">
-              <table className="min-w-full text-left text-xs">
-                <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
-                  <tr>
-                    {renderSortHeader('Product SKU', 'product__name', mappingPag)}
-                    <th>Barcode</th>
-                    <th>Supplier</th>
-                    {renderSortHeader('Negotiated Cost', 'current_cost', mappingPag)}
-                    <th className="px-4 py-2 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-low">
-                  {mappingPag.loading ? (
-                    <SkeletonTable rows={mappingPag.pageSize || 5} columns={5} />
-                  ) : (
-                    mappingPag.data.map((m) => (
-                      <tr key={m.id} className="hover:bg-surface-bright">
-                        <td className="px-4 py-3 font-semibold text-text-primary">{m.product_name}</td>
-                        <td className="px-4 py-3 text-text-secondary font-mono">{m.barcode}</td>
-                        <td className="px-4 py-3 text-text-primary">{m.supplier_name}</td>
-                        <td className="px-4 py-3 font-bold text-brand-blue">{formatCurrency(m.current_cost)}</td>
-                        <td className="px-4 py-3 text-right whitespace-nowrap">
-                          <button
-                            onClick={() => deleteMapping(m.id)}
-                            className="inline-flex items-center justify-center rounded bg-error-container/10 p-1 sm:px-2 sm:py-1 text-[11px] font-semibold text-error hover:bg-error-container/20 transition"
-                            title="Remove Mapping"
-                          >
-                            <svg className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            <span className="hidden sm:inline">Remove</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                  {mappingPag.data.length === 0 && !mappingPag.loading && (
+            {isMobile ? (
+              <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden">
+                {modelPag.loading ? (
+                  <div className="p-4 space-y-4">
+                    {[1, 2, 3, 4, 5].map((idx) => (
+                      <div key={idx} className="animate-pulse h-10 bg-surface-low rounded w-full"></div>
+                    ))}
+                  </div>
+                ) : (
+                  modelPag.data.map((m) => (
+                    <div key={m.id} className="p-4 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <span className="font-bold text-xs text-brand-blue">{m.brand_name}</span>
+                        <span className="ml-2 font-medium text-xs text-text-primary">{m.model_name}</span>
+                      </div>
+                      <button
+                        onClick={() => deleteMobileModel(m.id)}
+                        className="rounded bg-error-container/10 p-1.5 text-error hover:bg-error-container/20 transition cursor-pointer"
+                        title="Delete Mobile Model"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))
+                )}
+                {modelPag.data.length === 0 && !modelPag.loading && (
+                  <div className="p-8 text-center text-xs text-text-secondary">No mobile models found.</div>
+                )}
+                <PaginationControls
+                  page={modelPag.page}
+                  setPage={modelPag.setPage}
+                  pageSize={modelPag.pageSize}
+                  setPageSize={modelPag.setPageSize}
+                  totalCount={modelPag.totalCount}
+                  totalPages={modelPag.totalPages}
+                  loading={modelPag.loading}
+                />
+              </div>
+            ) : (
+              <div className="divide-y divide-surface-low text-sm border border-surface-low rounded-lg bg-white overflow-hidden">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
                     <tr>
-                      <td colSpan="5" className="px-4 py-8 text-center text-text-secondary">No supplier product mappings established.</td>
+                      {renderSortHeader('Brand', 'brand__name', modelPag)}
+                      {renderSortHeader('Model Name', 'model_name', modelPag)}
+                      <th className="px-4 py-2 text-right">Actions</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-surface-low">
+                    {modelPag.loading ? (
+                      <SkeletonTable rows={modelPag.pageSize || 5} columns={3} />
+                    ) : (
+                      modelPag.data.map((m) => (
+                        <tr key={m.id} className="hover:bg-surface-bright">
+                          <td className="px-4 py-3 font-semibold text-brand-blue">{m.brand_name}</td>
+                          <td className="px-4 py-3 font-medium text-text-primary">{m.model_name}</td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            <button
+                              onClick={() => deleteMobileModel(m.id)}
+                              className="inline-flex items-center justify-center rounded bg-error-container/10 p-1 sm:px-2 sm:py-1 text-[11px] font-semibold text-error hover:bg-error-container/20 transition"
+                              title="Delete Mobile Model"
+                            >
+                              <svg className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              <span className="hidden sm:inline">Delete</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                    {modelPag.data.length === 0 && !modelPag.loading && (
+                      <tr>
+                        <td colSpan="3" className="px-4 py-8 text-center text-text-secondary">No mobile models found.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
 
-              <PaginationControls
-                page={mappingPag.page}
-                setPage={mappingPag.setPage}
-                pageSize={mappingPag.pageSize}
-                setPageSize={mappingPag.setPageSize}
-                totalCount={mappingPag.totalCount}
-                totalPages={mappingPag.totalPages}
-                loading={mappingPag.loading}
-              />
-            </div>
+                <PaginationControls
+                  page={modelPag.page}
+                  setPage={modelPag.setPage}
+                  pageSize={modelPag.pageSize}
+                  setPageSize={modelPag.setPageSize}
+                  totalCount={modelPag.totalCount}
+                  totalPages={modelPag.totalPages}
+                  loading={modelPag.loading}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
 
+
       {/* Cost History Tab */}
       {currentTab === 'cost-history' && (
-        <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
-          <div className="flex items-center justify-between mb-6">
+        <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low" style={isMobile ? {} : { boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+          <div className="flex items-center justify-between mb-4 md:mb-6">
             <h3 className="text-sm font-semibold text-text-primary">Supplier Cost Price Fluctuation History</h3>
             {activeLoading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
           </div>
@@ -1062,90 +1515,583 @@ export default function Products() {
               value={costHistoryPag.search}
               onChange={(e) => costHistoryPag.setSearch(e.target.value)}
               placeholder="Search history by product or supplier..."
-              className="rounded border border-surface-dim bg-white px-3 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue w-64"
+              className="w-full sm:w-64 rounded border border-surface-dim bg-white px-3 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue"
             />
           </div>
 
-          <div className="divide-y divide-surface-low text-xs border border-surface-low rounded-lg bg-white overflow-hidden">
-            <table className="min-w-full text-left text-xs">
-              <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
-                <tr>
-                  {renderSortHeader('Date / Time', 'timestamp', costHistoryPag)}
-                  {renderSortHeader('Product SKU', 'product__name', costHistoryPag)}
-                  <th>Barcode</th>
-                  <th>Supplier</th>
-                  {renderSortHeader('Purchase Cost', 'cost', costHistoryPag)}
-                  {renderSortHeader('Retail Selling Price', 'selling_price', costHistoryPag)}
-                  <th>Reference</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-low">
-                {costHistoryPag.loading ? (
-                  <SkeletonTable rows={costHistoryPag.pageSize || 5} columns={7} />
-                ) : (
-                  costHistoryPag.data.map((h) => (
-                    <tr key={h.id} className="hover:bg-surface-bright">
-                      <td className="px-4 py-3 text-text-secondary">{new Date(h.timestamp).toLocaleString()}</td>
-                      <td className="px-4 py-3 font-semibold text-text-primary">{h.product_name}</td>
-                      <td className="px-4 py-3 text-text-secondary font-mono">{h.barcode}</td>
-                      <td className="px-4 py-3 text-text-primary">{h.supplier_name}</td>
-                      <td className="px-4 py-3 font-bold text-brand-blue">{formatCurrency(h.cost)}</td>
-                      <td className="px-4 py-3 font-bold text-green-600">
-                        {h.selling_price !== null && h.selling_price !== undefined ? formatCurrency(h.selling_price) : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-text-secondary font-mono">
-                        {h.purchase ? `PO-${h.purchase}` : 'Initial Seed'}
-                      </td>
-                    </tr>
-                  ))
-                )}
-                {costHistoryPag.data.length === 0 && !costHistoryPag.loading && (
+          {isMobile ? (
+            <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden">
+              {costHistoryPag.loading ? (
+                <div className="p-3 space-y-4">
+                  {[1, 2, 3, 4, 5].map((idx) => (
+                    <div key={idx} className="animate-pulse space-y-2">
+                      <div className="h-4 bg-surface-low rounded w-3/4"></div>
+                      <div className="h-3 bg-surface-low rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                costHistoryPag.data.map((h) => (
+                  <div key={h.id} className="p-3 space-y-2 text-xs">
+                    {/* Row 1: Product SKU, Date / Time */}
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="min-w-0">
+                        <div className="font-bold text-text-primary truncate">{h.product_name}</div>
+                        <div className="text-[10px] text-text-secondary mt-0.5">
+                          Supplier: <span className="font-semibold text-text-primary">{h.supplier_name}</span>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0 text-[10px] text-text-secondary">
+                        {new Date(h.timestamp).toLocaleDateString()} {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+
+                    {/* Row 2: Cost, Selling Price, Reference */}
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-dashed border-surface-low text-[10px]">
+                      <div>
+                        <span className="block text-[9px] text-text-secondary">Cost Price</span>
+                        <span className="font-bold text-brand-blue">{formatCurrency(h.cost)}</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="block text-[9px] text-text-secondary">Retail Price</span>
+                        <span className="font-bold text-green-600">
+                          {h.selling_price !== null && h.selling_price !== undefined ? formatCurrency(h.selling_price) : '-'}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="block text-[9px] text-text-secondary">Reference</span>
+                        <span className="font-mono text-text-secondary">{h.purchase ? `PO-${h.purchase}` : 'Initial Seed'}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+              {costHistoryPag.data.length === 0 && !costHistoryPag.loading && (
+                <div className="p-8 text-center text-xs text-text-secondary">No supplier cost history entries found.</div>
+              )}
+              <PaginationControls
+                page={costHistoryPag.page}
+                setPage={costHistoryPag.setPage}
+                pageSize={costHistoryPag.pageSize}
+                setPageSize={costHistoryPag.setPageSize}
+                totalCount={costHistoryPag.totalCount}
+                totalPages={costHistoryPag.totalPages}
+                loading={costHistoryPag.loading}
+              />
+            </div>
+          ) : (
+            <div className="divide-y divide-surface-low text-sm border border-surface-low rounded-lg bg-white overflow-hidden">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
                   <tr>
-                    <td colSpan="7" className="px-4 py-8 text-center text-text-secondary">No supplier cost history entries found.</td>
+                    {renderSortHeader('Date / Time', 'timestamp', costHistoryPag)}
+                    {renderSortHeader('Product SKU', 'product__name', costHistoryPag)}
+                    <th>Barcode</th>
+                    <th>Supplier</th>
+                    {renderSortHeader('Purchase Cost', 'cost', costHistoryPag)}
+                    {renderSortHeader('Retail Selling Price', 'selling_price', costHistoryPag)}
+                    <th>Reference</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-surface-low">
+                  {costHistoryPag.loading ? (
+                    <SkeletonTable rows={costHistoryPag.pageSize || 5} columns={7} />
+                  ) : (
+                    costHistoryPag.data.map((h) => (
+                      <tr key={h.id} className="hover:bg-surface-bright">
+                        <td className="px-4 py-3 text-text-secondary">{new Date(h.timestamp).toLocaleString()}</td>
+                        <td className="px-4 py-3 font-semibold text-text-primary">{h.product_name}</td>
+                        <td className="px-4 py-3 text-text-secondary font-mono">{h.barcode}</td>
+                        <td className="px-4 py-3 text-text-primary">{h.supplier_name}</td>
+                        <td className="px-4 py-3 font-bold text-brand-blue">{formatCurrency(h.cost)}</td>
+                        <td className="px-4 py-3 font-bold text-green-600">
+                          {h.selling_price !== null && h.selling_price !== undefined ? formatCurrency(h.selling_price) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-text-secondary font-mono">
+                          {h.purchase ? `PO-${h.purchase}` : 'Initial Seed'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                  {costHistoryPag.data.length === 0 && !costHistoryPag.loading && (
+                    <tr>
+                      <td colSpan="7" className="px-4 py-8 text-center text-text-secondary">No supplier cost history entries found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
 
-            <PaginationControls
-              page={costHistoryPag.page}
-              setPage={costHistoryPag.setPage}
-              pageSize={costHistoryPag.pageSize}
-              setPageSize={costHistoryPag.setPageSize}
-              totalCount={costHistoryPag.totalCount}
-              totalPages={costHistoryPag.totalPages}
-              loading={costHistoryPag.loading}
-            />
-          </div>
+              <PaginationControls
+                page={costHistoryPag.page}
+                setPage={costHistoryPag.setPage}
+                pageSize={costHistoryPag.pageSize}
+                setPageSize={costHistoryPag.setPageSize}
+                totalCount={costHistoryPag.totalCount}
+                totalPages={costHistoryPag.totalPages}
+                loading={costHistoryPag.loading}
+              />
+            </div>
+          )}
         </div>
       )}
+      {/* Mobile Bottom Sheet for Product Details */}
+      <MobileBottomSheet
+        isOpen={selectedProductDetails !== null}
+        onClose={() => setSelectedProductDetails(null)}
+        title="Product Details"
+      >
+        {selectedProductDetails && (
+          <div className="space-y-4 pb-6 text-xs text-text-primary animate-in fade-in duration-200">
+            {selectedProductDetails.image_url && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {selectedProductDetails.image_url.split(',').map((url, idx) => (
+                  <img
+                    key={idx}
+                    src={url}
+                    alt={selectedProductDetails.name}
+                    onClick={() => openGallery(selectedProductDetails.image_url, idx)}
+                    className="h-24 w-24 object-cover rounded border border-surface-low cursor-pointer hover:opacity-90 transition-opacity"
+                  />
+                ))}
+              </div>
+            )}
+            <div className="flex justify-between border-b border-surface-low pb-2">
+              <span className="font-semibold text-text-secondary">Name:</span>
+              <span className="font-bold text-text-primary text-right">{selectedProductDetails.name}</span>
+            </div>
+            <div className="flex justify-between border-b border-surface-low pb-2">
+              <span className="font-semibold text-text-secondary">Barcode:</span>
+              <span className="font-mono text-text-primary">{selectedProductDetails.barcode}</span>
+            </div>
+            <div className="flex justify-between border-b border-surface-low pb-2">
+              <span className="font-semibold text-text-secondary">Category:</span>
+              <span>{selectedProductDetails.category_name || '-'}</span>
+            </div>
+            <div className="flex justify-between border-b border-surface-low pb-2">
+              <span className="font-semibold text-text-secondary">Brand:</span>
+              <span>{selectedProductDetails.brand_name || '-'}</span>
+            </div>
+            <div className="flex justify-between border-b border-surface-low pb-2">
+              <span className="font-semibold text-text-secondary">RRP Selling:</span>
+              <span className="font-bold text-green-600">{formatCurrency(selectedProductDetails.selling_price)}</span>
+            </div>
+            <div className="flex justify-between border-b border-surface-low pb-2">
+              <span className="font-semibold text-text-secondary">Average Cost:</span>
+              <span>{formatCurrency(selectedProductDetails.average_cost)}</span>
+            </div>
+            <div className="flex justify-between border-b border-surface-low pb-2">
+              <span className="font-semibold text-text-secondary">Last Landed Cost:</span>
+              <span>{formatCurrency(selectedProductDetails.last_landed_cost)}</span>
+            </div>
+            <div className="flex justify-between border-b border-surface-low pb-2">
+              <span className="font-semibold text-text-secondary">Stock:</span>
+              <span className={`font-bold ${selectedProductDetails.stock_qty < 10 ? 'text-error' : 'text-green-600'}`}>{selectedProductDetails.stock_qty}</span>
+            </div>
+            {selectedProductDetails.description && (
+              <div className="border-b border-surface-low pb-2">
+                <span className="font-semibold text-text-secondary block mb-1">Description:</span>
+                <p className="text-text-primary bg-surface p-2 rounded">{selectedProductDetails.description}</p>
+              </div>
+            )}
+            {selectedProductDetails.suitable_models_details && selectedProductDetails.suitable_models_details.length > 0 && (
+              <div>
+                <span className="font-semibold text-text-secondary block mb-1">Suitable Models:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedProductDetails.suitable_models_details.map((m) => (
+                    <span key={m.id} className="inline-block px-2 py-0.5 rounded bg-brand-blue/10 text-brand-blue font-semibold border border-brand-blue/15 text-[10px]">
+                      {m.brand_name} {m.model_name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Mobile Actions Inside the Detail Sheet */}
+            <div className="pt-4 flex gap-3">
+              <button
+                onClick={() => {
+                  handleStartEdit(selectedProductDetails);
+                  setSelectedProductDetails(null);
+                }}
+                className="flex-1 flex items-center justify-center space-x-2 rounded bg-brand-blue py-2.5 text-xs font-bold text-white hover:bg-brand-cobalt transition active:scale-95 duration-150"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                <span>Edit Product</span>
+              </button>
+              <button
+                onClick={() => {
+                  deleteProduct(selectedProductDetails.id);
+                  setSelectedProductDetails(null);
+                }}
+                className="flex-1 flex items-center justify-center space-x-2 rounded bg-error py-2.5 text-xs font-bold text-white hover:bg-error-container transition active:scale-95 duration-150"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span>Delete Product</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </MobileBottomSheet>
+
       {/* Mobile Bottom Sheet for adding/editing products */}
       <MobileBottomSheet
         isOpen={showForm}
         onClose={() => {
           setShowForm(false);
           setEditingProduct(null);
+          resetProductForm();
         }}
         title={editingProduct ? `Edit Product: ${editingProduct.name}` : 'Add New Product'}
       >
         {renderProductForm(true)}
       </MobileBottomSheet>
 
-      {/* Floating Action Button for products tab */}
-      {currentTab === 'products' && !showForm && (
+      {/* Mobile Bottom Sheet for Category Form */}
+      <MobileBottomSheet
+        isOpen={activeMobileForm === 'category'}
+        onClose={() => {
+          setActiveMobileForm(null);
+        }}
+        title="Add Product Category"
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (!catName) return;
+          setIsSavingCategory(true);
+          api.categories.create({ name: catName })
+            .then(() => {
+              setCatName('');
+              catPag.refresh();
+              loadDropdowns();
+              setIsSavingCategory(false);
+              setActiveMobileForm(null);
+              alert('Category created successfully!');
+            })
+            .catch((err) => {
+              alert(err.message);
+              setIsSavingCategory(false);
+            });
+        }} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Category Name</label>
+            <input
+              type="text"
+              required
+              value={catName}
+              onChange={(e) => setCatName(e.target.value)}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={isSavingCategory}
+            className="w-full rounded bg-brand-blue py-2 text-sm font-semibold text-white hover:bg-brand-cobalt transition flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {isSavingCategory && <Spinner size="sm" />}
+            <span>{isSavingCategory ? 'Adding...' : 'Add Category'}</span>
+          </button>
+        </form>
+      </MobileBottomSheet>
+
+      {/* Mobile Bottom Sheet for Brand Form */}
+      <MobileBottomSheet
+        isOpen={activeMobileForm === 'brand'}
+        onClose={() => {
+          setActiveMobileForm(null);
+        }}
+        title="Add Brand"
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (!brandName) return;
+          setIsSavingBrand(true);
+          api.brands.create({ name: brandName })
+            .then(() => {
+              setBrandName('');
+              brandPag.refresh();
+              loadDropdowns();
+              setIsSavingBrand(false);
+              setActiveMobileForm(null);
+              alert('Brand created successfully!');
+            })
+            .catch((err) => {
+              alert(err.message);
+              setIsSavingBrand(false);
+            });
+        }} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Brand Name</label>
+            <input
+              type="text"
+              required
+              value={brandName}
+              onChange={(e) => setBrandName(e.target.value)}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={isSavingBrand}
+            className="w-full rounded bg-brand-blue py-2 text-sm font-semibold text-white hover:bg-brand-cobalt transition flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {isSavingBrand && <Spinner size="sm" />}
+            <span>{isSavingBrand ? 'Adding...' : 'Add Brand'}</span>
+          </button>
+        </form>
+      </MobileBottomSheet>
+
+      {/* Mobile Bottom Sheet for Mobile Model Form */}
+      <MobileBottomSheet
+        isOpen={activeMobileForm === 'model'}
+        onClose={() => {
+          setActiveMobileForm(null);
+          setTabModelBrand('');
+          setTabSearchBrandQuery('');
+          setTabNewModelName('');
+        }}
+        title="Add Mobile Model"
+      >
+        <form onSubmit={handleTabModelSubmit} className="space-y-4">
+          <div ref={tabBrandDropdownRef} className="relative">
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Mobile Brand</label>
+            <input
+              type="text"
+              placeholder="Search or type brand..."
+              required
+              value={tabSearchBrandQuery}
+              onChange={(e) => {
+                setTabSearchBrandQuery(e.target.value);
+                setTabShowBrandDropdown(true);
+                if (!e.target.value) {
+                  setTabModelBrand('');
+                }
+              }}
+              onFocus={() => setTabShowBrandDropdown(true)}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            />
+            {tabShowBrandDropdown && (
+              <div className="absolute z-30 w-full mt-1 bg-white border border-surface-dim rounded shadow-lg max-h-48 overflow-y-auto">
+                {brandsDropdown
+                  .filter(b => b.name.toLowerCase().includes(tabSearchBrandQuery.toLowerCase()))
+                  .slice(0, 10)
+                  .map(b => (
+                    <div
+                      key={b.id}
+                      onClick={() => {
+                        setTabModelBrand(b.id);
+                        setTabSearchBrandQuery(b.name);
+                        setTabShowBrandDropdown(false);
+                      }}
+                      className="px-3 py-2 hover:bg-surface-low text-xs cursor-pointer text-text-primary border-b border-surface-low last:border-b-0"
+                    >
+                      {b.name}
+                    </div>
+                  ))}
+                {tabSearchBrandQuery.trim() && !brandsDropdown.some(b => b.name.toLowerCase() === tabSearchBrandQuery.trim().toLowerCase()) && (
+                  <div
+                    onClick={() => {
+                      setTabShowBrandDropdown(false);
+                    }}
+                    className="px-3 py-2 hover:bg-brand-blue/10 text-xs cursor-pointer text-brand-blue font-semibold border-b border-surface-low last:border-b-0"
+                  >
+                    + Use Brand "{tabSearchBrandQuery.trim()}" (will be created)
+                  </div>
+                )}
+                {brandsDropdown.filter(b => b.name.toLowerCase().includes(tabSearchBrandQuery.toLowerCase())).length === 0 && !tabSearchBrandQuery.trim() && (
+                  <div className="px-3 py-2 text-xs text-text-secondary">No brands found.</div>
+                )}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Model Name</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Galaxy S23"
+              value={tabNewModelName}
+              onChange={(e) => setTabNewModelName(e.target.value)}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={isSavingTabModel}
+            className="w-full rounded bg-brand-blue py-2 text-sm font-semibold text-white hover:bg-brand-cobalt transition flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {isSavingTabModel && <Spinner size="sm" />}
+            <span>{isSavingTabModel ? 'Adding...' : 'Add Mobile Model'}</span>
+          </button>
+        </form>
+      </MobileBottomSheet>
+
+      {/* Mobile Create Menu Sheet */}
+      <MobileBottomSheet
+        isOpen={showCreateMenu}
+        onClose={() => setShowCreateMenu(false)}
+        title="Create New..."
+      >
+        <div className="space-y-3 pb-4">
+          <button
+            onClick={() => {
+              setShowCreateMenu(false);
+              setEditingProduct(null);
+              resetProductForm();
+              setShowForm(true);
+            }}
+            className="w-full flex items-center space-x-3 p-4 rounded-xl border border-surface-low hover:bg-surface-low text-left text-sm font-medium text-text-primary transition"
+          >
+            <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-brand-blue/10 text-brand-blue">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <div>
+              <div className="font-semibold">New Product</div>
+              <div className="text-xs text-text-secondary">Add a new item to the product catalog</div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => {
+              setShowCreateMenu(false);
+              setCatName('');
+              setActiveMobileForm('category');
+            }}
+            className="w-full flex items-center space-x-3 p-4 rounded-xl border border-surface-low hover:bg-surface-low text-left text-sm font-medium text-text-primary transition"
+          >
+            <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-green-600/10 text-green-600">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+            </div>
+            <div>
+              <div className="font-semibold">New Category</div>
+              <div className="text-xs text-text-secondary">Create a product classification category</div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => {
+              setShowCreateMenu(false);
+              setBrandName('');
+              setActiveMobileForm('brand');
+            }}
+            className="w-full flex items-center space-x-3 p-4 rounded-xl border border-surface-low hover:bg-surface-low text-left text-sm font-medium text-text-primary transition"
+          >
+            <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-purple-600/10 text-purple-600">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <div className="font-semibold">New Brand</div>
+              <div className="text-xs text-text-secondary">Create a product manufacturer brand</div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => {
+              setShowCreateMenu(false);
+              setModelBrand('');
+              setNewModelName('');
+              setActiveMobileForm('model');
+            }}
+            className="w-full flex items-center space-x-3 p-4 rounded-xl border border-surface-low hover:bg-surface-low text-left text-sm font-medium text-text-primary transition"
+          >
+            <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-orange-600/10 text-orange-600">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <div className="font-semibold">New Suitable Model</div>
+              <div className="text-xs text-text-secondary">Create a suitable mobile model configuration</div>
+            </div>
+          </button>
+        </div>
+      </MobileBottomSheet>
+
+      {/* Floating Action Button for mobile */}
+      {(currentTab === 'products' || currentTab === 'categories' || currentTab === 'brands') && !showForm && !activeMobileForm && !showCreateMenu && (
         <FloatingActionButton
           onClick={() => {
-            setEditingProduct(null);
-            setName('');
-            setBarcode('');
-            setDescription('');
-            setCategory('');
-            setBrand('');
-            setSellingPrice('0');
-            setImageUrls([]);
-            setShowForm(true);
+            setShowCreateMenu(true);
           }}
         />
+      )}
+
+      {/* Full-screen Image Gallery Overlay */}
+      {galleryImages.length > 0 && (
+        <div className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
+          {/* Close button */}
+          <button
+            onClick={() => setGalleryImages([])}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 p-2 rounded-full bg-black/40 hover:bg-black/60 transition cursor-pointer"
+            aria-label="Close gallery"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Main Image Slider Area */}
+          <div className="relative w-full max-w-2xl aspect-square md:aspect-video flex items-center justify-center">
+            {galleryImages.length > 1 && (
+              <button
+                onClick={() => setActiveGalleryIndex(prev => (prev - 1 + galleryImages.length) % galleryImages.length)}
+                className="absolute left-2 md:left-4 z-10 text-white p-3 rounded-full bg-black/40 hover:bg-black/60 hover:text-gray-300 transition cursor-pointer select-none"
+                aria-label="Previous image"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
+
+            <img
+              src={galleryImages[activeGalleryIndex]}
+              alt={`Gallery image ${activeGalleryIndex + 1}`}
+              className="max-h-[75vh] max-w-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
+            />
+
+            {galleryImages.length > 1 && (
+              <button
+                onClick={() => setActiveGalleryIndex(prev => (prev + 1) % galleryImages.length)}
+                className="absolute right-2 md:right-4 z-10 text-white p-3 rounded-full bg-black/40 hover:bg-black/60 hover:text-gray-300 transition cursor-pointer select-none"
+                aria-label="Next image"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Dots Indicator */}
+          {galleryImages.length > 1 && (
+            <div className="mt-4 flex space-x-2">
+              {galleryImages.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveGalleryIndex(idx)}
+                  className={`h-2 w-2 rounded-full transition-all duration-200 ${idx === activeGalleryIndex ? 'bg-white w-4' : 'bg-white/40'
+                    }`}
+                  aria-label={`Go to slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Image Count Indicator */}
+          <div className="mt-2 text-white/60 text-xs font-semibold">
+            {activeGalleryIndex + 1} / {galleryImages.length}
+          </div>
+        </div>
       )}
     </div>
   );

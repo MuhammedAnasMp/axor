@@ -60,8 +60,10 @@ export default function Sidebar() {
       ),
       subItems: [
         { title: 'Product List', path: '/erp/products' },
+        { title: 'Cost History', path: '/erp/products?tab=cost-history' },
         { title: 'Categories', path: '/erp/products?tab=categories' },
-        { title: 'Brands', path: '/erp/products?tab=brands' }
+        { title: 'Brands', path: '/erp/products?tab=brands' },
+        { title: 'Mobile Models', path: '/erp/products?tab=model' }
       ]
     },
     {
@@ -87,7 +89,11 @@ export default function Sidebar() {
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
-      )
+      ),
+      subItems: [
+        { title: 'Directory', path: '/erp/suppliers' },
+        { title: 'Mappings', path: '/erp/suppliers?tab=mappings' }
+      ]
     },
     {
       id: 5,
@@ -130,7 +136,7 @@ export default function Sidebar() {
     },
     {
       id: 8,
-      title: 'Expense & Income',
+      title: 'Income & Expense',
       path: '/erp/expenses',
       icon: (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -138,10 +144,8 @@ export default function Sidebar() {
         </svg>
       ),
       subItems: [
-        { title: 'Add Expense', path: '/erp/expenses' },
-        { title: 'Expense History', path: '/erp/expenses?tab=history' },
-        { title: 'Add Income', path: '/erp/expenses?tab=income' },
-        { title: 'Income History', path: '/erp/expenses?tab=income-history' }
+        { title: 'Incomes', path: '/erp/expenses?tab=income-history' },
+        { title: 'Expenses', path: '/erp/expenses?tab=history' }
       ]
     },
     {
@@ -225,11 +229,234 @@ export default function Sidebar() {
     if (path.startsWith('/erp/customers')) return 'Customers Ledger';
     if (path.startsWith('/erp/purchases')) return 'Purchase Orders';
     if (path.startsWith('/erp/accounts')) return 'Cash & Bank';
-    if (path.startsWith('/erp/expenses')) return 'Expense & Income';
+    if (path.startsWith('/erp/expenses')) return 'Income & Expense';
     if (path.startsWith('/erp/employees')) return 'Employee Directory';
     if (path.startsWith('/erp/reports')) return 'Visual Reports';
     if (path.startsWith('/erp/sales')) return 'Sales Billing';
     return 'Axon Console';
+  };
+
+
+
+  const getSubItemIcon = (title) => {
+    if (title.includes('List') || title.includes('Directory') || title.includes('Current')) {
+      return (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+        </svg>
+      );
+    }
+    if (title.includes('Categories') || title.includes('Mappings') || title.includes('Transfers')) {
+      return (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        </svg>
+      );
+    }
+    if (title.includes('Brands') || title.includes('Payments') || title.includes('Receive')) {
+      return (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M6 20h12a2 2 0 002-2V9a2 2 0 00-2-2h-1a2 2 0 00-2-2H9a2 2 0 00-2 2H6a2 2 0 00-2 2v9a2 2 0 002 2z" />
+        </svg>
+      );
+    }
+    if (title === 'Incomes') {
+      return (
+        <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+      );
+    }
+    if (title === 'Expenses') {
+      return (
+        <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+        </svg>
+      );
+    }
+    if (title.includes('History') || title.includes('Log')) {
+      return (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+    }
+    if (title.includes('Damaged') || title.includes('Expense')) {
+      return (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      );
+    }
+    if (title.includes('Models')) {
+      return (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+      );
+    }
+    if (title.includes('Invoice') || title.includes('Create') || title.includes('Add')) {
+      return (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+      );
+    }
+    if (title === 'Customers') {
+      return (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      );
+    }
+    if (title === 'Employees') {
+      return (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      );
+    }
+    if (title.includes('Reports')) {
+      return (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h2a2 2 0 002-2zm12 0a2 2 0 002-2V6a2 2 0 00-2-2h-2a2 2 0 00-2 2v13a2 2 0 002 2h2zm-4 0V4a2 2 0 00-2-2h-2a2 2 0 00-2 2v15a2 2 0 002 2h2a2 2 0 002-2z" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg>
+    );
+  };
+
+  const renderMobileBottomNav = () => {
+    const isDashboard = location.pathname === '/erp' || location.pathname === '/erp/';
+    
+    if (isDashboard) {
+      return (
+        <div className="flex justify-around items-center h-16">
+          <Link 
+            to="/erp"
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+              location.pathname === '/erp' || location.pathname === '/erp/' ? 'text-brand-blue' : 'text-text-secondary'
+            }`}
+          >
+            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
+              location.pathname === '/erp' || location.pathname === '/erp/' ? 'bg-accent-blue/15' : 'bg-transparent'
+            }`}>
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </div>
+            <span className="text-[9px] font-bold tracking-tight">Home</span>
+          </Link>
+
+          <Link 
+            to="/erp/products"
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+              location.pathname.startsWith('/erp/products') ? 'text-brand-blue' : 'text-text-secondary'
+            }`}
+          >
+            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
+              location.pathname.startsWith('/erp/products') ? 'bg-accent-blue/15' : 'bg-transparent'
+            }`}>
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <span className="text-[9px] font-bold tracking-tight">Products</span>
+          </Link>
+
+          <Link 
+            to="/pos"
+            className="flex flex-col items-center justify-center flex-1 py-1 text-tertiary"
+          >
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-tertiary-container/10 text-tertiary hover:bg-tertiary-container/20 transition-colors shadow-sm">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <span className="text-[9px] font-bold tracking-tight mt-0.5">POS</span>
+          </Link>
+
+          <Link 
+            to="/erp/sales"
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+              location.pathname.startsWith('/erp/sales') ? 'text-brand-blue' : 'text-text-secondary'
+            }`}
+          >
+            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
+              location.pathname.startsWith('/erp/sales') ? 'bg-accent-blue/15' : 'bg-transparent'
+            }`}>
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+              </svg>
+            </div>
+            <span className="text-[9px] font-bold tracking-tight">Sales</span>
+          </Link>
+
+          <button 
+            onClick={() => setDrawerOpen(true)}
+            className="flex flex-col items-center justify-center flex-1 py-1 text-text-secondary cursor-pointer"
+          >
+            <div className="flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 bg-transparent">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+              </svg>
+            </div>
+            <span className="text-[9px] font-bold tracking-tight">More</span>
+          </button>
+        </div>
+      );
+    }
+
+    const activeItem = navItems.find(item => item.path !== '/erp' && location.pathname.startsWith(item.path));
+    const itemsToShow = activeItem?.subItems || (activeItem ? [{ title: activeItem.title, path: activeItem.path }] : []);
+    const isEmployeesPage = location.pathname.startsWith('/erp/employees');
+
+    return (
+      <div className="flex justify-around items-center h-16">
+
+        {itemsToShow.map((sub, idx) => {
+          const isSubActive = location.pathname + location.search === sub.path || 
+                              (sub.path.includes('?') && (location.pathname + location.search).startsWith(sub.path)) ||
+                              (!sub.path.includes('?') && location.pathname === sub.path && !location.search);
+          return (
+            <Link 
+              key={idx}
+              to={sub.path}
+              className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+                isSubActive ? 'text-brand-blue' : 'text-text-secondary'
+              }`}
+            >
+              <div className={`flex items-center justify-center rounded-2xl px-3 py-1 mb-0.5 transition-colors ${
+                isSubActive ? 'bg-accent-blue/15' : 'bg-transparent'
+              }`}>
+                {getSubItemIcon(sub.title)}
+              </div>
+              <span className="text-[9px] font-bold tracking-tight text-center max-w-[65px] truncate">
+                {sub.title.replace('Product ', '').replace('Purchase ', '').replace('Expense ', '').replace('Income ', '')}
+              </span>
+            </Link>
+          );
+        })}
+
+        {!isEmployeesPage && (
+          <button 
+            onClick={() => setDrawerOpen(true)}
+            className="flex flex-col items-center justify-center flex-1 py-1 text-text-secondary cursor-pointer"
+          >
+            <div className="flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 bg-transparent">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+              </svg>
+            </div>
+            <span className="text-[9px] font-bold tracking-tight">More</span>
+          </button>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -359,7 +586,7 @@ export default function Sidebar() {
             className="flex w-full items-center space-x-3 rounded px-3 py-2 text-sm font-medium text-error hover:bg-error/10 transition cursor-pointer"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
             {!collapsed && <span>Logout</span>}
           </button>
@@ -403,89 +630,14 @@ export default function Sidebar() {
       {/* ========================================================================= */}
       {/* 3. MOBILE BOTTOM NAVIGATION BAR                                           */}
       {/* ========================================================================= */}
-      <nav 
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-surface-low safe-pb"
-        style={{ boxShadow: '0px -2px 10px rgba(0,0,0,0.06)' }}
-      >
-        <div className="flex justify-around items-center h-16">
-          {/* Dashboard Tab */}
-          <Link 
-            to="/erp"
-            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-              location.pathname === '/erp' ? 'text-brand-blue' : 'text-text-secondary'
-            }`}
-          >
-            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
-              location.pathname === '/erp' ? 'bg-accent-blue/15' : 'bg-transparent'
-            }`}>
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-            </div>
-            <span className="text-[9px] font-bold tracking-tight">Home</span>
-          </Link>
-
-          {/* Products Tab */}
-          <Link 
-            to="/erp/products"
-            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-              location.pathname.startsWith('/erp/products') ? 'text-brand-blue' : 'text-text-secondary'
-            }`}
-          >
-            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
-              location.pathname.startsWith('/erp/products') ? 'bg-accent-blue/15' : 'bg-transparent'
-            }`}>
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-            </div>
-            <span className="text-[9px] font-bold tracking-tight">Products</span>
-          </Link>
-
-          {/* POS Tab (Signature Action Button in center) */}
-          <Link 
-            to="/pos"
-            className="flex flex-col items-center justify-center flex-1 py-1 text-tertiary"
-          >
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-tertiary-container/10 text-tertiary hover:bg-tertiary-container/20 transition-colors shadow-sm">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <span className="text-[9px] font-bold tracking-tight mt-0.5">POS</span>
-          </Link>
-
-          {/* Sales/Billing Tab */}
-          <Link 
-            to="/erp/sales"
-            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-              location.pathname.startsWith('/erp/sales') ? 'text-brand-blue' : 'text-text-secondary'
-            }`}
-          >
-            <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${
-              location.pathname.startsWith('/erp/sales') ? 'bg-accent-blue/15' : 'bg-transparent'
-            }`}>
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
-              </svg>
-            </div>
-            <span className="text-[9px] font-bold tracking-tight">Sales</span>
-          </Link>
-
-          {/* Menu Toggle Tab */}
-          <button 
-            onClick={() => setDrawerOpen(true)}
-            className="flex flex-col items-center justify-center flex-1 py-1 text-text-secondary cursor-pointer"
-          >
-            <div className="flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 bg-transparent">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-              </svg>
-            </div>
-            <span className="text-[9px] font-bold tracking-tight">More</span>
-          </button>
-        </div>
-      </nav>
+      {!location.pathname.startsWith('/erp/employees') && (
+        <nav 
+          className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-surface-low safe-pb"
+          style={{ boxShadow: '0px -2px 10px rgba(0,0,0,0.06)' }}
+        >
+          {renderMobileBottomNav()}
+        </nav>
+      )}
 
       {/* ========================================================================= */}
       {/* 4. MOBILE SLIDING DRAWER                                                 */}
@@ -539,31 +691,54 @@ export default function Sidebar() {
 
                   return (
                     <div key={item.id}>
-                      <button
-                        onClick={() => handleTabClick(item, true)}
-                        className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold transition cursor-pointer ${
+                      <div
+                        className={`flex w-full items-center justify-between rounded-xl transition ${
                           active 
                             ? 'bg-accent-blue/15 text-brand-blue' 
                             : 'text-text-secondary hover:bg-surface-low active:bg-surface-low'
                         }`}
                       >
-                        <div className="flex items-center space-x-3.5">
+                        <button
+                          onClick={() => {
+                            setDrawerOpen(false);
+                            if (hasSub && item.subItems.length > 0) {
+                              const firstSub = item.subItems[0];
+                              if (firstSub.isExternal) {
+                                window.open(firstSub.path, '_blank', 'noopener,noreferrer');
+                              } else {
+                                navigate(firstSub.path);
+                              }
+                            } else {
+                              navigate(item.path);
+                            }
+                          }}
+                          className="flex flex-1 items-center space-x-3.5 px-4 py-3 text-sm font-semibold transition cursor-pointer text-left"
+                        >
                           <span className={active ? 'text-brand-blue' : 'text-text-secondary'}>
                             {item.icon}
                           </span>
                           <span>{item.title}</span>
-                        </div>
+                        </button>
                         {hasSub && (
-                          <svg 
-                            className={`h-4 w-4 transform transition-transform ${open ? 'rotate-180' : ''}`}
-                            fill="none" 
-                            viewBox="0 0 24 24" 
-                            stroke="currentColor"
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenTab(openTab === item.id ? null : item.id);
+                            }}
+                            className="p-3 hover:bg-black/5 active:bg-black/10 rounded-r-xl transition cursor-pointer"
+                            aria-label={`Toggle ${item.title} sub-menu`}
                           >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
+                            <svg 
+                              className={`h-4 w-4 transform transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                              fill="none" 
+                              viewBox="0 0 24 24" 
+                              stroke="currentColor"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
                         )}
-                      </button>
+                      </div>
 
                       {/* Accordion sub-items (mobile) */}
                       {hasSub && open && (

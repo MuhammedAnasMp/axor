@@ -18,7 +18,7 @@ from .models import (
     ExpenseCategory, Expense, Purchase, PurchaseItem, SupplierPayment,
     Sale, SaleItem, CustomerPayment, SupplierProduct, SupplierCostHistory,
     EmployeeSalaryPayment, EmployeeAdvance, EmployeeAttendance, EmployeePayrollAuditTrail,
-    PurchaseReturn, PurchaseReturnItem
+    PurchaseReturn, PurchaseReturnItem, MobileModel
 )
 from .serializers import (
     EmployeeSerializer, CategorySerializer, BrandSerializer, ProductSerializer,
@@ -27,7 +27,8 @@ from .serializers import (
     ExpenseCategorySerializer, ExpenseSerializer, PurchaseSerializer, PurchaseItemSerializer,
     SupplierPaymentSerializer, SaleSerializer, SaleItemSerializer, CustomerPaymentSerializer,
     UserSerializer, SupplierProductSerializer, SupplierCostHistorySerializer,
-    EmployeeSalaryPaymentSerializer, EmployeeAdvanceSerializer, EmployeeAttendanceSerializer, EmployeePayrollAuditTrailSerializer
+    EmployeeSalaryPaymentSerializer, EmployeeAdvanceSerializer, EmployeeAttendanceSerializer, EmployeePayrollAuditTrailSerializer,
+    MobileModelSerializer
 )
 
 from rest_framework import filters
@@ -136,6 +137,14 @@ class BrandViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
     ordering_fields = ['id', 'name']
+
+class MobileModelViewSet(viewsets.ModelViewSet):
+    queryset = MobileModel.objects.all().select_related('brand').order_by('brand__name', 'model_name')
+    serializer_class = MobileModelSerializer
+    pagination_class = OptionalPageNumberPagination
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['model_name', 'brand__name']
+    ordering_fields = ['id', 'brand__name', 'model_name']
 
 class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer

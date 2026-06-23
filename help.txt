@@ -1,16 +1,16 @@
-npm run build
+# Axon CLI Tools Help
 
+## Web & OTA Updates (from frontend folder)
+npm run build-ui          - Build frontend ZIP + register in databases (local/prod) in testing mode
+npm run build-ui push     - Build ZIP + register + git commit + push to GitHub
+npm run build-ui publish  - Approve current testing version to all users
+npm run build-ui remove   - Remove current testing OTA version
 
-npx cap sync
+## Build Standalone Applications (from frontend folder)
+npm run aapk / apk        - Compile Android debug APK (.apk)
+npm run exe               - Compile Windows desktop application (.exe)
+npm run both              - Compile both Android APK and Windows EXE
 
-.\gradlew.bat assembleDebug
-
-
-npm run build-ui
-
-
-
-npm run build-ui - just build ZIP + update DB (no git push)
-npm run build-ui push - build + update DB + git commit + push to GitHub
-npm run build-ui publish - publish current testing version to all users (approve)
-npm run build-ui remove - remove the OTA testing version
+## Local Development (from frontend folder)
+npm run dev               - Run Vite local development server
+npm run electron:start    - Run Electron app shell locally (pointing to dev server or dist)

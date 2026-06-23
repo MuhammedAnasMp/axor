@@ -108,7 +108,8 @@ export default function POS() {
         selling_price: parseFloat(product.selling_price), // actual default selling price
         original_price: parseFloat(product.selling_price), // track default recommended price
         quantity: 1,
-        stock_qty: product.stock_qty
+        stock_qty: product.stock_qty,
+        suitable_models_details: product.suitable_models_details
       }]);
     }
   };
@@ -308,10 +309,14 @@ export default function POS() {
     </div>
   );
 
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.barcode.includes(searchQuery)
-  );
+  const filteredProducts = products.filter(p => {
+    const nameMatch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const barcodeMatch = p.barcode.includes(searchQuery);
+    const tagsMatch = p.suitable_models_details?.some(m => 
+      `${m.brand_name} ${m.model_name}`.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    return nameMatch || barcodeMatch || tagsMatch;
+  });
 
   return (
     <div className="flex flex-col h-screen bg-surface md:flex-row overflow-hidden text-text-primary">
@@ -383,6 +388,15 @@ export default function POS() {
                 <div className="flex-1 min-w-0 flex flex-col justify-between sm:w-full">
                   <div className="flex flex-col sm:block">
                     <span className="text-xs font-semibold text-text-primary line-clamp-1 sm:line-clamp-2 leading-tight">{p.name}</span>
+                    {p.suitable_models_details && p.suitable_models_details.length > 0 && (
+                      <div className="flex flex-wrap gap-0.5 mt-1">
+                        {p.suitable_models_details.map(m => (
+                          <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
+                            {m.brand_name} {m.model_name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <span className="text-[9px] sm:text-[10px] text-text-secondary font-mono mt-0.5 block">{p.barcode}</span>
                   </div>
                   <div className="flex items-center justify-between mt-1 sm:mt-2 pt-1 border-t border-surface-low sm:w-full">
@@ -417,6 +431,15 @@ export default function POS() {
             <div key={idx} className="p-3 flex items-center justify-between hover:bg-surface-bright">
               <div className="flex-1 pr-3">
                 <span className="text-xs font-semibold text-text-primary line-clamp-1">{item.name}</span>
+                {item.suitable_models_details && item.suitable_models_details.length > 0 && (
+                  <div className="flex flex-wrap gap-0.5 mt-0.5">
+                    {item.suitable_models_details.map(m => (
+                      <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
+                        {m.brand_name} {m.model_name}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 {/* Price display with tap override trigger */}
                 <button
                   onClick={() => openOverridePrice(idx)}

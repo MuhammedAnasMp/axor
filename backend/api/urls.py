@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    AuthViewSet, EmployeeViewSet, CategoryViewSet, BrandViewSet, ProductViewSet, StockViewSet, StockHistoryViewSet,
+    AuthViewSet, EmployeeViewSet, CategoryViewSet, BrandViewSet, MobileModelViewSet, ProductViewSet, StockViewSet, StockHistoryViewSet,
     SupplierViewSet, CustomerViewSet, BankAccountViewSet, MoneyTransferViewSet, IncomeViewSet,
     ExpenseCategoryViewSet, ExpenseViewSet, PurchaseViewSet, SupplierPaymentViewSet, SaleViewSet,
     CustomerPaymentViewSet, SupplierProductViewSet, SupplierCostHistoryViewSet, dashboard_metrics, reports_data,
@@ -13,6 +13,7 @@ router.register(r'auth', AuthViewSet, basename='auth')
 router.register(r'employees', EmployeeViewSet, basename='employee')
 router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'brands', BrandViewSet, basename='brand')
+router.register(r'mobile-models', MobileModelViewSet, basename='mobilemodel')
 router.register(r'products', ProductViewSet, basename='product')
 router.register(r'stocks', StockViewSet, basename='stock')
 router.register(r'stock-history', StockHistoryViewSet, basename='stockhistory')

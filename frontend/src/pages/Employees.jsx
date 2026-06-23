@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
 import { SkeletonTable, Spinner, SkeletonForm, SkeletonText } from '../components/Skeleton';
+import FloatingActionButton from '../components/FloatingActionButton';
+import MobileBottomSheet from '../components/MobileBottomSheet';
 
 export default function Employees() {
+  const fileInputRef = useRef(null);
   // Unpaginated full list state for Leaderboard
   const [allEmployees, setAllEmployees] = useState([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
@@ -23,6 +27,16 @@ export default function Employees() {
   const [role, setRole] = useState('Cashier');
 
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showMobileReg, setShowMobileReg] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [activeActionForm, setActiveActionForm] = useState(null); // 'payroll', 'advance', null
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingAdvance, setIsSavingAdvance] = useState(false);
   const [isSavingPayroll, setIsSavingPayroll] = useState(false);
@@ -35,7 +49,16 @@ export default function Employees() {
   const [bankAccounts, setBankAccounts] = useState([]);
 
   // Detail view navigation tab state
-  const [activeTab, setActiveTab] = useState('Profile'); // Profile, Attendance, Advances, Payroll
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'Profile';
+  const setActiveTab = (tabId) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tabId);
+      return next;
+    });
+  };
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // Profile Edit states
   const [profileFirstName, setProfileFirstName] = useState('');
@@ -75,6 +98,8 @@ export default function Employees() {
   // Audit trail state
   const [auditTrail, setAuditTrail] = useState([]);
   const [viewingAuditPayrollId, setViewingAuditPayrollId] = useState(null);
+  const [selectedAdvanceDetails, setSelectedAdvanceDetails] = useState(null);
+  const [selectedPayrollDetails, setSelectedPayrollDetails] = useState(null);
 
   const loadLeaderboard = () => {
     setLeaderboardLoading(true);
@@ -138,7 +163,10 @@ export default function Employees() {
     setAdvanceDescription('');
     setEditingPayroll(null);
     setViewingAuditPayrollId(null);
+    setSelectedAdvanceDetails(null);
+    setSelectedPayrollDetails(null);
     setActiveTab('Profile');
+    setIsEditingProfile(false);
     loadSummary(emp.id);
   };
 
@@ -246,6 +274,7 @@ export default function Employees() {
     })
       .then(() => {
         setShowRegForm(false);
+        setShowMobileReg(false);
         setUsername('');
         setPassword('');
         setEmail('');
@@ -321,6 +350,7 @@ export default function Employees() {
         loadSummary(selectedEmployee.id);
         loadBankAccounts();
         setIsSavingAdvance(false);
+        setActiveActionForm(null);
       })
       .catch((err) => {
         alert(err.message);
@@ -457,7 +487,7 @@ export default function Employees() {
           e.stopPropagation();
           pag.handleSort(field);
         }}
-        className="px-4 py-2 cursor-pointer hover:bg-surface-low select-none transition-colors"
+        className="px-4 py-4 cursor-pointer hover:bg-surface-low select-none transition-colors"
       >
         <div className="flex items-center space-x-1">
           <span>{label}</span>
@@ -571,59 +601,77 @@ export default function Employees() {
     const calculatedNetPay = Math.max(0, basicSal + allowanceVal - totalDeducted);
 
     return (
-      <div className="space-y-6">
-        {/* Back and Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center space-x-4">
+      <div className="space-y-6 pb-20 md:pb-0">
+
+        {isMobile && (
+          <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-surface-low shadow-sm">
             <button
-              onClick={() => setSelectedEmployee(null)}
-              className="flex items-center space-x-2 rounded border border-surface-dim bg-white px-3 py-1.5 text-xs text-text-primary hover:bg-surface-low transition"
+              onClick={() => {
+                setSelectedEmployee(null);
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev);
+                  next.delete('tab');
+                  return next;
+                });
+              }}
+              className="flex items-center space-x-1.5 text-xs font-bold text-text-secondary hover:text-text-primary transition"
             >
-              <span>←</span>
-              <span>Back to Directory</span>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span>Back</span>
             </button>
-            <div className="flex items-center space-x-3">
-              {selectedEmployee.image_url ? (
-                <img
-                  src={selectedEmployee.image_url}
-                  alt={`${selectedEmployee.user?.first_name} ${selectedEmployee.user?.last_name}`}
-                  className="h-12 w-12 rounded-full object-cover border-2 border-brand-blue"
-                />
-              ) : (
-                <div className="h-12 w-12 rounded-full bg-brand-blue/10 border-2 border-brand-blue flex items-center justify-center font-bold text-brand-blue text-sm uppercase">
-                  {(selectedEmployee.user?.first_name?.[0] || '') + (selectedEmployee.user?.last_name?.[0] || '') || selectedEmployee.user?.username?.[0] || '?'}
-                </div>
-              )}
-              <div>
-                <h2 className="text-xl font-bold tracking-tight text-text-primary">
-                  {selectedEmployee.user?.first_name} {selectedEmployee.user?.last_name} ({selectedEmployee.user?.username})
-                </h2>
-                <p className="text-xs text-text-secondary">Manage profile details, attendance log, advances, and process payroll.</p>
-              </div>
+            <div className="text-[10px] text-text-secondary">
+              Employee: <span className="font-bold text-brand-blue">@{selectedEmployee.user?.username}</span>
             </div>
           </div>
-          {/* <div className="flex items-center space-x-2">
-            <span className="rounded-full bg-surface-low border border-surface-dim px-3 py-1 text-xs font-bold text-text-primary">
-              {selectedEmployee.role}
-            </span>
-          </div> */}
-        </div>
+        )}
 
-        {/* Sub Navigation Tabs */}
-        <div className="flex border-b border-surface-low text-sm font-medium">
-          {['Profile', 'Attendance', 'Payroll'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 border-b-2 transition ${activeTab === tab
-                  ? 'border-brand-blue text-brand-blue font-semibold'
-                  : 'border-transparent text-text-secondary hover:text-text-primary'
-                }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+        {!isMobile && (
+          <div className="flex items-center justify-between border-b border-surface-low pb-2 bg-white p-4 rounded-lg shadow-sm">
+            <div className="flex items-center space-x-6 text-sm font-medium">
+              <button
+                onClick={() => {
+                  setSelectedEmployee(null);
+                  setSearchParams((prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.delete('tab');
+                    return next;
+                  });
+                }}
+                className="flex items-center space-x-1 text-text-secondary hover:text-text-primary transition"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span>Back</span>
+              </button>
+              <span className="text-surface-dim">|</span>
+              {[
+                { id: 'Profile', label: 'Profile' },
+                { id: 'Attendance', label: 'Attendance' },
+                { id: 'Advances', label: 'Advances' },
+                { id: 'Payroll', label: 'Payroll' }
+              ].map((tab) => {
+                const active = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`pb-2 transition-all ${active ? 'border-b-2 border-brand-blue text-brand-blue font-bold' : 'text-text-secondary hover:text-text-primary'
+                      }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="text-xs text-text-secondary">
+              Selected Employee: <span className="font-bold text-brand-blue">@{selectedEmployee.user?.username}</span>
+            </div>
+          </div>
+        )}
 
         {summaryLoading ? (
           <div className="space-y-6">
@@ -644,130 +692,190 @@ export default function Employees() {
                 <div className="space-y-6">
                   {/* Salary Settings and Financial Totals grid */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <form onSubmit={handleSaveProfile} className="md:col-span-2 rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-6">
-                      <h3 className="text-sm font-semibold text-text-primary border-b border-surface-low pb-2">Profile & Salary Settings</h3>
-                      <div className="flex flex-col sm:flex-row gap-6">
-                        <div className="flex flex-col items-center space-y-2">
-                          <span className="block text-xs font-semibold text-text-secondary">Profile Image</span>
+                    <form onSubmit={(e) => { handleSaveProfile(e); setIsEditingProfile(false); }} className="md:col-span-2 rounded-lg bg-white p-4 sm:p-6 shadow-sm border border-surface-low space-y-4 sm:space-y-6">
+                      {/* Profile header with Edit button */}
+                      <div className="flex flex-col items-center justify-center space-y-3 pb-6 border-b border-surface-low relative">
+                        {/* Edit / Cancel button top-right */}
+                        {!isEditingProfile ? (
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingProfile(true)}
+                            className="absolute top-0 right-0 flex items-center space-x-1 rounded-lg border border-brand-blue/30 bg-brand-blue/5 px-3 py-1.5 text-[11px] font-semibold text-brand-blue hover:bg-brand-blue/10 transition"
+                          >
+                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                            <span>Edit</span>
+                          </button>
+                        ) : (
+                          <div className="absolute top-0 right-0 flex items-center space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsEditingProfile(false);
+                                // Reset to original values
+                                setProfileFirstName(selectedEmployee.user?.first_name || '');
+                                setProfileLastName(selectedEmployee.user?.last_name || '');
+                                setProfileUsername(selectedEmployee.user?.username || '');
+                                setProfilePassword('');
+                                setProfileEmail(selectedEmployee.user?.email || '');
+                                setProfilePhone(selectedEmployee.phone || '');
+                                setProfileRole(selectedEmployee.role || 'Cashier');
+                                setProfileImageUrl(selectedEmployee.image_url || '');
+                                setBasicSalaryInput(selectedEmployee.basic_salary);
+                              }}
+                              className="rounded-lg border border-surface-dim bg-white px-3 py-1.5 text-[11px] font-semibold text-text-secondary hover:bg-surface-low transition"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+
+                        <div
+                          onClick={() => isEditingProfile && fileInputRef.current?.click()}
+                          className={`relative h-24 w-24 rounded-full transition-all group ${isEditingProfile ? 'cursor-pointer hover:opacity-90 active:scale-95' : 'cursor-default'}`}
+                          title={isEditingProfile ? 'Click to upload profile photo' : ''}
+                        >
                           {profileImageUrl ? (
                             <img
                               src={profileImageUrl}
                               alt="Profile Preview"
-                              className="h-24 w-24 rounded-full object-cover border-2 border-brand-blue"
+                              className="h-full w-full rounded-full object-cover border-2 border-brand-blue"
                               onError={(e) => {
                                 e.target.src = 'https://via.placeholder.com/150?text=No+Image';
                               }}
                             />
                           ) : (
-                            <div className="h-24 w-24 rounded-full bg-brand-blue/10 border-2 border-brand-blue/20 flex items-center justify-center font-bold text-brand-blue text-2xl uppercase">
+                            <div className="h-full w-full rounded-full bg-brand-blue/10 border-2 border-brand-blue/20 flex items-center justify-center font-bold text-brand-blue text-2xl uppercase">
                               {(profileFirstName?.[0] || '') + (profileLastName?.[0] || '') || profileUsername?.[0] || '?'}
                             </div>
                           )}
-                        </div>
-                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-xs font-semibold text-text-secondary mb-1">First Name</label>
-                            <input
-                              type="text"
-                              value={profileFirstName}
-                              onChange={(e) => setProfileFirstName(e.target.value)}
-                              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-text-secondary mb-1">Last Name</label>
-                            <input
-                              type="text"
-                              value={profileLastName}
-                              onChange={(e) => setProfileLastName(e.target.value)}
-                              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-text-secondary mb-1">Username</label>
-                            <input
-                              type="text"
-                              required
-                              value={profileUsername}
-                              onChange={(e) => setProfileUsername(e.target.value.toLowerCase())}
-                              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-text-secondary mb-1">Password (Leave blank to keep current)</label>
-                            <input
-                              type="password"
-                              value={profilePassword}
-                              onChange={(e) => setProfilePassword(e.target.value)}
-                              placeholder="••••••••"
-                              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-text-secondary mb-1">Email</label>
-                            <input
-                              type="email"
-                              value={profileEmail}
-                              onChange={(e) => setProfileEmail(e.target.value)}
-                              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-text-secondary mb-1">Phone Number</label>
-                            <input
-                              type="text"
-                              value={profilePhone}
-                              onChange={(e) => setProfilePhone(e.target.value)}
-                              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-text-secondary mb-1">Role</label>
-                            <select
-                              value={profileRole}
-                              onChange={(e) => setProfileRole(e.target.value)}
-                              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
-                            >
-                              <option value="Owner">Owner</option>
-                              <option value="Manager">Manager</option>
-                              <option value="Cashier">Cashier</option>
-                              <option value="Store Keeper">Store Keeper</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-text-secondary mb-1">Basic Salary Amount</label>
-                            <input
-                              type="number"
-                              value={basicSalaryInput}
-                              onChange={(e) => setBasicSalaryInput(e.target.value)}
-                              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
-                            />
-                          </div>
-                          <div className="sm:col-span-2">
-                            <label className="block text-xs font-semibold text-text-secondary mb-1">Profile Image</label>
-                            <div className="flex items-center space-x-3 border border-surface-dim rounded bg-surface-low px-3 py-2 w-fit">
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleProfileImageChange}
-                                className="text-xs text-text-secondary file:py-1 file:px-3 file:rounded file:border-0 file:bg-brand-blue/10 file:text-brand-blue file:text-xs cursor-pointer"
-                              />
-                              {profileUploading && <span className="text-[10px] text-text-secondary animate-pulse">Uploading...</span>}
-                              {profileImageUrl && !profileUploading && <span className="text-[10px] text-green-600 font-semibold">✓ Uploaded</span>}
+                          {/* Upload overlay hover indicator - only in edit mode */}
+                          {isEditingProfile && (
+                            <div className="absolute inset-0 bg-black/35 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
                             </div>
-                          </div>
+                          )}
+                          {profileUploading && (
+                            <div className="absolute inset-0 bg-black/60 rounded-full flex flex-col items-center justify-center text-white text-[9px] font-semibold">
+                              <Spinner size="xs" />
+                              <span className="mt-1">Uploading...</span>
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          accept="image/*"
+                          onChange={handleProfileImageChange}
+                          className="hidden"
+                        />
+                        {profileImageUrl && !profileUploading && <span className="text-[10px] text-green-600 font-semibold">✓ Image Uploaded</span>}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                        <div>
+                          <label className="block text-[10px] sm:text-xs font-semibold text-text-secondary mb-0.5 sm:mb-1">First Name</label>
+                          <input
+                            type="text"
+                            value={profileFirstName}
+                            onChange={(e) => setProfileFirstName(e.target.value)}
+                            disabled={!isEditingProfile}
+                            className={`w-full rounded border px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs outline-none transition ${isEditingProfile ? 'border-surface-dim bg-white focus:border-brand-blue' : 'border-transparent bg-surface text-text-secondary cursor-default'}`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] sm:text-xs font-semibold text-text-secondary mb-0.5 sm:mb-1">Last Name</label>
+                          <input
+                            type="text"
+                            value={profileLastName}
+                            onChange={(e) => setProfileLastName(e.target.value)}
+                            disabled={!isEditingProfile}
+                            className={`w-full rounded border px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs outline-none transition ${isEditingProfile ? 'border-surface-dim bg-white focus:border-brand-blue' : 'border-transparent bg-surface text-text-secondary cursor-default'}`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] sm:text-xs font-semibold text-text-secondary mb-0.5 sm:mb-1">Username</label>
+                          <input
+                            type="text"
+                            required
+                            value={profileUsername}
+                            onChange={(e) => setProfileUsername(e.target.value.toLowerCase())}
+                            disabled={!isEditingProfile}
+                            className={`w-full rounded border px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs outline-none transition ${isEditingProfile ? 'border-surface-dim bg-white focus:border-brand-blue' : 'border-transparent bg-surface text-text-secondary cursor-default'}`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] sm:text-xs font-semibold text-text-secondary mb-0.5 sm:mb-1">Password {!isEditingProfile && '(hidden)'}</label>
+                          <input
+                            type="password"
+                            value={isEditingProfile ? profilePassword : '••••••••'}
+                            onChange={(e) => setProfilePassword(e.target.value)}
+                            placeholder="Leave blank to keep current"
+                            disabled={!isEditingProfile}
+                            className={`w-full rounded border px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs outline-none transition ${isEditingProfile ? 'border-surface-dim bg-white focus:border-brand-blue' : 'border-transparent bg-surface text-text-secondary cursor-default'}`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] sm:text-xs font-semibold text-text-secondary mb-0.5 sm:mb-1">Email</label>
+                          <input
+                            type="email"
+                            value={profileEmail}
+                            onChange={(e) => setProfileEmail(e.target.value)}
+                            disabled={!isEditingProfile}
+                            className={`w-full rounded border px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs outline-none transition ${isEditingProfile ? 'border-surface-dim bg-white focus:border-brand-blue' : 'border-transparent bg-surface text-text-secondary cursor-default'}`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] sm:text-xs font-semibold text-text-secondary mb-0.5 sm:mb-1">Phone</label>
+                          <input
+                            type="text"
+                            value={profilePhone}
+                            onChange={(e) => setProfilePhone(e.target.value)}
+                            disabled={!isEditingProfile}
+                            className={`w-full rounded border px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs outline-none transition ${isEditingProfile ? 'border-surface-dim bg-white focus:border-brand-blue' : 'border-transparent bg-surface text-text-secondary cursor-default'}`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] sm:text-xs font-semibold text-text-secondary mb-0.5 sm:mb-1">Role</label>
+                          <select
+                            value={profileRole}
+                            onChange={(e) => setProfileRole(e.target.value)}
+                            disabled={!isEditingProfile}
+                            className={`w-full rounded border px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs outline-none transition ${isEditingProfile ? 'border-surface-dim bg-white focus:border-brand-blue' : 'border-transparent bg-surface text-text-secondary cursor-default'}`}
+                          >
+                            <option value="Owner">Owner</option>
+                            <option value="Manager">Manager</option>
+                            <option value="Cashier">Cashier</option>
+                            <option value="Store Keeper">Store Keeper</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] sm:text-xs font-semibold text-text-secondary mb-0.5 sm:mb-1">Basic Salary</label>
+                          <input
+                            type="number"
+                            value={basicSalaryInput}
+                            onChange={(e) => setBasicSalaryInput(e.target.value)}
+                            disabled={!isEditingProfile}
+                            className={`w-full rounded border px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs outline-none transition ${isEditingProfile ? 'border-surface-dim bg-white focus:border-brand-blue' : 'border-transparent bg-surface text-text-secondary cursor-default'}`}
+                          />
                         </div>
                       </div>
-                      <div className="border-t border-surface-low pt-4 flex justify-end">
-                        <button
-                          type="submit"
-                          disabled={isSavingProfile}
-                          className="rounded bg-brand-blue px-4 py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition flex items-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
-                        >
-                          {isSavingProfile && <Spinner size="xs" />}
-                          <span>{isSavingProfile ? 'Saving...' : 'Save Profile & Salary Settings'}</span>
-                        </button>
-                      </div>
+                      {/* Save button only in edit mode */}
+                      {isEditingProfile && (
+                        <div className="border-t border-surface-low pt-4 flex justify-end">
+                          <button
+                            type="submit"
+                            disabled={isSavingProfile}
+                            className="rounded bg-brand-blue px-4 py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition flex items-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
+                          >
+                            {isSavingProfile && <Spinner size="xs" />}
+                            <span>{isSavingProfile ? 'Saving...' : 'Save Profile & Salary Settings'}</span>
+                          </button>
+                        </div>
+                      )}
                     </form>
 
                     <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4">
@@ -789,116 +897,89 @@ export default function Employees() {
                     </div>
                   </div>
 
-                  {/* Salary Advances section */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-surface-low pt-6">
-                    {/* Advance Request */}
-                    <div className="md:col-span-1 rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4">
-                      <h3 className="text-sm font-semibold text-text-primary border-b border-surface-low pb-2">Request / Receive Advance</h3>
-                      <form onSubmit={handleRequestAdvance} className="space-y-3">
-                        <div>
-                          <label className="block text-xs font-semibold text-text-secondary mb-1">Advance Amount (₹)</label>
-                          <input
-                            type="number"
-                            required
-                            value={advanceAmount}
-                            onChange={(e) => setAdvanceAmount(e.target.value)}
-                            placeholder="E.g., 5000"
-                            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-text-secondary mb-1">Paid From Account</label>
-                          <select
-                            required
-                            value={advancePaidFrom}
-                            onChange={(e) => setAdvancePaidFrom(e.target.value)}
-                            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
-                          >
-                            {bankAccounts.map((acct) => (
-                              <option key={acct.id} value={acct.id}>
-                                {acct.name} (₹{acct.balance})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-text-secondary mb-1">Advance Description</label>
-                          <input
-                            type="text"
-                            value={advanceDescription}
-                            onChange={(e) => setAdvanceDescription(e.target.value)}
-                            placeholder="E.g., Mid-month emergency expense"
-                            className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
-                          />
-                        </div>
-                        <button
-                          type="submit"
-                          disabled={isSavingAdvance}
-                          className="w-full rounded bg-brand-blue py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
-                        >
-                          {isSavingAdvance && <Spinner size="xs" />}
-                          <span>{isSavingAdvance ? 'Issuing...' : 'Issue Advance Salary'}</span>
-                        </button>
-                      </form>
-                    </div>
+                </div>
+              )}
 
-                    {/* Advance History */}
-                    <div className="md:col-span-2 rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4">
-                      <h3 className="text-sm font-semibold text-text-primary border-b border-surface-low pb-2">Salary Advance History</h3>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full text-left text-xs">
-                          <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
-                            <tr>
-                              <th className="px-3 py-2">Date</th>
-                              <th className="px-3 py-2">Amount</th>
-                              <th className="px-3 py-2">Paid From</th>
-                              <th className="px-3 py-2">Description</th>
-                              <th className="px-3 py-2">Status</th>
-                              <th className="px-3 py-2 text-center">Action</th>
+              {/* Advances Tab */}
+              {activeTab === 'Advances' && (
+                <div className="space-y-6">
+                  {/* Header with trigger button */}
+                  <div className="flex justify-between items-center bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-surface-low">
+                    <div>
+                      <h3 className="text-sm font-semibold text-text-primary">Salary Advance History</h3>
+                      <p className="text-[11px] text-text-secondary">View past advances or issue a new one.</p>
+                    </div>
+                    <button
+                      onClick={() => setActiveActionForm('advance')}
+                      className="hidden md:block rounded bg-brand-blue px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-cobalt transition"
+                    >
+                      Issue Advance
+                    </button>
+                  </div>
+
+                  {/* Advance History */}
+                  <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-left text-xs">
+                        <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
+                          <tr>
+                            <th className="px-3 py-2">Date</th>
+                            <th className="px-3 py-2">Amount</th>
+                            <th className="hidden sm:table-cell px-3 py-2">Paid From</th>
+                            <th className="hidden sm:table-cell px-3 py-2">Description</th>
+                            <th className="px-3 py-2">Status</th>
+                            <th className="hidden sm:table-cell px-3 py-2 text-center">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-surface-low">
+                          {summary.advance_history.map((adv) => (
+                            <tr
+                              key={adv.id}
+                              onClick={() => {
+                                if (isMobile) {
+                                  setSelectedAdvanceDetails(adv);
+                                }
+                              }}
+                              className="hover:bg-surface-bright cursor-pointer sm:cursor-default"
+                            >
+                              <td className="px-3 py-2.5 font-semibold text-text-primary">
+                                {new Date(adv.timestamp).toLocaleDateString()}
+                              </td>
+                              <td className="px-3 py-2.5 font-semibold text-text-primary">
+                                {formatCurrency(adv.amount)}
+                              </td>
+                              <td className="hidden sm:table-cell px-3 py-2.5">
+                                {adv.paid_from_name || 'N/A'}
+                              </td>
+                              <td className="hidden sm:table-cell px-3 py-2.5 max-w-xs truncate" title={adv.description}>
+                                {adv.description || '-'}
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <span className={`inline-block rounded px-1.5 py-0.5 text-[8px] font-bold ${adv.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  adv.status === 'Deducted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                  }`}>
+                                  {adv.status}
+                                </span>
+                              </td>
+                              <td className="hidden sm:table-cell px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                                {adv.status === 'Pending' && (
+                                  <button
+                                    onClick={() => handleReverseAdvance(adv.id)}
+                                    className="rounded bg-error-container/10 hover:bg-error-container/20 px-2 py-0.5 text-[9px] font-bold text-error transition"
+                                  >
+                                    Reverse
+                                  </button>
+                                )}
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody className="divide-y divide-surface-low">
-                            {summary.advance_history.map((adv) => (
-                              <tr key={adv.id} className="hover:bg-surface-bright">
-                                <td className="px-3 py-2.5 font-semibold text-text-primary">
-                                  {new Date(adv.timestamp).toLocaleDateString()}
-                                </td>
-                                <td className="px-3 py-2.5 font-semibold text-text-primary">
-                                  {formatCurrency(adv.amount)}
-                                </td>
-                                <td className="px-3 py-2.5">
-                                  {adv.paid_from_name || 'N/A'}
-                                </td>
-                                <td className="px-3 py-2.5 max-w-xs truncate" title={adv.description}>
-                                  {adv.description || '-'}
-                                </td>
-                                <td className="px-3 py-2.5">
-                                  <span className={`inline-block rounded px-1.5 py-0.5 text-[8px] font-bold ${adv.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                                      adv.status === 'Deducted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                    }`}>
-                                    {adv.status}
-                                  </span>
-                                </td>
-                                <td className="px-3 py-2.5 text-center">
-                                  {adv.status === 'Pending' && (
-                                    <button
-                                      onClick={() => handleReverseAdvance(adv.id)}
-                                      className="rounded bg-error-container/10 hover:bg-error-container/20 px-2 py-0.5 text-[9px] font-bold text-error transition"
-                                    >
-                                      Reverse
-                                    </button>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                            {summary.advance_history.length === 0 && (
-                              <tr>
-                                <td colSpan="6" className="px-3 py-8 text-center text-text-secondary">No salary advance logs.</td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                          ))}
+                          {summary.advance_history.length === 0 && (
+                            <tr>
+                              <td colSpan="6" className="px-3 py-8 text-center text-text-secondary">No salary advance logs.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
@@ -915,88 +996,10 @@ export default function Employees() {
               {/* Payroll Tab */}
               {activeTab === 'Payroll' && (
                 <div className="space-y-6">
-                  {/* Process Monthly Payroll */}
-                  <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4">
-                    <h3 className="text-sm font-semibold text-text-primary border-b border-surface-low pb-2">Process Monthly Payroll</h3>
-                    <form onSubmit={handleProcessPayroll} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-text-secondary mb-1">Basic Salary</label>
-                        <input
-                          type="text"
-                          disabled
-                          value={formatCurrency(selectedEmployee.basic_salary)}
-                          className="w-full rounded border border-surface-dim bg-surface px-3 py-2 text-xs text-text-secondary"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-text-secondary mb-1">Allowance Components</label>
-                        <input
-                          type="number"
-                          value={allowanceInput}
-                          onChange={(e) => setAllowanceInput(e.target.value)}
-                          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-text-secondary mb-1">Paid From Account</label>
-                        <select
-                          required
-                          value={payrollPaidFrom}
-                          onChange={(e) => setPayrollPaidFrom(e.target.value)}
-                          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
-                        >
-                          {bankAccounts.map((acct) => (
-                            <option key={acct.id} value={acct.id}>
-                              {acct.name} (₹{acct.balance})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="sm:col-span-3">
-                        <label className="block text-xs font-semibold text-text-secondary mb-1">Payroll Notes / Description</label>
-                        <input
-                          type="text"
-                          value={payrollDescription}
-                          onChange={(e) => setPayrollDescription(e.target.value)}
-                          placeholder="E.g., June 2026 Salary"
-                          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
-                        />
-                      </div>
 
-                      <div className="sm:col-span-3 bg-surface p-4 rounded-lg space-y-2 text-xs text-text-primary">
-                        <div className="flex justify-between border-b border-surface-low pb-1">
-                          <span>Basic Salary:</span>
-                          <span className="font-semibold">{formatCurrency(basicSal)}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-surface-low pb-1">
-                          <span>Allowance Additions:</span>
-                          <span className="font-semibold text-green-700">+{formatCurrency(allowanceVal)}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-surface-low pb-1">
-                          <span>Salary Advance Deductions:</span>
-                          <span className="font-semibold text-error">-{formatCurrency(totalDeducted)}</span>
-                        </div>
-                        <div className="flex justify-between font-bold text-sm text-brand-blue">
-                          <span>Final Net Pay:</span>
-                          <span>{formatCurrency(calculatedNetPay)}</span>
-                        </div>
-                      </div>
 
-                      <div className="sm:col-span-3">
-                        <button
-                          type="submit"
-                          disabled={isSavingPayroll}
-                          className="rounded bg-brand-blue px-4 py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition flex items-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
-                        >
-                          {isSavingPayroll && <Spinner size="xs" />}
-                          <span>{isSavingPayroll ? 'Processing...' : 'Approve & Process Payroll'}</span>
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-
-                  {/* Edit Payroll Inline Form */}
-                  {editingPayroll && (
+                  {/* Edit Payroll Inline Form (Desktop only) */}
+                  {!isMobile && editingPayroll && (
                     <form onSubmit={handleEditPayrollSubmit} className="rounded-lg bg-yellow-50/50 p-6 shadow-sm border border-yellow-200 space-y-4">
                       <h3 className="text-xs font-bold text-yellow-800 uppercase tracking-wider">Edit Processed Payroll</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -1109,39 +1112,58 @@ export default function Employees() {
 
                   {/* Payroll History Table */}
                   <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4">
-                    <h3 className="text-sm font-semibold text-text-primary border-b border-surface-low pb-2">Salary Payments History</h3>
+                    <div className="flex justify-between items-center border-b border-surface-low pb-2">
+                      <div>
+                        <h3 className="text-sm font-semibold text-text-primary">Salary Payments History</h3>
+                        <p className="text-[11px] text-text-secondary">View payroll payments history or process new payroll.</p>
+                      </div>
+                      <button
+                        onClick={() => setActiveActionForm('payroll')}
+                        className="hidden md:block rounded bg-brand-blue px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-cobalt transition"
+                      >
+                        Process Payroll
+                      </button>
+                    </div>
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-left text-xs">
                         <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
                           <tr>
                             <th className="px-3 py-2">Paid Date</th>
-                            <th className="px-3 py-2">Basic</th>
-                            <th className="px-3 py-2">Allowance</th>
-                            <th className="px-3 py-2">Deductions</th>
+                            <th className="hidden sm:table-cell px-3 py-2">Basic</th>
+                            <th className="hidden sm:table-cell px-3 py-2">Allowance</th>
+                            <th className="hidden sm:table-cell px-3 py-2">Deductions</th>
                             <th className="px-3 py-2">Net Paid</th>
-                            <th className="px-3 py-2">Paid From</th>
+                            <th className="hidden sm:table-cell px-3 py-2">Paid From</th>
                             <th className="px-3 py-2">Status</th>
-                            <th className="px-3 py-2 text-center">Actions</th>
+                            <th className="hidden sm:table-cell px-3 py-2 text-center">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-surface-low">
                           {summary.payroll_history.map((pay) => (
-                            <tr key={pay.id} className="hover:bg-surface-bright">
+                            <tr
+                              key={pay.id}
+                              onClick={() => {
+                                if (isMobile) {
+                                  setSelectedPayrollDetails(pay);
+                                }
+                              }}
+                              className="hover:bg-surface-bright cursor-pointer sm:cursor-default"
+                            >
                               <td className="px-3 py-2.5 font-semibold text-text-primary">
                                 {new Date(pay.timestamp).toLocaleDateString()}
                               </td>
-                              <td className="px-3 py-2.5">{formatCurrency(pay.basic_salary)}</td>
-                              <td className="px-3 py-2.5">{formatCurrency(pay.allowance)}</td>
-                              <td className="px-3 py-2.5 text-error">-{formatCurrency(pay.advance)}</td>
+                              <td className="hidden sm:table-cell px-3 py-2.5">{formatCurrency(pay.basic_salary)}</td>
+                              <td className="hidden sm:table-cell px-3 py-2.5">{formatCurrency(pay.allowance)}</td>
+                              <td className="hidden sm:table-cell px-3 py-2.5 text-error">-{formatCurrency(pay.advance)}</td>
                               <td className="px-3 py-2.5 font-bold text-green-700">{formatCurrency(pay.total_paid)}</td>
-                              <td className="px-3 py-2.5">{pay.paid_from_name || 'N/A'}</td>
+                              <td className="hidden sm:table-cell px-3 py-2.5">{pay.paid_from_name || 'N/A'}</td>
                               <td className="px-3 py-2.5">
                                 <span className={`inline-block rounded px-2 py-0.5 text-[9px] font-semibold ${pay.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                                   }`}>
                                   {pay.status}
                                 </span>
                               </td>
-                              <td className="px-3 py-2.5 text-center space-x-1 whitespace-nowrap">
+                              <td className="hidden sm:table-cell px-3 py-2.5 text-center space-x-1 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                 {pay.status === 'Paid' && (
                                   <>
                                     <button
@@ -1166,16 +1188,7 @@ export default function Employees() {
                                     </button>
                                   </>
                                 )}
-                                <button
-                                  onClick={() => handleViewAuditTrail(pay.id)}
-                                  className="inline-flex items-center justify-center rounded bg-surface-low hover:bg-surface-dim p-1 text-[10px] font-semibold text-text-primary transition"
-                                  title="Audit Logs"
-                                >
-                                  <svg className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2" />
-                                  </svg>
-                                  <span className="hidden sm:inline">Audit</span>
-                                </button>
+                                {/* Audit button removed */}
                               </td>
                             </tr>
                           ))}
@@ -1194,9 +1207,551 @@ export default function Employees() {
             </div>
           )
         )}
+
+        {/* Mobile Bottom Tab Navigation */}
+        {isMobile && (
+          <div className="md:hidden fixed bottom-0 left-0 right-0 z-45 bg-white border-t border-surface-low flex justify-around pt-2 pb-0 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] safe-pb" style={{ marginBottom: '0px' }}>
+            {[
+              {
+                id: 'Profile',
+                label: 'Profile',
+                icon: (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                )
+              },
+              {
+                id: 'Attendance',
+                label: 'Attendance',
+                icon: (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                )
+              },
+              {
+                id: 'Advances',
+                label: 'Advance',
+                icon: (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                )
+              },
+              {
+                id: 'Payroll',
+                label: 'Payroll',
+                icon: (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )
+              }
+            ].map((tab) => {
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                  }}
+                  className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${active ? 'text-brand-blue' : 'text-text-secondary'
+                    }`}
+                >
+                  <div className={`flex items-center justify-center rounded-2xl px-4 py-1 mb-0.5 transition-colors ${active ? 'bg-accent-blue/15' : 'bg-transparent'
+                    }`}>
+                    {tab.icon}
+                  </div>
+                  <span className="text-[9px] font-bold tracking-tight">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Actions FAB Button - shown only on mobile when employee is selected */}
+        {isMobile && (
+          <div className="fixed bottom-20 right-6 md:bottom-8 md:right-8 z-40">
+            <button
+              onClick={() => setShowActionMenu(!showActionMenu)}
+              aria-label="Actions menu"
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-blue text-white shadow-xl hover:bg-brand-cobalt transition-transform active:scale-95 duration-200"
+              style={{ boxShadow: '0px 6px 20px rgba(26, 115, 232, 0.4)' }}
+            >
+              <svg className={`h-6 w-6 transform transition-transform duration-200 ${showActionMenu ? 'rotate-45' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+
+            {/* Action Menu Popover */}
+            {showActionMenu && (
+              <div className="absolute bottom-16 right-0 w-48 rounded-xl bg-white border border-surface-low shadow-2xl p-2 space-y-1">
+                <button
+                  onClick={() => {
+                    setActiveActionForm('payroll');
+                    setShowActionMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-semibold text-text-primary hover:bg-surface-low rounded-lg transition"
+                >
+                  💸 Process Payroll
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveActionForm('advance');
+                    setShowActionMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-semibold text-text-primary hover:bg-surface-low rounded-lg transition"
+                >
+                  💰 Issue Salary Advance
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Responsive Modal/Sheet for Actions */}
+        {(activeActionForm === 'payroll' || activeActionForm === 'advance') && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-xs p-4">
+            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-surface-low animate-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-surface-low">
+                <h3 className="font-bold text-text-primary text-sm">
+                  {activeActionForm === 'payroll' ? 'Process Monthly Payroll' : 'Issue Salary Advance'}
+                </h3>
+                <button
+                  onClick={() => setActiveActionForm(null)}
+                  className="p-1 rounded-full text-text-secondary hover:bg-surface-low"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="p-6 max-h-[80vh] overflow-y-auto">
+                {activeActionForm === 'payroll' ? (
+                  <form onSubmit={(e) => { handleProcessPayroll(e); setActiveActionForm(null); }} className="space-y-4 text-left">
+                    <div>
+                      <label className="block text-xs font-semibold text-text-secondary mb-1">Basic Salary</label>
+                      <input
+                        type="text"
+                        disabled
+                        value={formatCurrency(selectedEmployee.basic_salary)}
+                        className="w-full rounded border border-surface-dim bg-surface px-3 py-2 text-xs text-text-secondary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-text-secondary mb-1">Allowance Components</label>
+                      <input
+                        type="number"
+                        value={allowanceInput}
+                        onChange={(e) => setAllowanceInput(e.target.value)}
+                        className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-text-secondary mb-1">Paid From Account</label>
+                      <select
+                        required
+                        value={payrollPaidFrom}
+                        onChange={(e) => setPayrollPaidFrom(e.target.value)}
+                        className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
+                      >
+                        {bankAccounts.map((acct) => (
+                          <option key={acct.id} value={acct.id}>
+                            {acct.name} (₹{acct.balance})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-text-secondary mb-1">Payroll Notes / Description</label>
+                      <input
+                        type="text"
+                        value={payrollDescription}
+                        onChange={(e) => setPayrollDescription(e.target.value)}
+                        placeholder="E.g., June 2026 Salary"
+                        className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
+                      />
+                    </div>
+
+                    <div className="bg-surface p-4 rounded-lg space-y-2 text-xs text-text-primary">
+                      <div className="flex justify-between border-b border-surface-low pb-1">
+                        <span>Basic Salary:</span>
+                        <span className="font-semibold">{formatCurrency(basicSal)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-surface-low pb-1">
+                        <span>Allowance Additions:</span>
+                        <span className="font-semibold text-green-700">+{formatCurrency(allowanceVal)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-surface-low pb-1">
+                        <span>Salary Advance Deductions:</span>
+                        <span className="font-semibold text-error">-{formatCurrency(totalDeducted)}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-sm text-brand-blue">
+                        <span>Final Net Pay:</span>
+                        <span>{formatCurrency(calculatedNetPay)}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSavingPayroll}
+                      className="w-full rounded bg-brand-blue py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      {isSavingPayroll && <Spinner size="xs" />}
+                      <span>{isSavingPayroll ? 'Processing...' : 'Approve & Process Payroll'}</span>
+                    </button>
+                  </form>
+                ) : activeActionForm === 'advance' ? (
+                  <form onSubmit={handleRequestAdvance} className="space-y-4 text-left">
+                    <div>
+                      <label className="block text-xs font-semibold text-text-secondary mb-1">Advance Amount (₹)</label>
+                      <input
+                        type="number"
+                        required
+                        value={advanceAmount}
+                        onChange={(e) => setAdvanceAmount(e.target.value)}
+                        placeholder="E.g., 5000"
+                        className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-text-secondary mb-1">Paid From Account</label>
+                      <select
+                        required
+                        value={advancePaidFrom}
+                        onChange={(e) => setAdvancePaidFrom(e.target.value)}
+                        className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
+                      >
+                        {bankAccounts.map((acct) => (
+                          <option key={acct.id} value={acct.id}>
+                            {acct.name} (₹{acct.balance})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-text-secondary mb-1">Description / Notes</label>
+                      <input
+                        type="text"
+                        value={advanceDescription}
+                        onChange={(e) => setAdvanceDescription(e.target.value)}
+                        placeholder="E.g., Mid-month emergency expense"
+                        className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isSavingAdvance}
+                      className="w-full rounded bg-brand-blue py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      {isSavingAdvance && <Spinner size="xs" />}
+                      <span>{isSavingAdvance ? 'Issuing...' : 'Issue Advance Salary'}</span>
+                    </button>
+                  </form>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <MobileBottomSheet
+          isOpen={selectedAdvanceDetails !== null}
+          onClose={() => setSelectedAdvanceDetails(null)}
+          title="Salary Advance Details"
+        >
+          {selectedAdvanceDetails && (
+            <div className="space-y-4 pb-6 text-xs text-text-primary">
+              <div className="flex justify-between border-b border-surface-low pb-2">
+                <span className="font-semibold text-text-secondary">Date:</span>
+                <span>{new Date(selectedAdvanceDetails.timestamp).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between border-b border-surface-low pb-2">
+                <span className="font-semibold text-text-secondary">Amount:</span>
+                <span className="font-bold text-brand-blue">{formatCurrency(selectedAdvanceDetails.amount)}</span>
+              </div>
+              <div className="flex justify-between border-b border-surface-low pb-2">
+                <span className="font-semibold text-text-secondary">Paid From:</span>
+                <span>{selectedAdvanceDetails.paid_from_name || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between border-b border-surface-low pb-2">
+                <span className="font-semibold text-text-secondary">Description:</span>
+                <span className="max-w-[200px] break-words text-right">{selectedAdvanceDetails.description || '-'}</span>
+              </div>
+              <div className="flex justify-between border-b border-surface-low pb-2">
+                <span className="font-semibold text-text-secondary">Status:</span>
+                <span className={`inline-block rounded px-1.5 py-0.5 text-[8px] font-bold ${selectedAdvanceDetails.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                  selectedAdvanceDetails.status === 'Deducted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                  {selectedAdvanceDetails.status}
+                </span>
+              </div>
+              {selectedAdvanceDetails.status === 'Pending' && (
+                <div className="pt-2">
+                  <button
+                    onClick={() => {
+                      handleReverseAdvance(selectedAdvanceDetails.id);
+                      setSelectedAdvanceDetails(null);
+                    }}
+                    className="w-full rounded bg-error py-2 text-xs font-bold text-white hover:bg-error-container transition"
+                  >
+                    Reverse Advance
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </MobileBottomSheet>
+
+        <MobileBottomSheet
+          isOpen={selectedPayrollDetails !== null}
+          onClose={() => setSelectedPayrollDetails(null)}
+          title="Payroll Record Details"
+        >
+          {selectedPayrollDetails && (
+            <div className="space-y-4 pb-6 text-xs text-text-primary">
+              <div className="flex justify-between border-b border-surface-low pb-2">
+                <span className="font-semibold text-text-secondary">Paid Date:</span>
+                <span>{new Date(selectedPayrollDetails.timestamp).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between border-b border-surface-low pb-2">
+                <span className="font-semibold text-text-secondary">Basic Salary:</span>
+                <span>{formatCurrency(selectedPayrollDetails.basic_salary)}</span>
+              </div>
+              <div className="flex justify-between border-b border-surface-low pb-2">
+                <span className="font-semibold text-text-secondary">Allowance:</span>
+                <span className="text-green-700">+{formatCurrency(selectedPayrollDetails.allowance)}</span>
+              </div>
+              <div className="flex justify-between border-b border-surface-low pb-2">
+                <span className="font-semibold text-text-secondary">Deductions:</span>
+                <span className="text-error">-{formatCurrency(selectedPayrollDetails.advance)}</span>
+              </div>
+              <div className="flex justify-between border-b border-surface-low pb-2">
+                <span className="font-semibold text-text-secondary">Net Paid:</span>
+                <span className="font-bold text-green-700">{formatCurrency(selectedPayrollDetails.total_paid)}</span>
+              </div>
+              <div className="flex justify-between border-b border-surface-low pb-2">
+                <span className="font-semibold text-text-secondary">Paid From:</span>
+                <span>{selectedPayrollDetails.paid_from_name || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between border-b border-surface-low pb-2">
+                <span className="font-semibold text-text-secondary">Status:</span>
+                <span className={`inline-block rounded px-2 py-0.5 text-[9px] font-semibold ${selectedPayrollDetails.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                  {selectedPayrollDetails.status}
+                </span>
+              </div>
+
+              {/* Mobile Actions */}
+              <div className="pt-2 space-y-2">
+                {selectedPayrollDetails.status === 'Paid' && (
+                  <>
+                    <button
+                      onClick={() => {
+                        startEditPayroll(selectedPayrollDetails);
+                        setSelectedPayrollDetails(null);
+                      }}
+                      className="w-full rounded bg-brand-blue py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition flex items-center justify-center space-x-1.5"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                      <span>Edit Payroll</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleReversePayroll(selectedPayrollDetails.id);
+                        setSelectedPayrollDetails(null);
+                      }}
+                      className="w-full rounded bg-error py-2 text-xs font-bold text-white hover:bg-error-container transition flex items-center justify-center space-x-1.5"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                      </svg>
+                      <span>Reverse Payment</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </MobileBottomSheet>
+
+        <MobileBottomSheet
+          isOpen={isMobile && editingPayroll !== null}
+          onClose={() => setEditingPayroll(null)}
+          title="Edit Processed Payroll"
+        >
+          {editingPayroll && (
+            <form onSubmit={handleEditPayrollSubmit} className="space-y-4 text-left pb-6">
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary mb-1">Basic Salary</label>
+                <input
+                  type="number"
+                  required
+                  value={editBasicSalary}
+                  onChange={(e) => setEditBasicSalary(e.target.value)}
+                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary mb-1">Allowance</label>
+                <input
+                  type="number"
+                  required
+                  value={editAllowance}
+                  onChange={(e) => setEditAllowance(e.target.value)}
+                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary mb-1">Paid From</label>
+                <select
+                  required
+                  value={editPaidFrom}
+                  onChange={(e) => setEditPaidFrom(e.target.value)}
+                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
+                >
+                  {bankAccounts.map((acct) => (
+                    <option key={acct.id} value={acct.id}>
+                      {acct.name} (₹{acct.balance})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary mb-1">Description / Notes</label>
+                <input
+                  type="text"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-xs outline-none focus:border-brand-blue"
+                />
+              </div>
+              <div className="flex flex-col space-y-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSavingEditPayroll}
+                  className="w-full rounded bg-brand-blue py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  {isSavingEditPayroll && <Spinner size="xs" />}
+                  <span>{isSavingEditPayroll ? 'Recalculating...' : 'Recalculate & Save'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingPayroll(null)}
+                  className="w-full rounded bg-surface-low border border-surface-dim py-2 text-xs text-text-primary hover:bg-surface-dim transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+        </MobileBottomSheet>
       </div>
     );
   }
+
+  const renderRegisterForm = () => {
+    return (
+      <form onSubmit={handleRegister} className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Username</label>
+            <input
+              type="text"
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase())}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Password</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            >
+              <option value="Owner">Owner</option>
+              <option value="Manager">Manager</option>
+              <option value="Cashier">Cashier</option>
+              <option value="Store Keeper">Store Keeper</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary mb-1">First Name</label>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Last Name</label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Phone Number</label>
+            <input
+              type="text"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Profile Image</label>
+            <div className="flex items-center space-x-2 mt-1">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleRegImageChange}
+                className="text-xs text-text-secondary file:py-1 file:px-2 file:rounded file:border-0 file:bg-brand-blue/10 file:text-brand-blue file:text-xs cursor-pointer"
+              />
+              {regUploading && <span className="text-[10px] text-text-secondary animate-pulse">Uploading...</span>}
+            </div>
+            {regImageUrl && (
+              <span className="text-[10px] text-green-600 block mt-1 truncate">Uploaded successfully!</span>
+            )}
+          </div>
+        </div>
+        <button
+          type="submit"
+          disabled={isRegistering}
+          className="rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition flex items-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
+        >
+          {isRegistering && <Spinner size="sm" />}
+          <span>{isRegistering ? 'Saving...' : 'Save Employee'}</span>
+        </button>
+      </form>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -1205,228 +1760,232 @@ export default function Employees() {
           <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Employees & Roles</h2>
           <p className="text-xs text-text-secondary">Manage staff accounts, assign roles, and review sales leaderboards.</p>
         </div>
-        <button
-          onClick={() => setShowRegForm(!showRegForm)}
-          className="rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
-        >
-          {showRegForm ? 'Cancel' : 'Register Employee'}
-        </button>
       </div>
 
-      {showRegForm && (
-        <form onSubmit={handleRegister} className="rounded-lg bg-white p-6 shadow-sm border border-surface-low space-y-4">
-          <h3 className="text-sm font-semibold text-text-primary">Add Staff Member</h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">Username</label>
-              <input
-                type="text"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">Password</label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">Role</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-              >
-                <option value="Owner">Owner</option>
-                <option value="Manager">Manager</option>
-                <option value="Cashier">Cashier</option>
-                <option value="Store Keeper">Store Keeper</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">First Name</label>
-              <input
-                type="text"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">Last Name</label>
-              <input
-                type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">Phone Number</label>
-              <input
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">Profile Image</label>
-              <div className="flex items-center space-x-2 mt-1">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleRegImageChange}
-                  className="text-xs text-text-secondary file:py-1 file:px-2 file:rounded file:border-0 file:bg-brand-blue/10 file:text-brand-blue file:text-xs cursor-pointer"
-                />
-                {regUploading && <span className="text-[10px] text-text-secondary animate-pulse">Uploading...</span>}
+      {/* Main Staff Dashboard Layout - Full Width Directory Tabl        {/* Search bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 md:bg-white md:p-4 md:rounded-t-lg md:border-t md:border-x md:border-surface-low bg-transparent p-0 border-none">
+        <div className="relative w-full sm:w-72">
+          <input
+            type="text"
+            value={pag.search}
+            onChange={(e) => pag.setSearch(e.target.value)}
+            placeholder="Search staff by username/name/phone..."
+            className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
+          />
+          <span className="absolute left-3 top-2.5 text-text-secondary">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </span>
+        </div>
+        {pag.loading && (
+          <span className="text-xs text-brand-blue animate-pulse">Loading...</span>
+        )}
+      </div>
+
+      {/* Directory Table (Desktop) */}
+      <div className="hidden md:block rounded-t-lg bg-white border-x border-t border-surface-low overflow-x-auto">
+        <table className="min-w-full text-left text-sm">
+          <thead className="bg-surface-low text-text-secondary font-semibold uppercase text-xs tracking-wider">
+            <tr>
+              <th className="px-4 py-4">Name</th>
+              {renderSortHeader('Role', 'role')}
+              {renderSortHeader('Salary', 'basic_salary')}
+              <th className="px-4 py-4">Total Paid</th>
+              <th className="px-4 py-4">Advance Balance</th>
+              <th className="px-4 py-4">Attendance (Month)</th>
+              <th className="px-4 py-4 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-surface-low">
+            {pag.loading ? (
+              <SkeletonTable rows={pag.pageSize || 5} columns={7} />
+            ) : (
+              pag.data.map((emp) => (
+                <tr
+                  key={emp.id}
+                  onClick={() => handleSelectEmployee(emp)}
+                  className="hover:bg-surface-bright cursor-pointer"
+                >
+                  <td className="px-4 py-4 text-text-primary">
+                    <div className="flex items-center space-x-3">
+                      {emp.image_url ? (
+                        <img
+                          src={emp.image_url}
+                          alt=""
+                          className="h-8 w-8 rounded-full object-cover border border-surface-dim"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-brand-blue/10 border border-brand-blue/20 flex items-center justify-center font-bold text-brand-blue text-xs uppercase">
+                          {(emp.user?.first_name?.[0] || '') + (emp.user?.last_name?.[0] || '') || emp.user?.username?.[0] || '?'}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-semibold text-brand-blue">{emp.user?.first_name} {emp.user?.last_name}</div>
+                        <div className="text-[10px] text-text-secondary">@{emp.user?.username}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 text-text-primary font-medium">
+                    {emp.role}
+                  </td>
+                  <td className="px-4 py-4 font-semibold text-text-primary">
+                    {formatCurrency(emp.basic_salary)}
+                  </td>
+                  <td className="px-4 py-4 text-green-700 font-semibold">
+                    {formatCurrency(emp.total_salary_paid)}
+                  </td>
+                  <td className="px-4 py-4 text-error font-semibold">
+                    {formatCurrency(emp.outstanding_advance)}
+                  </td>
+                  <td className="px-4 py-4 font-semibold text-text-primary">
+                    {emp.monthly_attendance}
+                  </td>
+                  <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                    <label className="relative inline-flex items-center cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={emp.is_active}
+                        onChange={() => toggleStatus(emp)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
+                    </label>
+                  </td>
+                </tr>
+              ))
+            )}
+            {pag.data.length === 0 && !pag.loading && (
+              <tr>
+                <td colSpan="7" className="px-4 py-8 text-center text-text-secondary">No staff members found.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Directory Card List (Mobile) */}
+      <div className="block md:hidden grid grid-cols-2 gap-3">
+        {pag.loading ? (
+          Array.from({ length: 4 }).map((_, idx) => (
+            <div key={idx} className="border border-surface-low rounded-2xl p-4 bg-white flex flex-col items-center space-y-3 shadow-sm animate-pulse">
+              <div className="h-16 w-16 bg-surface-dim/50 rounded-full" />
+              <div className="space-y-2 flex flex-col items-center w-full">
+                <div className="h-4 w-24 bg-surface-dim/50 rounded" />
+                <div className="h-3.5 w-16 bg-surface-dim/50 rounded" />
+                <div className="h-5 w-20 bg-surface-dim/50 rounded-full" />
               </div>
-              {regImageUrl && (
-                <span className="text-[10px] text-green-600 block mt-1 truncate">Uploaded successfully!</span>
-              )}
+              <div className="w-full border-t border-surface-low pt-3 grid grid-cols-2 gap-2">
+                <div className="h-8 bg-surface-dim/50 rounded" />
+                <div className="h-8 bg-surface-dim/50 rounded" />
+              </div>
             </div>
+          ))
+        ) : (
+          pag.data.map((emp) => (
+            <div
+              key={emp.id}
+              onClick={() => handleSelectEmployee(emp)}
+              className="border border-surface-low rounded-2xl p-4 bg-white flex flex-col items-center text-center space-y-3 shadow-sm active:bg-surface-low transition-all hover:shadow-md cursor-pointer relative"
+            >
+              {/* Active Toggle Switch in corner */}
+              <div className="absolute top-2 right-2 flex items-center" onClick={(e) => e.stopPropagation()}>
+                <label className="relative inline-flex items-center cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={emp.is_active}
+                    onChange={() => toggleStatus(emp)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-7 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-green-600"></div>
+                </label>
+              </div>
+
+              {/* Profile Image / Initials */}
+              {emp.image_url ? (
+                <img
+                  src={emp.image_url}
+                  alt=""
+                  className="h-16 w-16 rounded-full object-cover border-2 border-brand-blue/20"
+                />
+              ) : (
+                <div className="h-16 w-16 rounded-full bg-brand-blue/10 border-2 border-brand-blue/20 flex items-center justify-center font-bold text-brand-blue text-lg uppercase">
+                  {(emp.user?.first_name?.[0] || '') + (emp.user?.last_name?.[0] || '') || emp.user?.username?.[0] || '?'}
+                </div>
+              )}
+
+              {/* Name & Role */}
+              <div className="space-y-1">
+                <div className="font-bold text-brand-blue text-xs leading-tight truncate max-w-[130px]" title={`${emp.user?.first_name} ${emp.user?.last_name}`}>
+                  {emp.user?.first_name} {emp.user?.last_name}
+                </div>
+                <div className="text-[10px] text-text-secondary">@{emp.user?.username}</div>
+                <span className="inline-block text-[9px] font-bold text-text-primary px-2 py-0.5 rounded-full bg-surface-low border border-surface-dim">
+                  {emp.role}
+                </span>
+              </div>
+
+              {/* Stats grid */}
+              <div className="w-full border-t border-surface-low pt-3 grid grid-cols-2 gap-x-2 gap-y-3 text-left">
+                <div>
+                  <span className="block text-[8px] text-text-secondary uppercase font-semibold">Salary</span>
+                  <span className="font-bold text-text-primary text-[10px]">{formatCurrency(emp.basic_salary)}</span>
+                </div>
+                <div>
+                  <span className="block text-[8px] text-text-secondary uppercase font-semibold">Total Paid</span>
+                  <span className="font-bold text-green-700 text-[10px]">{formatCurrency(emp.total_salary_paid)}</span>
+                </div>
+                <div>
+                  <span className="block text-[8px] text-text-secondary uppercase font-semibold">Advance</span>
+                  <span className="font-bold text-error text-[10px]">{formatCurrency(emp.outstanding_advance)}</span>
+                </div>
+                <div>
+                  <span className="block text-[8px] text-text-secondary uppercase font-semibold">Attendance</span>
+                  <span className="font-bold text-text-primary text-[10px]">{emp.monthly_attendance}</span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+        {pag.data.length === 0 && !pag.loading && (
+          <div className="col-span-2 p-8 text-center text-text-secondary bg-white rounded-xl border border-surface-low">
+            No staff members found.
           </div>
-          <button
-            type="submit"
-            disabled={isRegistering}
-            className="rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition flex items-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none"
-          >
-            {isRegistering && <Spinner size="sm" />}
-            <span>{isRegistering ? 'Saving...' : 'Save Employee'}</span>
-          </button>
-        </form>
+        )}
+      </div>
+
+      {/* Pagination Controls (Shared) */}
+      <div className="bg-white border-x border-b border-surface-low rounded-b-lg p-4 mb-20 md:mb-0">
+        <PaginationControls
+          page={pag.page}
+          setPage={pag.setPage}
+          pageSize={pag.pageSize}
+          setPageSize={pag.setPageSize}
+          totalCount={pag.totalCount}
+          totalPages={pag.totalPages}
+          loading={pag.loading}
+        />
+      </div>
+
+
+      {/* Mobile Floating Action Button */}
+      {isMobile && !selectedEmployee && !showMobileReg && (
+        <FloatingActionButton
+          onClick={() => setShowMobileReg(true)}
+          label="Register Employee"
+        />
       )}
 
-      {/* Main Staff Dashboard Layout - Full Width Directory Table */}
-      <div className="space-y-4">
-        {/* Search bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-t-lg border-t border-x border-surface-low">
-          <div className="relative w-full sm:w-72">
-            <input
-              type="text"
-              value={pag.search}
-              onChange={(e) => pag.setSearch(e.target.value)}
-              placeholder="Search staff by username/name/phone..."
-              className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-2 text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary"
-            />
-            <span className="absolute left-3 top-2.5 text-text-secondary">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </span>
-          </div>
-          {pag.loading && (
-            <span className="text-xs text-brand-blue animate-pulse">Loading...</span>
-          )}
+      {/* Mobile Bottom Sheet Register Form */}
+      <MobileBottomSheet
+        isOpen={showMobileReg}
+        onClose={() => setShowMobileReg(false)}
+        title="Register Employee"
+      >
+        <div className="pb-6">
+          {renderRegisterForm()}
         </div>
-
-        {/* Directory Table */}
-        <div className="rounded-b-lg bg-white border-x border-b border-surface-low overflow-x-auto">
-          <table className="min-w-full text-left text-xs">
-            <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
-              <tr>
-                <th className="px-4 py-2">Name</th>
-                {renderSortHeader('Role', 'role')}
-                {renderSortHeader('Salary', 'basic_salary')}
-                <th className="px-4 py-2">Total Paid</th>
-                <th className="px-4 py-2">Advance Balance</th>
-                <th className="px-4 py-2">Attendance (Month)</th>
-                <th className="px-4 py-2 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-low">
-              {pag.loading ? (
-                <SkeletonTable rows={pag.pageSize || 5} columns={7} />
-              ) : (
-                pag.data.map((emp) => (
-                  <tr
-                    key={emp.id}
-                    onClick={() => handleSelectEmployee(emp)}
-                    className="hover:bg-surface-bright cursor-pointer"
-                  >
-                    <td className="px-4 py-3 text-text-primary">
-                      <div className="flex items-center space-x-3">
-                        {emp.image_url ? (
-                          <img
-                            src={emp.image_url}
-                            alt=""
-                            className="h-8 w-8 rounded-full object-cover border border-surface-dim"
-                          />
-                        ) : (
-                          <div className="h-8 w-8 rounded-full bg-brand-blue/10 border border-brand-blue/20 flex items-center justify-center font-bold text-brand-blue text-xs uppercase">
-                            {(emp.user?.first_name?.[0] || '') + (emp.user?.last_name?.[0] || '') || emp.user?.username?.[0] || '?'}
-                          </div>
-                        )}
-                        <div>
-                          <div className="font-semibold text-brand-blue">{emp.user?.first_name} {emp.user?.last_name}</div>
-                          <div className="text-[10px] text-text-secondary">@{emp.user?.username}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-text-primary font-medium">
-                      {emp.role}
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-text-primary">
-                      {formatCurrency(emp.basic_salary)}
-                    </td>
-                    <td className="px-4 py-3 text-green-700 font-semibold">
-                      {formatCurrency(emp.total_salary_paid)}
-                    </td>
-                    <td className="px-4 py-3 text-error font-semibold">
-                      {formatCurrency(emp.outstanding_advance)}
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-text-primary">
-                      {emp.monthly_attendance}
-                    </td>
-                    <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                      <label className="relative inline-flex items-center cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={emp.is_active}
-                          onChange={() => toggleStatus(emp)}
-                          className="sr-only peer"
-                        />
-                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
-                      </label>
-                    </td>
-                  </tr>
-                ))
-              )}
-              {pag.data.length === 0 && !pag.loading && (
-                <tr>
-                  <td colSpan="7" className="px-4 py-8 text-center text-text-secondary">No staff members found.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-
-          <PaginationControls
-            page={pag.page}
-            setPage={pag.setPage}
-            pageSize={pag.pageSize}
-            setPageSize={pag.setPageSize}
-            totalCount={pag.totalCount}
-            totalPages={pag.totalPages}
-            loading={pag.loading}
-          />
-        </div>
-      </div>
+      </MobileBottomSheet>
     </div>
   );
 }

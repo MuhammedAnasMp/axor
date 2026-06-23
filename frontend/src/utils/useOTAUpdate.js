@@ -15,10 +15,12 @@ export function useOTAUpdate() {
   const [downloadedBundle, setDownloadedBundle] = useState(null);
 
   useEffect(() => {
-    // 1. Critical Safeguard: Notify CapacitorUpdater that the web app mounted successfully.
-    // If this call isn't made, Capgo native side will revert to the previous working bundle
-    // upon the next app relaunch (protecting from white-screens and JS crashes).
-    if (Capacitor.isNativePlatform()) {
+    // 1. Critical Safeguard: Notify platform that the web app mounted successfully.
+    if (window.electronAPI) {
+      window.electronAPI.notifyAppReady()
+        .then(() => console.log('OTA: Electron App marked as ready.'))
+        .catch((err) => console.error('OTA: Failed to notify ready in Electron', err));
+    } else if (Capacitor.isNativePlatform()) {
       CapacitorUpdater.notifyAppReady()
         .then(() => console.log('OTA: App marked as ready. Rollback protection armed.'))
         .catch((err) => console.error('OTA: Failed to notify ready', err));
@@ -29,9 +31,11 @@ export function useOTAUpdate() {
   }, []);
 
   const checkAndApplyUpdates = async () => {
-    // Only check updates on actual iOS/Android containers
-    if (!Capacitor.isNativePlatform()) {
-      console.log('OTA: Skipping check. Not running on native container.');
+    const isElectron = !!window.electronAPI;
+
+    // Only check updates on actual iOS/Android containers or Electron
+    if (!Capacitor.isNativePlatform() && !isElectron) {
+      console.log('OTA: Skipping check. Not running on native container or Electron.');
       return;
     }
 
@@ -39,23 +43,36 @@ export function useOTAUpdate() {
       setStatus('checking');
 
       // Check network connectivity
-      const netStatus = await Network.getStatus();
-      if (!netStatus.connected) {
-        console.log('OTA: Device offline, bypassing update check.');
-        setStatus('idle');
-        return;
+      if (isElectron) {
+        if (!navigator.onLine) {
+          console.log('OTA: Electron device offline, bypassing update check.');
+          setStatus('idle');
+          return;
+        }
+      } else {
+        const netStatus = await Network.getStatus();
+        if (!netStatus.connected) {
+          console.log('OTA: Device offline, bypassing update check.');
+          setStatus('idle');
+          return;
+        }
       }
 
-      // Fetch native package information
-      const info = await App.getInfo();
-      const nativeVersion = info.version; // e.g. "1.0.0"
+      // Fetch native container version
+      let nativeVersion;
+      if (isElectron) {
+        nativeVersion = await window.electronAPI.getNativeVersion();
+      } else {
+        const info = await App.getInfo();
+        nativeVersion = info.version; // e.g. "1.0.0"
+      }
 
-      // Request update metadata from backend via the existing request utility
+      // Request update metadata from backend
       const isTestDevice = localStorage.getItem('is_test_device') === 'true';
       const data = await request('/ota/check/', {
         method: 'POST',
         body: {
-          platform: Capacitor.getPlatform(),
+          platform: isElectron ? 'electron' : Capacitor.getPlatform(),
           native_version: nativeVersion,
           web_version: CURRENT_WEB_VERSION,
           is_test_device: isTestDevice,
@@ -63,12 +80,10 @@ export function useOTAUpdate() {
       });
 
       if (!data) {
-        // No bundle registered in the backend at all
         setStatus('waiting-for-ui');
         return;
       }
       if (!data.update_available) {
-        // Already on the latest version — show nothing
         setStatus('idle');
         return;
       }
@@ -81,11 +96,41 @@ export function useOTAUpdate() {
       }
 
       if (data.update_type === 'OTA_UPDATE') {
-        await executeOtaDownload(data);
+        if (isElectron) {
+          await executeElectronOtaDownload(data);
+        } else {
+          await executeOtaDownload(data);
+        }
       }
     } catch (error) {
       console.error('OTA Error:', error);
       setStatus('idle');
+    }
+  };
+
+  const executeElectronOtaDownload = async (updateData) => {
+    try {
+      setStatus('downloading');
+      setDownloadProgress(0);
+
+      // Listen to progress events from Electron main process
+      const removeProgress = window.electronAPI.onDownloadProgress((percent) => {
+        setDownloadProgress(percent);
+      });
+
+      // Download and extract the update zip
+      await window.electronAPI.downloadUpdate(updateData.download_url, updateData.version);
+
+      removeProgress();
+      setStatus('ready-to-reload');
+
+      if (updateData.is_mandatory) {
+        // Immediate reload for critical updates
+        await applyElectronUpdate();
+      }
+    } catch (err) {
+      console.error('Electron Download failed:', err);
+      setStatus('error');
     }
   };
 
@@ -113,8 +158,7 @@ export function useOTAUpdate() {
       setStatus('ready-to-reload');
 
       if (updateData.is_mandatory) {
-        // Immediate reload for critical bugfixes
-        applyUpdate(bundle);
+        applyMobileUpdate(bundle);
       }
     } catch (err) {
       console.error('Download failed:', err);
@@ -122,12 +166,20 @@ export function useOTAUpdate() {
     }
   };
 
-  const applyUpdate = async (bundleObj) => {
+  const applyElectronUpdate = async () => {
     try {
-      // Set update active and reload web view instantly using the native bundle info object
+      await window.electronAPI.applyUpdate(updateInfo.version);
+    } catch (err) {
+      console.error('Failed to apply Electron update:', err);
+      setStatus('error');
+    }
+  };
+
+  const applyMobileUpdate = async (bundleObj) => {
+    try {
       await CapacitorUpdater.set(bundleObj);
     } catch (err) {
-      console.error('Failed to set active update:', err);
+      console.error('Failed to set active mobile update:', err);
       setStatus('error');
     }
   };
@@ -136,7 +188,13 @@ export function useOTAUpdate() {
     status,
     downloadProgress,
     updateInfo,
-    applyUpdate: () => downloadedBundle && applyUpdate(downloadedBundle),
+    applyUpdate: () => {
+      if (window.electronAPI) {
+        applyElectronUpdate();
+      } else if (downloadedBundle) {
+        applyMobileUpdate(downloadedBundle);
+      }
+    },
     checkAndApplyUpdates,
   };
 }

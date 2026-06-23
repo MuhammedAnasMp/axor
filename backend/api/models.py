@@ -31,6 +31,10 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+
+
+
+
 class Brand(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
@@ -38,12 +42,33 @@ class Brand(models.Model):
     def __str__(self):
         return self.name
 
+class MobileModel(models.Model):
+    brand = models.ForeignKey(
+        Brand,
+        on_delete=models.CASCADE,
+        related_name='mobile_models'
+    )
+    model_name = models.CharField(max_length=200)
+
+    class Meta:
+        unique_together = ('brand', 'model_name')
+        ordering = ['brand__name', 'model_name']
+
+    def __str__(self):
+        return f"{self.brand.name} {self.model_name}"
+
+
 class Product(models.Model):
     name = models.CharField(max_length=200)
     barcode = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True)
+    suitable_models = models.ManyToManyField(
+        MobileModel,
+        blank=True,
+        related_name='products'
+    )
     selling_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00) # Recommended Retail Price
     average_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0.00) # Weighted Average Cost (WAC)
     last_landed_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)

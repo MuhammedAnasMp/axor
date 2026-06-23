@@ -1,10 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../utils/api';
 import { SkeletonCard, SkeletonTable } from '../components/Skeleton';
+import MobileBottomSheet from '../components/MobileBottomSheet';
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     api.dashboard.metrics()
@@ -43,42 +52,64 @@ export default function Dashboard() {
 
         {/* Skeleton Recents Tables Grid */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-lg bg-white p-6 shadow-sm" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
-            <h3 className="text-sm font-semibold text-text-primary mb-4 text-left">Recent Sales Transactions</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-xs">
-                <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
-                  <tr>
-                    <th className="px-4 py-2">Invoice #</th>
-                    <th className="px-4 py-2">Customer</th>
-                    <th className="px-4 py-2">Payment</th>
-                    <th className="px-4 py-2">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-low">
-                  <SkeletonTable rows={5} columns={4} />
-                </tbody>
-              </table>
-            </div>
+          <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm" style={isMobile ? {} : { boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+            <h3 className="text-sm font-semibold text-text-primary mb-3 md:mb-4 text-left">Recent Sales Transactions</h3>
+            {isMobile ? (
+              <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden p-3.5 space-y-3">
+                {[1, 2, 3].map((idx) => (
+                  <div key={idx} className="animate-pulse space-y-2">
+                    <div className="h-4 bg-surface-low rounded w-3/4"></div>
+                    <div className="h-3 bg-surface-low rounded w-1/2"></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
+                    <tr>
+                      <th className="px-4 py-3">Invoice #</th>
+                      <th className="px-4 py-3">Customer</th>
+                      <th className="px-4 py-3">Payment</th>
+                      <th className="px-4 py-3">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-surface-low">
+                    <SkeletonTable rows={5} columns={4} />
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
-          <div className="rounded-lg bg-white p-6 shadow-sm" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
-            <h3 className="text-sm font-semibold text-text-primary mb-4 text-left">Recent Purchase Orders</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-xs">
-                <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
-                  <tr>
-                    <th className="px-4 py-2">PO #</th>
-                    <th className="px-4 py-2">Supplier</th>
-                    <th className="px-4 py-2">Status</th>
-                    <th className="px-4 py-2">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-low">
-                  <SkeletonTable rows={5} columns={4} />
-                </tbody>
-              </table>
-            </div>
+          <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm" style={isMobile ? {} : { boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+            <h3 className="text-sm font-semibold text-text-primary mb-3 md:mb-4 text-left">Recent Purchase Orders</h3>
+            {isMobile ? (
+              <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden p-3.5 space-y-3">
+                {[1, 2, 3].map((idx) => (
+                  <div key={idx} className="animate-pulse space-y-2">
+                    <div className="h-4 bg-surface-low rounded w-3/4"></div>
+                    <div className="h-3 bg-surface-low rounded w-1/2"></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
+                    <tr>
+                      <th className="px-4 py-3">PO #</th>
+                      <th className="px-4 py-3">Supplier</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-surface-low">
+                    <SkeletonTable rows={5} columns={4} />
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -216,74 +247,193 @@ export default function Dashboard() {
       {/* Recents Tables Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Recent Sales */}
-        <div className="rounded-lg bg-white p-6 shadow-sm" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
-          <h3 className="text-sm font-semibold text-text-primary mb-4">Recent Sales Transactions</h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-xs">
-              <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
-                <tr>
-                  <th className="px-4 py-2">Invoice #</th>
-                  <th className="px-4 py-2">Customer</th>
-                  <th className="px-4 py-2">Payment</th>
-                  <th className="px-4 py-2">Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-low">
-                {metrics?.recent_sales?.map((sale, i) => (
-                  <tr key={i}>
-                    <td className="px-4 py-2.5 font-medium text-brand-blue">{sale.invoice_number}</td>
-                    <td className="px-4 py-2.5 text-text-primary">{sale.customer_name || 'Walk-In Customer'}</td>
-                    <td className="px-4 py-2.5 text-text-secondary">{sale.payment_type}</td>
-                    <td className="px-4 py-2.5 font-semibold text-text-primary">{formatCurrency(sale.total_amount)}</td>
-                  </tr>
-                ))}
-                {(!metrics?.recent_sales || metrics.recent_sales.length === 0) && (
+        <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm" style={isMobile ? {} : { boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+          <h3 className="text-sm font-semibold text-text-primary mb-3 md:mb-4">Recent Sales Transactions</h3>
+          {isMobile ? (
+            <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden">
+              {metrics?.recent_sales?.map((sale, i) => (
+                <div
+                  key={i}
+                  onClick={() => setSelectedTransaction({ ...sale, type: 'sale' })}
+                  className="p-3.5 hover:bg-surface-bright transition-colors cursor-pointer space-y-2 text-sm"
+                >
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="min-w-0">
+                      <div className="font-bold text-text-primary truncate">{sale.customer_name || 'Walk-In Customer'}</div>
+                      <div className="text-xs text-text-secondary mt-0.5">Invoice: <span className="font-mono">{sale.invoice_number}</span></div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="font-bold text-brand-blue">{formatCurrency(sale.total_amount)}</div>
+                      <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-surface-low text-text-secondary mt-1">
+                        {sale.payment_type}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {(!metrics?.recent_sales || metrics.recent_sales.length === 0) && (
+                <div className="p-8 text-center text-sm text-text-secondary">No sales transactions logged today.</div>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
                   <tr>
-                    <td colSpan="4" className="px-4 py-8 text-center text-text-secondary">No sales transactions logged today.</td>
+                    <th className="px-4 py-3">Invoice #</th>
+                    <th className="px-4 py-3">Customer</th>
+                    <th className="px-4 py-3">Payment</th>
+                    <th className="px-4 py-3">Amount</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-surface-low">
+                  {metrics?.recent_sales?.map((sale, i) => (
+                    <tr key={i} className="hover:bg-surface-bright">
+                      <td className="px-4 py-4 font-medium text-brand-blue">{sale.invoice_number}</td>
+                      <td className="px-4 py-4 text-text-primary">{sale.customer_name || 'Walk-In Customer'}</td>
+                      <td className="px-4 py-4 text-text-secondary">{sale.payment_type}</td>
+                      <td className="px-4 py-4 font-semibold text-text-primary">{formatCurrency(sale.total_amount)}</td>
+                    </tr>
+                  ))}
+                  {(!metrics?.recent_sales || metrics.recent_sales.length === 0) && (
+                    <tr>
+                      <td colSpan="4" className="px-4 py-8 text-center text-text-secondary">No sales transactions logged today.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Recent Purchases */}
-        <div className="rounded-lg bg-white p-6 shadow-sm" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
-          <h3 className="text-sm font-semibold text-text-primary mb-4">Recent Purchase Orders</h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-xs">
-              <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
-                <tr>
-                  <th className="px-4 py-2">PO #</th>
-                  <th className="px-4 py-2">Supplier</th>
-                  <th className="px-4 py-2">Status</th>
-                  <th className="px-4 py-2">Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-low">
-                {metrics?.recent_purchases?.map((pur, i) => (
-                  <tr key={i}>
-                    <td className="px-4 py-2.5 font-medium text-brand-blue">PO-{pur.id}</td>
-                    <td className="px-4 py-2.5 text-text-primary">{pur.supplier_name}</td>
-                    <td className="px-4 py-2.5">
-                      <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${pur.is_received ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                        }`}>
+        <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm" style={isMobile ? {} : { boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
+          <h3 className="text-sm font-semibold text-text-primary mb-3 md:mb-4">Recent Purchase Orders</h3>
+          {isMobile ? (
+            <div className="divide-y divide-surface-low bg-white border border-surface-low rounded-lg overflow-hidden">
+              {metrics?.recent_purchases?.map((pur, i) => (
+                <div
+                  key={i}
+                  onClick={() => setSelectedTransaction({ ...pur, type: 'purchase' })}
+                  className="p-3.5 hover:bg-surface-bright transition-colors cursor-pointer space-y-2 text-sm"
+                >
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="min-w-0">
+                      <div className="font-bold text-text-primary truncate">{pur.supplier_name}</div>
+                      <div className="text-xs text-text-secondary mt-0.5">PO: <span className="font-mono">PO-{pur.id}</span></div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="font-bold text-brand-blue">{formatCurrency(pur.total_amount)}</div>
+                      <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold mt-1 ${
+                        pur.is_received ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
                         {pur.is_received ? 'Received' : 'Pending'}
                       </span>
-                    </td>
-                    <td className="px-4 py-2.5 font-semibold text-text-primary">{formatCurrency(pur.total_amount)}</td>
-                  </tr>
-                ))}
-                {(!metrics?.recent_purchases || metrics.recent_purchases.length === 0) && (
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {(!metrics?.recent_purchases || metrics.recent_purchases.length === 0) && (
+                <div className="p-8 text-center text-sm text-text-secondary">No purchase orders logged.</div>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
                   <tr>
-                    <td colSpan="4" className="px-4 py-8 text-center text-text-secondary">No purchase orders logged.</td>
+                    <th className="px-4 py-3">PO #</th>
+                    <th className="px-4 py-3">Supplier</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Amount</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-surface-low">
+                  {metrics?.recent_purchases?.map((pur, i) => (
+                    <tr key={i} className="hover:bg-surface-bright">
+                      <td className="px-4 py-4 font-medium text-brand-blue">PO-{pur.id}</td>
+                      <td className="px-4 py-4 text-text-primary">{pur.supplier_name}</td>
+                      <td className="px-4 py-4">
+                        <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${pur.is_received ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                          }`}>
+                          {pur.is_received ? 'Received' : 'Pending'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 font-semibold text-text-primary">{formatCurrency(pur.total_amount)}</td>
+                    </tr>
+                  ))}
+                  {(!metrics?.recent_purchases || metrics.recent_purchases.length === 0) && (
+                    <tr>
+                      <td colSpan="4" className="px-4 py-8 text-center text-text-secondary">No purchase orders logged.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Mobile Bottom Sheet for Transaction Details */}
+      <MobileBottomSheet
+        isOpen={selectedTransaction !== null}
+        onClose={() => setSelectedTransaction(null)}
+        title={selectedTransaction?.type === 'sale' ? 'Sale Transaction Details' : 'Purchase Order Details'}
+      >
+        {selectedTransaction && (
+          <div className="space-y-4 pb-6 text-sm">
+            {selectedTransaction.type === 'sale' ? (
+              <>
+                <div>
+                  <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Invoice Number</span>
+                  <div className="text-base font-bold text-text-primary mt-0.5 font-mono">{selectedTransaction.invoice_number}</div>
+                </div>
+                <div>
+                  <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Customer Name</span>
+                  <div className="text-sm font-semibold text-text-primary mt-0.5">{selectedTransaction.customer_name || 'Walk-In Customer'}</div>
+                </div>
+                <div>
+                  <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Payment Type</span>
+                  <div className="mt-1">
+                    <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded bg-surface-low text-text-secondary">
+                      {selectedTransaction.payment_type}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Total Sales Amount</span>
+                  <div className="text-lg font-bold text-brand-blue mt-0.5">{formatCurrency(selectedTransaction.total_amount)}</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">PO # Reference</span>
+                  <div className="text-base font-bold text-text-primary mt-0.5 font-mono">PO-{selectedTransaction.id}</div>
+                </div>
+                <div>
+                  <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Supplier</span>
+                  <div className="text-sm font-semibold text-text-primary mt-0.5">{selectedTransaction.supplier_name}</div>
+                </div>
+                <div>
+                  <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Order Status</span>
+                  <div className="mt-1">
+                    <span className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${
+                      selectedTransaction.is_received ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {selectedTransaction.is_received ? 'Received' : 'Pending'}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Total Order Value</span>
+                  <div className="text-lg font-bold text-brand-blue mt-0.5">{formatCurrency(selectedTransaction.total_amount)}</div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </MobileBottomSheet>
     </div>
   );
 }

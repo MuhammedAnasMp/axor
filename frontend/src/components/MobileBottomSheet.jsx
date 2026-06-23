@@ -12,7 +12,7 @@ export default function MobileBottomSheet({ isOpen, onClose, title, children }) 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="md:hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs"
+            className="md:hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs" style={{}}
           />
 
           {/* Bottom Sheet Container */}
@@ -21,11 +21,11 @@ export default function MobileBottomSheet({ isOpen, onClose, title, children }) 
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-            className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex max-h-[85vh] flex-col rounded-t-3xl bg-white shadow-2xl border-t border-surface-low overflow-hidden safe-pb"
+            className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex max-h-[85vh] flex-col rounded-t-3xl bg-white shadow-2xl border-t border-surface-low overflow-hidden safe-pb mb-0"
           >
             {/* Drag Handle Area */}
             <div className="relative flex items-center justify-center py-3 border-b border-surface-low cursor-grab active:cursor-grabbing">
-              <div className="h-1.5 w-12 rounded-full bg-surface-highest" />
+              <div className="my-3 h-1.5 w-12 rounded-full bg-surface-highest" />
               {title && (
                 <span className="absolute left-6 text-sm font-bold text-text-primary">
                   {title}

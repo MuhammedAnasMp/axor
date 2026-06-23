@@ -13,7 +13,7 @@ export const getBaseUrl = () => {
 
     const activeMode = localStorage.getItem('active_api_mode') || 'local';
     if (activeMode === 'production') {
-      return localStorage.getItem('production_api_url') || 'https://axonbackend.pythonanywhere.com/api';
+      return localStorage.getItem('production_api_url') || 'https://axor-0r99.onrender.com/api';
     } else {
       return localStorage.getItem('local_api_url') || 'http://172.16.4.167:8001/api';
     }
@@ -121,6 +121,11 @@ export const api = {
     list: (params) => request('/brands/', { params }),
     create: (data) => request('/brands/', { method: 'POST', body: data }),
     delete: (id) => request(`/brands/${id}/`, { method: 'DELETE' }),
+  },
+  mobileModels: {
+    list: (params) => request('/mobile-models/', { params }),
+    create: (data) => request('/mobile-models/', { method: 'POST', body: data }),
+    delete: (id) => request(`/mobile-models/${id}/`, { method: 'DELETE' }),
   },
   products: {
     list: (params) => request('/products/', { params }),

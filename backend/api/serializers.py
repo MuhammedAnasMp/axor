@@ -6,7 +6,7 @@ from .models import (
     ExpenseCategory, Expense, Purchase, PurchaseItem, SupplierPayment,
     Sale, SaleItem, CustomerPayment, SupplierProduct, SupplierCostHistory,
     EmployeeSalaryPayment, EmployeeAdvance, EmployeeAttendance, EmployeePayrollAuditTrail,
-    PurchaseReturn, PurchaseReturnItem
+    PurchaseReturn, PurchaseReturnItem, MobileModel
 )
 
 class UserSerializer(serializers.ModelSerializer):
@@ -135,28 +135,44 @@ class BrandSerializer(serializers.ModelSerializer):
         model = Brand
         fields = '__all__'
 
+class MobileModelSerializer(serializers.ModelSerializer):
+    brand_name = serializers.CharField(source='brand.name', read_only=True)
+    
+    class Meta:
+        model = MobileModel
+        fields = ['id', 'brand', 'brand_name', 'model_name']
+
 class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     brand_name = serializers.CharField(source='brand.name', read_only=True)
     stock_qty = serializers.IntegerField(source='stock.quantity', read_only=True)
     profit_per_item = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    suitable_models_details = MobileModelSerializer(source='suitable_models', many=True, read_only=True)
+    suitable_models = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=MobileModel.objects.all(),
+        required=False
+    )
 
     class Meta:
         model = Product
         fields = ['id', 'name', 'barcode', 'description', 'category', 'category_name', 
                   'brand', 'brand_name', 'selling_price', 'average_cost', 
-                  'last_landed_cost', 'profit_per_item', 'status', 'image_url', 'stock_qty']
+                  'last_landed_cost', 'profit_per_item', 'status', 'image_url', 'stock_qty',
+                  'suitable_models', 'suitable_models_details']
 
 class StockSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     barcode = serializers.CharField(source='product.barcode', read_only=True)
+    suitable_models_details = MobileModelSerializer(source='product.suitable_models', many=True, read_only=True)
 
     class Meta:
         model = Stock
-        fields = ['id', 'product', 'product_name', 'barcode', 'quantity']
+        fields = ['id', 'product', 'product_name', 'barcode', 'quantity', 'suitable_models_details']
 
 class StockHistorySerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
+    suitable_models_details = MobileModelSerializer(source='product.suitable_models', many=True, read_only=True)
 
     class Meta:
         model = StockHistory
@@ -175,6 +191,7 @@ class SupplierProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='product.category.name', read_only=True, allow_null=True)
     product_image = serializers.CharField(source='product.image_url', read_only=True, allow_null=True)
     selling_price = serializers.DecimalField(source='product.selling_price', max_digits=12, decimal_places=2, read_only=True)
+    suitable_models_details = MobileModelSerializer(source='product.suitable_models', many=True, read_only=True)
 
     class Meta:
         model = SupplierProduct
@@ -184,6 +201,7 @@ class SupplierCostHistorySerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     barcode = serializers.CharField(source='product.barcode', read_only=True)
     supplier_name = serializers.CharField(source='supplier.name', read_only=True)
+    suitable_models_details = MobileModelSerializer(source='product.suitable_models', many=True, read_only=True)
 
     class Meta:
         model = SupplierCostHistory
@@ -239,6 +257,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
 class PurchaseReturnItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     barcode = serializers.CharField(source='product.barcode', read_only=True)
+    suitable_models_details = MobileModelSerializer(source='product.suitable_models', many=True, read_only=True)
 
     class Meta:
         model = PurchaseReturnItem
@@ -257,6 +276,7 @@ class PurchaseItemSerializer(serializers.ModelSerializer):
     barcode = serializers.CharField(source='product.barcode', read_only=True)
     selling_price = serializers.DecimalField(source='product.selling_price', max_digits=12, decimal_places=2, read_only=True)
     stock_qty = serializers.IntegerField(source='product.stock.quantity', read_only=True)
+    suitable_models_details = MobileModelSerializer(source='product.suitable_models', many=True, read_only=True)
 
     class Meta:
         model = PurchaseItem
@@ -283,6 +303,7 @@ class SupplierPaymentSerializer(serializers.ModelSerializer):
 class SaleItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     barcode = serializers.CharField(source='product.barcode', read_only=True)
+    suitable_models_details = MobileModelSerializer(source='product.suitable_models', many=True, read_only=True)
 
     class Meta:
         model = SaleItem

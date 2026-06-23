@@ -488,7 +488,8 @@ export default function Purchases() {
       supplier_id: poMode === 'product' ? parseInt(selectedProductSupplierId) : parseInt(supplier),
       supplier_name: poMode === 'product'
         ? (supplierObj ? supplierObj.supplier_name : '')
-        : (suppliers.find(s => s.id.toString() === supplier)?.name || '')
+        : (suppliers.find(s => s.id.toString() === supplier)?.name || ''),
+      suitable_models_details: selectedProductObj.suitable_models_details
     };
 
     setItems([...items, newItem]);
@@ -1446,7 +1447,7 @@ export default function Purchases() {
       </div>
 
       {/* Tabs Menu */}
-      <div className="tabs-container border-b border-surface-low">
+      <div className="hidden md:block tabs-container border-b border-surface-low">
         <div className="tabs-scrollable space-x-6 text-sm font-medium">
           <Link
             to="/erp/purchases"
@@ -1685,7 +1686,18 @@ export default function Purchases() {
                             }}
                             className="w-full text-left px-3 py-2 hover:bg-surface-low text-text-primary font-medium border-b border-surface-lowest last:border-0"
                           >
-                            <span className="font-semibold">{p.name}</span> <span className="text-text-secondary">({p.barcode})</span>
+                            <div>
+                              <span className="font-semibold">{p.name}</span> <span className="text-text-secondary">({p.barcode})</span>
+                              {p.suitable_models_details && p.suitable_models_details.length > 0 && (
+                                <div className="flex flex-wrap gap-0.5 mt-0.5">
+                                  {p.suitable_models_details.map((m) => (
+                                    <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
+                                    {m.brand_name} {m.model_name}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </button>
                         ))
                       )}
@@ -1802,6 +1814,15 @@ export default function Purchases() {
                             <tr key={item.originalIndex}>
                               <td className="px-3 py-2 pl-6">
                                 <span className="font-semibold text-text-primary">{item.name}</span>
+                                {item.suitable_models_details && item.suitable_models_details.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1 font-normal">
+                                    {item.suitable_models_details.map((m) => (
+                                      <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
+                                        {m.brand_name} {m.model_name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                               </td>
                               {poMode === 'product' && (
                                 <td className="px-3 py-2 text-text-primary font-medium">
@@ -1851,7 +1872,7 @@ export default function Purchases() {
       {currentTab === 'receive' && (
         <div className="space-y-4">
           {/* Search bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-t-lg border-t border-x border-surface-low">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 md:bg-white md:p-4 md:rounded-t-lg md:border-t md:border-x md:border-surface-low bg-transparent p-0 border-none">
             <div className="relative w-full sm:w-72">
               <input
                 type="text"
@@ -1872,16 +1893,16 @@ export default function Purchases() {
           </div>
 
           <div className="rounded-b-lg bg-white border-x border-b border-surface-low overflow-x-auto hidden md:block">
-            <table className="min-w-full text-left text-xs">
-              <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-surface-low text-text-secondary font-semibold uppercase text-xs tracking-wider">
                 <tr>
                   {renderSortHeader('PO #', 'id', receivePag)}
                   {renderSortHeader('Supplier', 'supplier__name', receivePag)}
                   {renderSortHeader('Ref Invoice #', 'invoice_number', receivePag)}
-                  <th className="px-4 py-2">Payment Type</th>
-                  <th className="px-4 py-2 text-right">Landed Cost</th>
+                  <th className="px-4 py-4">Payment Type</th>
+                  <th className="px-4 py-4 text-right">Landed Cost</th>
                   {renderSortHeader('Total Amount', 'total_amount', receivePag)}
-                  <th className="px-4 py-2 text-center">Action</th>
+                  <th className="px-4 py-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-low">
@@ -1890,13 +1911,13 @@ export default function Purchases() {
                 ) : (
                   receivePag.data.map((p) => (
                     <tr key={p.id} className="hover:bg-surface-bright">
-                      <td className="px-4 py-3 font-semibold text-brand-blue cursor-pointer hover:underline" onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}>PO-{p.id}</td>
-                      <td className="px-4 py-3 text-text-primary">{p.supplier_name}</td>
-                      <td className="px-4 py-3 text-text-secondary font-mono">{p.invoice_number || '-'}</td>
-                      <td className="px-4 py-3 text-text-secondary">{p.payment_type}</td>
-                      <td className="px-4 py-3 text-right text-text-secondary">{formatCurrency(p.additional_costs)}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-text-primary">{formatCurrency(p.total_amount)}</td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-4 font-semibold text-brand-blue cursor-pointer hover:underline" onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}>PO-{p.id}</td>
+                      <td className="px-4 py-4 text-text-primary">{p.supplier_name}</td>
+                      <td className="px-4 py-4 text-text-secondary font-mono">{p.invoice_number || '-'}</td>
+                      <td className="px-4 py-4 text-text-secondary">{p.payment_type}</td>
+                      <td className="px-4 py-4 text-right text-text-secondary">{formatCurrency(p.additional_costs)}</td>
+                      <td className="px-4 py-4 text-right font-semibold text-text-primary">{formatCurrency(p.total_amount)}</td>
+                      <td className="px-4 py-4 text-center">
                         <button
                           onClick={() => handleOpenReceiveModal(p)}
                           className="rounded bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 transition"
@@ -1984,7 +2005,7 @@ export default function Purchases() {
             )}
           </div>
 
-          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-surface-low sm:px-6">
+          <div className="md:bg-white md:px-4 md:py-3 flex items-center justify-between md:border-t md:border-surface-low bg-transparent p-0 border-none mt-2">
             <PaginationControls
               page={receivePag.page}
               setPage={receivePag.setPage}
@@ -2002,7 +2023,7 @@ export default function Purchases() {
       {currentTab === 'history' && (
         <div className="space-y-4">
           {/* Search bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-t-lg border-t border-x border-surface-low">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 md:bg-white md:p-4 md:rounded-t-lg md:border-t md:border-x md:border-surface-low bg-transparent p-0 border-none">
             <div className="relative w-full sm:w-72">
               <input
                 type="text"
@@ -2023,16 +2044,16 @@ export default function Purchases() {
           </div>
 
           <div className="rounded-b-lg bg-white border-x border-b border-surface-low overflow-x-auto hidden md:block">
-            <table className="min-w-full text-left text-xs">
-              <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-surface-low text-text-secondary font-semibold uppercase text-xs tracking-wider">
                 <tr>
                   {renderSortHeader('PO #', 'id', historyPag)}
                   {renderSortHeader('Date', 'timestamp', historyPag)}
                   {renderSortHeader('Supplier', 'supplier__name', historyPag)}
-                  <th className="px-4 py-2 text-right">Landed Cost</th>
+                  <th className="px-4 py-4 text-right">Landed Cost</th>
                   {renderSortHeader('Total Amount', 'total_amount', historyPag)}
                   {renderSortHeader('Status', 'is_received', historyPag)}
-                  <th className="px-4 py-2 text-center">Actions</th>
+                  <th className="px-4 py-4 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-low">
@@ -2041,12 +2062,12 @@ export default function Purchases() {
                 ) : (
                   historyPag.data.map((p) => (
                     <tr key={p.id} className="hover:bg-surface-bright">
-                      <td className="px-4 py-3 font-semibold text-brand-blue cursor-pointer hover:underline" onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}>PO-{p.id}</td>
-                      <td className="px-4 py-3 text-text-secondary">{new Date(p.timestamp).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-text-primary">{p.supplier_name}</td>
-                      <td className="px-4 py-3 text-right text-text-secondary">{formatCurrency(p.additional_costs)}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-text-primary">{formatCurrency(p.total_amount)}</td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-4 font-semibold text-brand-blue cursor-pointer hover:underline" onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}>PO-{p.id}</td>
+                      <td className="px-4 py-4 text-text-secondary">{new Date(p.timestamp).toLocaleString()}</td>
+                      <td className="px-4 py-4 text-text-primary">{p.supplier_name}</td>
+                      <td className="px-4 py-4 text-right text-text-secondary">{formatCurrency(p.additional_costs)}</td>
+                      <td className="px-4 py-4 text-right font-semibold text-text-primary">{formatCurrency(p.total_amount)}</td>
+                      <td className="px-4 py-4 text-center">
                         <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold ${
                           p.status === 'Returned' ? 'bg-red-100 text-red-800' :
                           p.status === 'Partially Returned' ? 'bg-orange-100 text-orange-800' :
@@ -2055,7 +2076,7 @@ export default function Purchases() {
                           {p.status || (p.is_received ? 'Received' : 'Pending')}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-4 text-center">
                         {p.is_received && (
                           <button
                             onClick={() => handleOpenReturnModal(p)}
@@ -2158,7 +2179,7 @@ export default function Purchases() {
             )}
           </div>
 
-          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-surface-low sm:px-6">
+          <div className="md:bg-white md:px-4 md:py-3 flex items-center justify-between md:border-t md:border-surface-low bg-transparent p-0 border-none mt-2">
             <PaginationControls
               page={historyPag.page}
               setPage={historyPag.setPage}
@@ -2286,6 +2307,15 @@ export default function Purchases() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <span className="font-semibold text-xs text-text-primary line-clamp-1 block">{sp.product_name}</span>
+                            {sp.suitable_models_details && sp.suitable_models_details.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1 font-normal">
+                                {sp.suitable_models_details.map((m) => (
+                                  <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
+                                    {m.brand_name} {m.model_name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                             <span className="text-[10px] text-text-secondary font-mono block">{sp.barcode}</span>
                             <span className="text-brand-blue font-bold text-xs pt-0.5 block">₹{sp.current_cost}</span>
                           </div>
@@ -2311,6 +2341,15 @@ export default function Purchases() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <span className="font-semibold text-xs text-text-primary line-clamp-1 block">{p.name}</span>
+                            {p.suitable_models_details && p.suitable_models_details.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1 font-normal">
+                                {p.suitable_models_details.map((m) => (
+                                  <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
+                                    {m.brand_name} {m.model_name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                             <span className="text-[10px] text-text-secondary font-mono block">{p.barcode}</span>
                             <span className="text-text-secondary text-[10px] pt-0.5 block">RRP: ₹{p.selling_price}</span>
                           </div>
@@ -2539,7 +2578,18 @@ export default function Purchases() {
                                       }}
                                       className="w-full text-left px-3 py-1.5 hover:bg-surface-low text-text-primary font-medium border-b border-surface-lowest last:border-0"
                                     >
-                                      <span className="font-semibold text-xs">{p.name}</span> <span className="text-[10px] text-text-secondary">({p.barcode})</span>
+                                      <div>
+                                        <span className="font-semibold text-xs">{p.name}</span> <span className="text-[10px] text-text-secondary">({p.barcode})</span>
+                                        {p.suitable_models_details && p.suitable_models_details.length > 0 && (
+                                          <div className="flex flex-wrap gap-0.5 mt-0.5">
+                                            {p.suitable_models_details.map((m) => (
+                                              <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
+                                              {m.brand_name} {m.model_name}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
                                     </button>
                                   ))
                                 )}
@@ -2748,7 +2798,18 @@ export default function Purchases() {
                                 }}
                                 className="w-full text-left px-3 py-1.5 hover:bg-surface-low text-text-primary font-medium border-b border-surface-lowest last:border-0"
                               >
-                                <span className="font-semibold text-xs">{p.name}</span> <span className="text-[10px] text-text-secondary">({p.barcode})</span>
+                                <div>
+                                  <span className="font-semibold text-xs">{p.name}</span> <span className="text-[10px] text-text-secondary">({p.barcode})</span>
+                                  {p.suitable_models_details && p.suitable_models_details.length > 0 && (
+                                    <div className="flex flex-wrap gap-0.5 mt-0.5">
+                                      {p.suitable_models_details.map((m) => (
+                                        <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
+                                          {m.brand_name} {m.model_name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               </button>
                             ))
                           )}
@@ -3084,6 +3145,15 @@ export default function Purchases() {
                           <span className="font-semibold text-xs text-text-primary line-clamp-1 block">
                             {sp.product_name}
                           </span>
+                          {sp.suitable_models_details && sp.suitable_models_details.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1 font-normal">
+                              {sp.suitable_models_details.map((m) => (
+                                <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
+                                  {m.brand_name} {m.model_name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           <span className="text-[10px] text-text-secondary font-mono block">{sp.barcode}</span>
                           <span className="text-brand-blue font-bold text-xs pt-0.5 block">₹{sp.current_cost}</span>
                         </div>
@@ -3472,6 +3542,15 @@ export default function Purchases() {
                         <tr key={idx} className="hover:bg-surface-bright">
                           <td className="px-3 py-2 font-medium">
                             <div>{item.product_name}</div>
+                            {item.suitable_models_details && item.suitable_models_details.length > 0 && (
+                               <div className="flex flex-wrap gap-1 mt-1 font-normal">
+                                 {item.suitable_models_details.map((m) => (
+                                   <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
+                                   {m.brand_name} {m.model_name}
+                                   </span>
+                                 ))}
+                               </div>
+                             )}
                             <div className="text-[10px] text-text-secondary font-mono">{item.barcode}</div>
                           </td>
                           <td className="px-3 py-2 text-right">{item.quantity}</td>
@@ -3500,6 +3579,15 @@ export default function Purchases() {
                       <div className="flex justify-between items-start border-b border-surface-lowest pb-1.5">
                         <div>
                           <div className="font-semibold text-text-primary">{item.product_name}</div>
+                          {item.suitable_models_details && item.suitable_models_details.length > 0 && (
+                             <div className="flex flex-wrap gap-1 mt-1 font-normal">
+                               {item.suitable_models_details.map((m) => (
+                                 <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
+                                   {m.brand_name} {m.model_name}
+                                 </span>
+                               ))}
+                             </div>
+                           )}
                           <div className="text-[10px] text-text-secondary font-mono">{item.barcode}</div>
                         </div>
                         <div className="text-right font-semibold text-brand-blue">
@@ -3566,6 +3654,15 @@ export default function Purchases() {
                               <div key={rIdx} className="flex justify-between items-center text-[11px] border-b border-surface-lowest last:border-b-0 py-0.5">
                                 <div>
                                   <span className="font-medium text-text-primary">{ritem.product_name}</span>
+                                  {ritem.suitable_models_details && ritem.suitable_models_details.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1 font-normal">
+                                      {ritem.suitable_models_details.map((m) => (
+                                        <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
+                                          {m.brand_name} {m.model_name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
                                   <span className="text-text-secondary text-[10px] ml-1.5 font-mono">({ritem.barcode})</span>
                                 </div>
                                 <span className="font-semibold text-text-primary">

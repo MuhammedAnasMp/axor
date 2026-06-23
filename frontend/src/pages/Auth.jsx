@@ -44,7 +44,7 @@ export default function Auth() {
 
   const [isTestDevice] = useState(localStorage.getItem('is_test_device') === 'true');
   const [localApiUrl, setLocalApiUrl] = useState(localStorage.getItem('local_api_url') || 'http://172.16.4.167:8001/api');
-  const [prodApiUrl, setProdApiUrl] = useState(localStorage.getItem('production_api_url') || 'https://axonbackend.pythonanywhere.com/api');
+  const [prodApiUrl, setProdApiUrl] = useState(localStorage.getItem('production_api_url') || 'https://axor-0r99.onrender.com/api');
   const [activeApiMode, setActiveApiMode] = useState(localStorage.getItem('active_api_mode') || 'local');
 
   const saveApiSettings = (localUrl, prodUrl, mode) => {

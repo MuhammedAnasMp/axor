@@ -194,17 +194,22 @@ export default function VisualReports() {
         <div className="rounded-lg bg-white p-6 shadow-sm" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
           <h3 className="text-sm font-semibold text-text-primary mb-4">Expenses Category Spread</h3>
           <div className="space-y-3">
-            {reportData?.expense_breakdown?.map((exp, i) => (
-              <div key={i} className="space-y-1 text-xs">
-                <div className="flex justify-between font-semibold text-text-primary">
-                  <span>{exp.category__name}</span>
-                  <span>{formatCurrency(exp.total_amount)}</span>
+            {(() => {
+              const maxExpense = reportData?.expense_breakdown && reportData.expense_breakdown.length > 0
+                ? Math.max(...reportData.expense_breakdown.map(e => e.total_amount))
+                : 1;
+              return reportData?.expense_breakdown?.map((exp, i) => (
+                <div key={i} className="space-y-1 text-xs">
+                  <div className="flex justify-between font-semibold text-text-primary">
+                    <span>{exp.category__name}</span>
+                    <span>{formatCurrency(exp.total_amount)}</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-surface-low rounded-full overflow-hidden">
+                    <div className="h-full bg-error rounded-full" style={{ width: `${Math.max((exp.total_amount / maxExpense) * 100, 5)}%` }}></div>
+                  </div>
                 </div>
-                <div className="h-1.5 w-full bg-surface-low rounded-full overflow-hidden">
-                  <div className="h-full bg-error rounded-full" style={{ width: '60%' }}></div>
-                </div>
-              </div>
-            ))}
+              ));
+            })()}
             {(!reportData?.expense_breakdown || reportData.expense_breakdown.length === 0) && (
               <div className="text-center text-xs text-text-secondary py-12">No expenses recorded.</div>
             )}
