@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../utils/api';
 import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
@@ -89,6 +90,9 @@ function ContactNumber({ number, isWhatsapp }) {
 }
 
 export default function Customers() {
+  const [searchParams] = useSearchParams();
+  const currentTab = searchParams.get('tab') || 'directory';
+
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedCustomerDetails, setSelectedCustomerDetails] = useState(null);
 
@@ -103,7 +107,10 @@ export default function Customers() {
   const [dropdownsLoading, setDropdownsLoading] = useState(true);
 
   // Paginated customers list
-  const pag = usePagination(api.customers.list, 10, true);
+  const pag = usePagination(api.customers.list, 10, currentTab === 'directory');
+
+  // Paginated payment logs
+  const paymentsPag = usePagination(api.customerPayments.list, 10, currentTab === 'payments');
 
   // Form states
   const [showForm, setShowForm] = useState(false);
@@ -122,12 +129,19 @@ export default function Customers() {
   const [isSaving, setIsSaving] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
 
+  // Post (negative balance) states
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [postCustomer, setPostCustomer] = useState(null);
+  const [postAmount, setPostAmount] = useState('');
+  const [postBank, setPostBank] = useState('');
+  const [isPostingOut, setIsPostingOut] = useState(false);
+
   const loadDropdowns = () => {
     setDropdownsLoading(true);
     api.bankAccounts.list()
       .then((b) => {
         setBankAccounts(b);
-        if (b.length > 0) setPayBank(b[0].id.toString());
+        if (b.length > 0) { setPayBank(b[0].id.toString()); setPostBank(b[0].id.toString()); }
         setDropdownsLoading(false);
       })
       .catch((err) => {
@@ -222,6 +236,34 @@ export default function Customers() {
     setShowPayModal(true);
   };
 
+  const openPostModal = (customer) => {
+    setPostCustomer(customer);
+    setPostAmount(Math.abs(parseFloat(customer.outstanding_balance)).toString());
+    setShowPostModal(true);
+  };
+
+  const handlePostSubmit = (e) => {
+    e.preventDefault();
+    if (!postCustomer || postAmount === '' || postBank === '') return;
+    setIsPostingOut(true);
+    api.customerPayments.create({
+      customer: postCustomer.id,
+      payment_to: parseInt(postBank),
+      amount: -Math.abs(parseFloat(postAmount))
+    })
+      .then(() => {
+        setShowPostModal(false);
+        setPostAmount('');
+        pag.refresh();
+        loadDropdowns();
+        setIsPostingOut(false);
+      })
+      .catch((err) => {
+        alert(err.message);
+        setIsPostingOut(false);
+      });
+  };
+
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -238,6 +280,24 @@ export default function Customers() {
         className="px-4 py-3 cursor-pointer hover:bg-surface-low select-none transition-colors"
       >
         <div className="flex items-center space-x-1">
+          <span>{label}</span>
+          <span className="text-text-secondary">
+            {isSorted ? (isDesc ? '↓' : '↑') : '↕'}
+          </span>
+        </div>
+      </th>
+    );
+  };
+
+  const renderSortHeaderForPag = (label, field, pagObj, isRight = false) => {
+    const isSorted = pagObj.ordering === field || pagObj.ordering === `-${field}`;
+    const isDesc = pagObj.ordering === `-${field}`;
+    return (
+      <th
+        onClick={() => pagObj.handleSort(field)}
+        className={`px-4 py-4 cursor-pointer hover:bg-surface-low select-none transition-colors ${isRight ? 'text-right' : 'text-left'}`}
+      >
+        <div className={`flex items-center space-x-1 ${isRight ? 'justify-end' : ''}`}>
           <span>{label}</span>
           <span className="text-text-secondary">
             {isSorted ? (isDesc ? '↓' : '↑') : '↕'}
@@ -368,7 +428,57 @@ export default function Customers() {
           className={`rounded bg-brand-blue px-3 py-1.5 text-xs text-white hover:bg-brand-cobalt flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
         >
           {isPosting && <Spinner size="xs" />}
-          <span>{isPosting ? 'Posting...' : 'Post Payment'}</span>
+          <span>{isPosting ? 'Recieving...' : 'Recieve'}</span>
+        </button>
+      </div>
+    </form>
+  );
+
+  const renderPostForm = (isMobile = false) => (
+    <form onSubmit={handlePostSubmit} className="space-y-4">
+      <div className="rounded bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700 font-medium">
+        This customer has a credit balance. Post a payment out from the bank to settle the amount owed to them.
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-text-secondary mb-1">Amount to Post (INR)</label>
+        <input
+          type="number"
+          step="0.01"
+          required
+          min="0.01"
+          value={postAmount}
+          onChange={(e) => setPostAmount(e.target.value)}
+          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue text-text-primary"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-text-secondary mb-1">Pay From Bank Account</label>
+        <select
+          required
+          value={postBank}
+          onChange={(e) => setPostBank(e.target.value)}
+          className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue text-text-primary"
+        >
+          {bankAccounts.map((b) => (
+            <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
+          ))}
+        </select>
+      </div>
+      <div className={isMobile ? "flex flex-col space-y-2 pt-2" : "flex justify-end space-x-2 pt-2"}>
+        <button
+          type="button"
+          onClick={() => setShowPostModal(false)}
+          className={`rounded border border-surface-dim px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-low ${isMobile ? 'w-full py-2.5 font-semibold' : ''}`}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={isPostingOut}
+          className={`rounded bg-green-600 px-3 py-1.5 text-xs text-white hover:bg-green-700 flex items-center justify-center space-x-1.5 disabled:opacity-50 disabled:pointer-events-none ${isMobile ? 'w-full py-2.5 font-bold' : ''}`}
+        >
+          {isPostingOut && <Spinner size="xs" />}
+          <span>{isPostingOut ? 'Posting...' : 'Pay'}</span>
         </button>
       </div>
     </form>
@@ -380,26 +490,68 @@ export default function Customers() {
       {!isMobile && (
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Customers Directory</h2>
-            <p className="text-xs text-text-secondary">Configure customer records, outstanding balances, and credit limits.</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Customers</h2>
+            <p className="text-xs text-text-secondary">Customer records, outstanding balances, credit limits, and payment logs.</p>
           </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="hidden md:inline-block rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
-          >
-            {showForm ? 'Cancel' : 'Add Customer'}
-          </button>
+          {currentTab === 'directory' && (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="hidden md:inline-block rounded bg-brand-blue px-4 py-2 text-sm font-medium text-white hover:bg-brand-cobalt transition"
+            >
+              {showForm ? 'Cancel' : 'Add Customer'}
+            </button>
+          )}
         </div>
       )}
 
-      {showForm && (
+      {/* Tabs (Desktop) */}
+      <div className="hidden md:block tabs-container border-b border-surface-low">
+        <div className="tabs-scrollable space-x-6 text-sm font-medium">
+          <Link
+            to="/erp/customers"
+            className={`pb-2 ${currentTab === 'directory' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Directory
+          </Link>
+          <Link
+            to="/erp/customers?tab=payments"
+            className={`pb-2 ${currentTab === 'payments' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+          >
+            Payment Logs
+          </Link>
+        </div>
+      </div>
+
+      {/* Tabs (Mobile) */}
+      {isMobile && (
+        <div className="flex border-b border-surface-low">
+          <Link
+            to="/erp/customers"
+            className={`flex-1 text-center py-2.5 text-xs font-semibold transition ${
+              currentTab === 'directory' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'
+            }`}
+          >
+            Directory
+          </Link>
+          <Link
+            to="/erp/customers?tab=payments"
+            className={`flex-1 text-center py-2.5 text-xs font-semibold transition ${
+              currentTab === 'payments' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'
+            }`}
+          >
+            Payment Logs
+          </Link>
+        </div>
+      )}
+
+      {currentTab === 'directory' && showForm && (
         <div className="hidden md:block">
           {renderCustomerForm(false)}
         </div>
       )}
 
-      {/* Directory Table Wrapper */}
-      <div className="space-y-4">
+      {/* Directory Tab */}
+      {currentTab === 'directory' && <div className="space-y-4">
         {/* Search & loading bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 md:bg-white md:p-4 md:rounded-t-lg md:border-t md:border-x md:border-surface-low bg-transparent p-0 border-none">
           <div className="relative w-full sm:w-72">
@@ -472,7 +624,14 @@ export default function Customers() {
                           onClick={() => openPayModal(c)}
                           className="rounded bg-brand-blue text-white px-2.5 py-1 text-xs font-semibold"
                         >
-                          Post Payment
+                          Recieve
+                        </button>
+                      ) : parseFloat(c.outstanding_balance) < 0 ? (
+                        <button
+                          onClick={() => openPostModal(c)}
+                          className="rounded bg-green-600 text-white px-2.5 py-1 text-xs font-semibold"
+                        >
+                          Pay
                         </button>
                       ) : (
                         <button
@@ -543,13 +702,23 @@ export default function Customers() {
                         </span>
                       </td>
                       <td className="px-4 py-4 text-center">
-                        <button
-                          disabled={parseFloat(c.outstanding_balance) <= 0}
-                          onClick={() => openPayModal(c)}
-                          className="rounded bg-brand-blue/10 px-3 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-blue/20 disabled:opacity-50 disabled:pointer-events-none transition"
-                        >
-                          Post Payment
-                        </button>
+                        {parseFloat(c.outstanding_balance) > 0 ? (
+                          <button
+                            onClick={() => openPayModal(c)}
+                            className="rounded bg-brand-blue/10 px-3 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-blue/20 transition"
+                          >
+                            Recieve
+                          </button>
+                        ) : parseFloat(c.outstanding_balance) < 0 ? (
+                          <button
+                            onClick={() => openPostModal(c)}
+                            className="rounded bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-100 border border-green-200 transition"
+                          >
+                            Pay
+                          </button>
+                        ) : (
+                          <span className="text-xs text-text-secondary">Settled</span>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -573,7 +742,111 @@ export default function Customers() {
             />
           </div>
         )}
-      </div>
+      </div>}
+
+      {/* Payments Log Tab */}
+      {currentTab === 'payments' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 md:bg-white md:p-4 md:rounded-t-lg md:border-t md:border-x md:border-surface-low bg-transparent p-0 border-none">
+            <div className="relative w-full sm:w-72">
+              <input
+                type="text"
+                value={paymentsPag.search}
+                onChange={(e) => paymentsPag.setSearch(e.target.value)}
+                placeholder="Search customer payments..."
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
+              />
+              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+            </div>
+            {paymentsPag.loading && (
+              <span className="text-xs text-brand-blue animate-pulse">Loading...</span>
+            )}
+          </div>
+
+          <div className="md:rounded-b-lg md:bg-white md:border-x md:border-b md:border-surface-low bg-transparent border-none overflow-x-auto">
+            {isMobile ? (
+              <div className="space-y-3 pt-2">
+                {paymentsPag.loading ? (
+                  <div className="space-y-3 animate-pulse">
+                    <div className="h-20 bg-surface-dim/40 rounded-xl" />
+                    <div className="h-20 bg-surface-dim/40 rounded-xl" />
+                  </div>
+                ) : (
+                  paymentsPag.data.map((p) => (
+                    <div
+                      key={p.id}
+                      className="rounded-lg border border-surface-low bg-white p-3 shadow-sm text-sm"
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <div>
+                          <span className="font-semibold text-text-primary">{p.customer_name}</span>
+                          <span className="text-text-secondary text-[10px] block mt-0.5">Account: {p.payment_to_name}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className={`font-bold ${parseFloat(p.amount) >= 0 ? 'text-green-600' : 'text-amber-600'}`}>{formatCurrency(p.amount)}</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center text-xs text-text-secondary mt-1">
+                        <span>Date</span>
+                        <span>{new Date(p.timestamp).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+                {paymentsPag.data.length === 0 && !paymentsPag.loading && (
+                  <div className="text-center py-8 text-text-secondary text-sm">No customer payments found.</div>
+                )}
+              </div>
+            ) : (
+              <table className="min-w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-surface-low text-text-secondary font-semibold uppercase text-xs tracking-wider">
+                  <tr>
+                    {renderSortHeaderForPag('Date', 'timestamp', paymentsPag)}
+                    <th className="px-4 py-4">Customer</th>
+                    <th className="px-4 py-4">Account</th>
+                    {renderSortHeaderForPag('Amount', 'amount', paymentsPag, true)}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-low">
+                  {paymentsPag.loading ? (
+                    <SkeletonTable rows={paymentsPag.pageSize || 5} columns={4} />
+                  ) : (
+                    <>
+                      {paymentsPag.data.map((p) => (
+                        <tr key={p.id}>
+                          <td className="px-4 py-4 text-text-secondary">{new Date(p.timestamp).toLocaleString()}</td>
+                          <td className="px-4 py-4 font-semibold text-text-primary">{p.customer_name}</td>
+                          <td className="px-4 py-4 text-text-secondary">{p.payment_to_name}</td>
+                          <td className={`px-4 py-4 text-right font-semibold ${parseFloat(p.amount) >= 0 ? 'text-green-600' : 'text-amber-600'}`}>{formatCurrency(p.amount)}</td>
+                        </tr>
+                      ))}
+                      {paymentsPag.data.length === 0 && (
+                        <tr>
+                          <td colSpan="4" className="px-4 py-8 text-center text-text-secondary">No customer payments found.</td>
+                        </tr>
+                      )}
+                    </>
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            <PaginationControls
+              page={paymentsPag.page}
+              setPage={paymentsPag.setPage}
+              pageSize={paymentsPag.pageSize}
+              setPageSize={paymentsPag.setPageSize}
+              totalCount={paymentsPag.totalCount}
+              totalPages={paymentsPag.totalPages}
+              loading={paymentsPag.loading}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Record Payment Modal */}
       {showPayModal && (
@@ -581,6 +854,16 @@ export default function Customers() {
           <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg">
             <h3 className="text-sm font-semibold text-text-primary mb-4">Record Customer Payment: {selectedCustomer?.name}</h3>
             {renderPayForm(false)}
+          </div>
+        </div>
+      )}
+
+      {/* Post Modal */}
+      {showPostModal && (
+        <div className="hidden md:flex fixed inset-0 z-50 items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg">
+            <h3 className="text-sm font-semibold text-text-primary mb-4">Post: {postCustomer?.name}</h3>
+            {renderPostForm(false)}
           </div>
         </div>
       )}
@@ -602,8 +885,16 @@ export default function Customers() {
         {renderPayForm(true)}
       </MobileBottomSheet>
 
-      {/* Mobile Floating Action Button */}
-      {!showForm && !showPayModal && (
+      <MobileBottomSheet
+        isOpen={showPostModal}
+        onClose={() => setShowPostModal(false)}
+        title={`Post: ${postCustomer?.name}`}
+      >
+        {renderPostForm(true)}
+      </MobileBottomSheet>
+
+      {/* Mobile Floating Action Button - Directory only */}
+      {currentTab === 'directory' && !showForm && !showPayModal && (
         <FloatingActionButton
           onClick={() => {
             setName('');

@@ -272,7 +272,7 @@ export default function POS() {
 
       {paymentType !== 'Credit' && (
         <div>
-          <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Deduct Account</label>
+          <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Credit to Account</label>
           <select
             value={paidTo}
             onChange={(e) => setPaidTo(e.target.value)}
@@ -312,7 +312,7 @@ export default function POS() {
   const filteredProducts = products.filter(p => {
     const nameMatch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
     const barcodeMatch = p.barcode.includes(searchQuery);
-    const tagsMatch = p.suitable_models_details?.some(m => 
+    const tagsMatch = p.suitable_models_details?.some(m =>
       `${m.brand_name} ${m.model_name}`.toLowerCase().includes(searchQuery.toLowerCase())
     );
     return nameMatch || barcodeMatch || tagsMatch;
@@ -320,14 +320,14 @@ export default function POS() {
 
   return (
     <div className="flex flex-col h-screen bg-surface md:flex-row overflow-hidden text-text-primary">
-      
+
       {/* Products Left Panel */}
       <div className="flex-1 flex flex-col h-1/2 md:h-full overflow-hidden border-r border-surface-dim">
         {/* POS Header / Search */}
         <div className="p-4 safe-pt bg-white border-b border-surface-low space-y-3 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <button 
+              <button
                 onClick={() => navigate('/erp')}
                 className="rounded bg-surface p-1.5 hover:bg-surface-dim transition"
               >
@@ -412,11 +412,11 @@ export default function POS() {
 
       {/* Cart Right Panel */}
       <div className="w-full md:w-80 lg:w-96 flex flex-col h-1/2 md:h-full bg-white shadow-lg overflow-hidden border-t md:border-t-0 border-surface-dim">
-        
+
         {/* Cart Header */}
         <div className="p-4 bg-surface-low border-b border-surface-dim flex justify-between items-center">
-          <span className="text-xs font-bold uppercase tracking-wider text-text-secondary">Checkout Cart ({cart.reduce((a,c) => a+c.quantity, 0)} items)</span>
-          <button 
+          <span className="text-xs font-bold uppercase tracking-wider text-text-secondary">Checkout Cart ({cart.reduce((a, c) => a + c.quantity, 0)} items)</span>
+          <button
             onClick={() => setCart([])}
             disabled={loading || isSubmittingCheckout || cart.length === 0}
             className="text-[10px] font-semibold text-error hover:underline disabled:opacity-50 disabled:pointer-events-none"
@@ -555,7 +555,7 @@ export default function POS() {
               <div className="text-[10px] text-text-secondary">Invoice: {receiptSale.invoice_number}</div>
               <div className="text-[10px] text-text-secondary">{new Date(receiptSale.timestamp).toLocaleString()}</div>
             </div>
-            
+
             <div className="py-4 border-b border-dashed border-surface-dim space-y-2">
               <div className="flex justify-between font-semibold">
                 <span>Item</span>

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../utils/api';
@@ -50,6 +51,15 @@ export default function Purchases() {
   const [poMode, setPoMode] = useState(null); // 'supplier' or 'product'
   const [productSuppliers, setProductSuppliers] = useState([]);
   const [selectedProductSupplierId, setSelectedProductSupplierId] = useState('');
+
+  // Quick-create product state
+  const [showQuickCreate, setShowQuickCreate] = useState(false);
+  const [qcName, setQcName] = useState('');
+  const [qcBarcode, setQcBarcode] = useState('');
+  const [qcSellingPrice, setQcSellingPrice] = useState('0');
+  const [qcCost, setQcCost] = useState('0');
+  const [qcSupplierId, setQcSupplierId] = useState('');
+  const [isSavingQc, setIsSavingQc] = useState(false);
 
   const dropdownRef = useRef(null);
   const supplierDropdownRef = useRef(null);
@@ -560,6 +570,52 @@ export default function Purchases() {
     setNewSellingPrice('');
     setProductSuppliers([]);
     setSelectedProductSupplierId('');
+  };
+
+  const handleQuickCreateProduct = async (e) => {
+    e.preventDefault();
+    if (!qcName.trim() || !qcBarcode.trim()) {
+      alert('Name and Barcode are required.');
+      return;
+    }
+    const supplierId = poMode === 'supplier' ? parseInt(supplier) : parseInt(qcSupplierId);
+    if (!supplierId) {
+      alert('Please select a supplier for this product.');
+      return;
+    }
+    setIsSavingQc(true);
+    try {
+      // 1. Create the product
+      const newProduct = await api.products.create({
+        name: qcName.trim(),
+        barcode: qcBarcode.trim(),
+        selling_price: parseFloat(qcSellingPrice) || 0,
+      });
+      // 2. Link product to supplier
+      await api.supplierProducts.create({
+        product: newProduct.id,
+        supplier: supplierId,
+        current_cost: parseFloat(qcCost) || 0,
+        selling_price: parseFloat(qcSellingPrice) || 0,
+      });
+      // 3. Auto-select into PO form
+      setSelectedProductObj(newProduct);
+      setProductSearch(`${newProduct.name} (${newProduct.barcode})`);
+      setCost(qcCost);
+      setNewSellingPrice(qcSellingPrice);
+      if (poMode === 'product') {
+        const supProdList = await api.supplierProducts.list({ product_id: newProduct.id });
+        const list = (supProdList && supProdList.results) || (Array.isArray(supProdList) && supProdList) || [];
+        setProductSuppliers(list);
+        setSelectedProductSupplierId(supplierId.toString());
+      }
+      setShowQuickCreate(false);
+      setQcName(''); setQcBarcode(''); setQcSellingPrice('0'); setQcCost('0'); setQcSupplierId('');
+    } catch (err) {
+      alert('Error creating product: ' + err.message);
+    } finally {
+      setIsSavingQc(false);
+    }
   };
 
   const handleRemoveLineItem = (idx) => {
@@ -1109,18 +1165,6 @@ export default function Purchases() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">
-                Additional Expense (Shipping, Customs, Delivery)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={additionalCosts}
-                onChange={(e) => setAdditionalCosts(e.target.value)}
-                className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm outline-none focus:border-brand-blue"
-              />
-            </div>
-            <div>
               <label className="block text-xs font-semibold text-text-secondary mb-1">Payment Method</label>
               <select
                 value={paymentType}
@@ -1143,7 +1187,7 @@ export default function Purchases() {
                 </div>
               )}
             </div>
-            {(paymentType !== 'Credit' || parseFloat(additionalCosts || 0) > 0) && (
+            {paymentType !== 'Credit' && (
               <div>
                 <label className="block text-xs font-semibold text-text-secondary mb-1">Deduct Cash/Bank Account</label>
                 <select
@@ -1232,10 +1276,6 @@ export default function Purchases() {
             })()}
 
             <div className="border-t border-surface-low pt-4 space-y-2 text-xs font-semibold">
-              <div className="flex justify-between text-text-secondary">
-                <span>Additional Cost:</span>
-                <span>{formatCurrency(additionalCosts)}</span>
-              </div>
               {(() => {
                 const expectedProfit = items.reduce((acc, item) => {
                   const sell = item.new_selling_price !== null && item.new_selling_price !== undefined && item.new_selling_price !== '' ? parseFloat(item.new_selling_price) : parseFloat(item.selling_price || 0);
@@ -1359,16 +1399,6 @@ export default function Purchases() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Additional Landing Cost</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={billing.additionalCosts}
-                        onChange={(e) => updateBillingField('additionalCosts', e.target.value)}
-                        className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs outline-none focus:border-brand-blue"
-                      />
-                    </div>
-                    <div>
                       <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Payment Method</label>
                       <select
                         value={billing.paymentType}
@@ -1391,7 +1421,7 @@ export default function Purchases() {
                         </div>
                       )}
                     </div>
-                    {(billing.paymentType !== 'Credit' || additional > 0) && (
+                    {billing.paymentType !== 'Credit' && (
                       <div>
                         <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Deduct Account</label>
                         <select
@@ -1475,10 +1505,6 @@ export default function Purchases() {
                       <div className="flex justify-between text-text-secondary text-[10px]">
                         <span>Subtotal:</span>
                         <span>{formatCurrency(itemsSubtotal)}</span>
-                      </div>
-                      <div className="flex justify-between text-text-secondary text-[10px]">
-                        <span>Landed Cost:</span>
-                        <span>{formatCurrency(additional)}</span>
                       </div>
                       {(() => {
                         const expectedProfit = supplierItems.reduce((acc, item) => {
@@ -1737,9 +1763,6 @@ export default function Purchases() {
       {currentTab === 'create' && !poMode && (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-lg border border-surface-low shadow-sm space-y-6">
           <h3 className="text-lg font-semibold text-text-primary">Choose Purchase Order Mode</h3>
-          {/* <p className="text-xs text-text-secondary max-w-md text-center">
-            Select how you would like to construct your purchase order. You can either build it supplier-by-supplier or select individual products and automatically generate separate POs.
-          </p> */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
             <button
               onClick={() => setPoMode('supplier')}
@@ -1750,10 +1773,7 @@ export default function Purchases() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
-              <span className="font-semibold text-sm text-text-primary">Supplier-Based PO</span>
-              {/* <span className="text-xs text-text-secondary">
-                Select a single supplier first. Then search and add products mapped only to that supplier. Generates one PO.
-              </span> */}
+              <span className="font-semibold text-sm text-text-primary">Single Shop</span>
             </button>
 
             <button
@@ -1765,10 +1785,7 @@ export default function Purchases() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               </div>
-              <span className="font-semibold text-sm text-text-primary">Product-Based PO</span>
-              {/* <span className="text-xs text-text-secondary">
-                Search products first, choose from available suppliers for each product, and add to one cart. Automatically splits and generates multiple POs.
-              </span> */}
+              <span className="font-semibold text-sm text-text-primary">Multiple Shop</span>
             </button>
           </div>
         </div>
@@ -1780,7 +1797,7 @@ export default function Purchases() {
           <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none space-y-4 lg:col-span-2">
             <div className="flex justify-between items-center">
               <h3 className="text-base md:text-lg font-bold text-text-primary">
-                {poMode === 'product' ? 'Product-Based PO' : 'Supplier-Based PO'}
+                {poMode === 'product' ? 'Multiple Shop Purchase Order' : 'Single Shop Purchase Order'}
               </h3>
               <button
                 type="button"
@@ -1966,6 +1983,26 @@ export default function Purchases() {
                             </div>
                           </button>
                         ))
+                      )}
+                      {productSearch.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowDropdown(false);
+                            setQcName(productSearch.trim());
+                            setQcBarcode('');
+                            setQcSellingPrice('0');
+                            setQcCost('0');
+                            setQcSupplierId(poMode === 'supplier' ? supplier : '');
+                            setShowQuickCreate(true);
+                          }}
+                          className="w-full text-left px-3 py-2 text-brand-blue font-bold hover:bg-brand-blue/10 border-t border-surface-low flex items-center gap-1.5"
+                        >
+                          <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                          </svg>
+                          Create product "{productSearch.trim()}"
+                        </button>
                       )}
                     </div>
                   )}
@@ -2514,7 +2551,7 @@ export default function Purchases() {
               </button>
             </div>
 
-            {/* Sub-Modal Overlay (Choose Supplier for Product-Based mode) */}
+            {/* Sub-Modal Overlay (Choose Supplier for Multiple Shop mode) */}
             {selectedPopupProduct && (
               <div className="absolute inset-0 bg-black/35 backdrop-blur-sm flex items-center justify-center p-4 z-20">
                 <div className="bg-white rounded-lg p-5 max-w-md w-full border border-surface-low shadow-lg relative animate-in zoom-in-95 duration-150">
@@ -2773,8 +2810,6 @@ export default function Purchases() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-low">
-                    {/* Inline Add Row */}
-
                     {recItems.map((item, idx) => {
                       const sell = item.new_selling_price !== null && item.new_selling_price !== undefined && item.new_selling_price !== '' ? parseFloat(item.new_selling_price) : parseFloat(item.selling_price || 0);
                       const itemProfit = item.quantity * (sell - item.purchase_cost);
@@ -3169,11 +3204,11 @@ export default function Purchases() {
 
 
               {/* Settlement adjustments */}
-              <div className="border border-surface-low rounded-lg p-4 bg-surface-lowest space-y-3">
+              <div className="border border-surface-low p-4 bg-surface-lowest space-y-3 rounded-lg">
                 <span className="text-xs font-bold text-text-primary block">Costs & Settlement Adjustments</span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-text-secondary mb-1">Additional Expance</label>
+                    <label className="block text-xs font-semibold text-text-secondary mb-1">Additional Expense</label>
                     <input
                       type="number"
                       step="0.01"
@@ -4315,7 +4350,110 @@ export default function Purchases() {
           {renderBillingForm()}
         </div>
       </MobileBottomSheet>
+
+      {/* Quick-Create Product Modal */}
+      {showQuickCreate && (
+        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-surface-low">
+              <div>
+                <h3 className="text-sm font-bold text-text-primary">Quick-Create Product</h3>
+                <p className="text-[10px] text-text-secondary mt-0.5">
+                  {poMode === 'supplier'
+                    ? `Will be linked to the selected supplier`
+                    : 'Select a supplier to link this product to'}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowQuickCreate(false)}
+                className="text-text-secondary hover:text-text-primary p-1.5 rounded-full hover:bg-surface-low transition"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleQuickCreateProduct} className="p-5 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-[11px] font-semibold text-text-secondary mb-1">Product Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={qcName}
+                    onChange={(e) => setQcName(e.target.value)}
+                    className="w-full rounded-lg border border-surface-dim bg-white px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand-blue"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-text-secondary mb-1">Barcode / SKU *</label>
+                  <input
+                    type="text"
+                    required
+                    value={qcBarcode}
+                    onChange={(e) => setQcBarcode(e.target.value)}
+                    placeholder="e.g. 8901234"
+                    className="w-full rounded-lg border border-surface-dim bg-white px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand-blue"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-text-secondary mb-1">Selling Price (RRP)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={qcSellingPrice}
+                    onChange={(e) => setQcSellingPrice(e.target.value)}
+                    className="w-full rounded-lg border border-surface-dim bg-white px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand-blue"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-text-secondary mb-1">Purchase Cost</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={qcCost}
+                    onChange={(e) => setQcCost(e.target.value)}
+                    className="w-full rounded-lg border border-surface-dim bg-white px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand-blue"
+                  />
+                </div>
+                {poMode === 'product' && (
+                  <div className="col-span-2">
+                    <label className="block text-[11px] font-semibold text-text-secondary mb-1">Link to Supplier *</label>
+                    <select
+                      required
+                      value={qcSupplierId}
+                      onChange={(e) => setQcSupplierId(e.target.value)}
+                      className="w-full rounded-lg border border-surface-dim bg-white px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand-blue"
+                    >
+                      <option value="">Select Supplier</option>
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickCreate(false)}
+                  className="flex-1 rounded-lg border border-surface-dim py-2.5 text-sm font-semibold text-text-secondary hover:bg-surface-low transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingQc}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-brand-blue py-2.5 text-sm font-bold text-white hover:bg-brand-cobalt transition disabled:opacity-50"
+                >
+                  {isSavingQc && <Spinner size="sm" />}
+                  {isSavingQc ? 'Creating...' : 'Create & Add'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

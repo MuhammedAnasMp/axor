@@ -629,7 +629,10 @@ export default function Suppliers() {
                   }}
                   className={`w-full text-left px-3 py-2 hover:bg-surface-low text-text-primary font-medium border-b border-surface-lowest last:border-0 ${mapProduct === p.id.toString() ? 'bg-surface-low font-semibold' : ''}`}
                 >
-                  {p.name} ({p.barcode})
+                  <div className="flex justify-between items-center w-full">
+                    <span>{p.name} ({p.barcode})</span>
+                    <span className="text-xs font-semibold text-text-secondary ml-2">RSP: {formatCurrency(p.selling_price)}</span>
+                  </div>
                 </button>
               ))
             )}
@@ -1047,6 +1050,8 @@ export default function Suppliers() {
                           <span className="font-mono text-text-secondary">{m.barcode}</span>
                           <span className="text-text-secondary mx-2">|</span>
                           <span className="text-text-primary font-semibold truncate">{m.supplier_name}</span>
+                          <span className="text-text-secondary mx-2">|</span>
+                          <span className="text-text-secondary font-semibold">RSP: {formatCurrency(m.selling_price)}</span>
                         </div>
                         <div onClick={(e) => e.stopPropagation()}>
                           <button
@@ -1082,13 +1087,14 @@ export default function Suppliers() {
                       {renderSortHeader('Product SKU', 'product__name')}
                       <th>Barcode</th>
                       <th>Supplier</th>
+                      <th>RSP</th>
                       {renderSortHeader('Negotiated Cost', 'current_cost')}
                       <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-low">
                     {mappingPag.loading ? (
-                      <SkeletonTable rows={mappingPag.pageSize || 5} columns={5} />
+                      <SkeletonTable rows={mappingPag.pageSize || 5} columns={6} />
                     ) : (
                       mappingPag.data.map((m) => (
                         <tr key={m.id} className="hover:bg-surface-bright">
@@ -1106,6 +1112,7 @@ export default function Suppliers() {
                           </td>
                           <td className="px-4 py-4 text-text-secondary font-mono">{m.barcode}</td>
                           <td className="px-4 py-4 text-text-primary">{m.supplier_name}</td>
+                          <td className="px-4 py-4 text-text-secondary font-semibold">{formatCurrency(m.selling_price)}</td>
                           <td className="px-4 py-4 font-bold text-brand-blue">{formatCurrency(m.current_cost)}</td>
                           <td className="px-4 py-4 text-right whitespace-nowrap">
                             <button
@@ -1124,7 +1131,7 @@ export default function Suppliers() {
                     )}
                     {mappingPag.data.length === 0 && !mappingPag.loading && (
                       <tr>
-                        <td colSpan="5" className="px-4 py-8 text-center text-text-secondary">No supplier product mappings established.</td>
+                        <td colSpan="6" className="px-4 py-8 text-center text-text-secondary">No supplier product mappings established.</td>
                       </tr>
                     )}
                   </tbody>
@@ -1318,12 +1325,13 @@ export default function Suppliers() {
                   <tr>
                     <th className="px-4 py-2">Product Name</th>
                     <th className="px-4 py-2">Barcode</th>
+                    <th className="px-4 py-2 text-right">RSP</th>
                     <th className="px-4 py-2 text-right">Negotiated Cost</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-low">
                   {mappingsLoading ? (
-                    <SkeletonTable rows={3} columns={3} />
+                    <SkeletonTable rows={3} columns={4} />
                   ) : (
                     mappedProducts.map((mp) => (
                       <tr key={mp.id} className="hover:bg-surface-bright">
@@ -1340,13 +1348,14 @@ export default function Suppliers() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-text-secondary font-mono">{mp.barcode}</td>
+                        <td className="px-4 py-3 text-right text-text-secondary font-semibold">{formatCurrency(mp.selling_price)}</td>
                         <td className="px-4 py-3 text-right font-bold text-brand-blue">{formatCurrency(mp.current_cost)}</td>
                       </tr>
                     ))
                   )}
                   {mappedProducts.length === 0 && !mappingsLoading && (
                     <tr>
-                      <td colSpan="3" className="px-4 py-8 text-center text-text-secondary">
+                      <td colSpan="4" className="px-4 py-8 text-center text-text-secondary">
                         No products mapped to this supplier.
                       </td>
                     </tr>
@@ -1387,6 +1396,10 @@ export default function Suppliers() {
                 <div>
                   <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Supplier</span>
                   <div className="text-sm font-semibold text-text-primary mt-0.5">{selectedSupplierDetails.supplier_name}</div>
+                </div>
+                <div>
+                  <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">RSP (Retail Selling Price)</span>
+                  <div className="text-sm font-semibold text-text-primary mt-0.5">{formatCurrency(selectedSupplierDetails.selling_price)}</div>
                 </div>
                 <div>
                   <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Negotiated Cost</span>

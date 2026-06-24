@@ -37,7 +37,6 @@ export default function Sales() {
 
   // Pagination hooks for lists
   const salesPag = usePagination(api.sales.list, 10, currentTab === 'history');
-  const paymentsPag = usePagination(api.customerPayments.list, 10, currentTab === 'payments');
 
   // Invoice Form states
   const [customer, setCustomer] = useState('');
@@ -46,6 +45,16 @@ export default function Sales() {
   const [paidTo, setPaidTo] = useState('');
   const [discount, setDiscount] = useState('0');
   const [tax, setTax] = useState('0');
+
+  // Quick-add customer states
+  const [showQuickCustomer, setShowQuickCustomer] = useState(false);
+  const [quickName, setQuickName] = useState('');
+  const [quickContact, setQuickContact] = useState('');
+  const [quickPlace, setQuickPlace] = useState('');
+  const [quickPhone, setQuickPhone] = useState('');
+  const [quickWhatsapp, setQuickWhatsapp] = useState('');
+  const [quickCreditLimit, setQuickCreditLimit] = useState('10000');
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
 
   // Selected items in Sale
   const [items, setItems] = useState([]);
@@ -161,18 +170,69 @@ export default function Sales() {
       api.employees.list(),
       api.bankAccounts.list()
     ])
-    .then(([prod, cust, emp, banks]) => {
-      setProducts(prod);
-      setCustomers(cust);
-      setEmployees(emp);
-      setBankAccounts(banks);
-      if (banks.length > 0) setPaidTo(banks[0].id.toString());
-      setLoading(false);
+      .then(([prod, cust, emp, banks]) => {
+        setProducts(prod);
+        setCustomers(cust);
+        setEmployees(emp);
+        setBankAccounts(banks);
+        if (banks.length > 0) setPaidTo(banks[0].id.toString());
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setLoading(false);
+      });
+  };
+
+  const reloadCustomers = () =>
+    api.customers.list().then((c) => setCustomers(c)).catch(console.error);
+
+  const handleQuickCustomerSubmit = (e) => {
+    e.preventDefault();
+    if (!quickName.trim() || !quickContact.trim()) return;
+
+    const validatePhone = (num, label) => {
+      if (!num.trim()) return true; // optional
+      const d = num.replace(/[^\d]/g, '');
+      if (d.length !== 10) {
+        alert(`${label} must be exactly 10 digits.`);
+        return false;
+      }
+      return true;
+    };
+
+    if (!validatePhone(quickPhone, 'Phone number')) return;
+    if (!validatePhone(quickWhatsapp, 'WhatsApp number')) return;
+
+    setIsCreatingCustomer(true);
+
+    const cleanPhone = (num) => num.replace(/[^\d]/g, '').slice(-10);
+
+    api.customers.create({
+      name: quickName.trim(),
+      contact_info: quickContact.trim(),
+      place: quickPlace.trim(),
+      contact_number: quickPhone.trim() ? cleanPhone(quickPhone) : '',
+      whatsapp_number: quickWhatsapp.trim() ? cleanPhone(quickWhatsapp) : '',
+      credit_limit: parseFloat(quickCreditLimit) || 10000,
     })
-    .catch((err) => {
-      console.error(err);
-      setLoading(false);
-    });
+      .then((newCustomer) => {
+        reloadCustomers().then(() => {
+          setCustomer(newCustomer.id.toString());
+        });
+        setShowQuickCustomer(false);
+        setQuickName('');
+        setQuickContact('');
+        setQuickPlace('');
+        setQuickPhone('');
+        setQuickWhatsapp('');
+        setQuickCreditLimit('10000');
+        setIsCreatingCustomer(false);
+      })
+      .catch((err) => {
+        alert(err.message);
+        setIsCreatingCustomer(false);
+      });
   };
 
   useEffect(() => {
@@ -183,7 +243,7 @@ export default function Sales() {
     const isSorted = pag.ordering === field || pag.ordering === `-${field}`;
     const isDesc = pag.ordering === `-${field}`;
     return (
-      <th 
+      <th
         onClick={() => pag.handleSort(field)}
         className={`px-4 py-4 cursor-pointer hover:bg-surface-low select-none transition-colors ${isRight ? 'text-right' : 'text-left'}`}
       >
@@ -399,17 +459,120 @@ export default function Sales() {
     return (
       <form onSubmit={handleSubmitSale} className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-text-secondary mb-1">Customer (Receivables Account)</label>
-          <select
-            value={customer}
-            onChange={(e) => setCustomer(e.target.value)}
-            className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm outline-none focus:border-brand-blue"
-          >
-            <option value="">-- Walk-In Customer --</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>{c.name} (Credit Avail: ₹{c.credit_limit - c.outstanding_balance})</option>
-            ))}
-          </select>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-semibold text-text-secondary">Customer (Receivables Account)</label>
+            <button
+              type="button"
+              onClick={() => setShowQuickCustomer((v) => !v)}
+              className="text-[10px] font-semibold text-brand-blue hover:underline flex items-center gap-0.5"
+            >
+              {showQuickCustomer ? 'Cancel' : '+ New Customer'}
+            </button>
+          </div>
+          {showQuickCustomer ? (
+            <div className="rounded border border-brand-blue/30 bg-blue-50/40 p-3 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={quickName}
+                    onChange={(e) => setQuickName(e.target.value)}
+                    placeholder="Customer name"
+                    className="w-full rounded border border-surface-dim bg-white px-2 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Place</label>
+                  <input
+                    type="text"
+                    value={quickPlace}
+                    onChange={(e) => setQuickPlace(e.target.value)}
+                    placeholder="City / Town"
+                    className="w-full rounded border border-surface-dim bg-white px-2 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Address / Contact Info *</label>
+                <input
+                  type="text"
+                  required
+                  value={quickContact}
+                  onChange={(e) => setQuickContact(e.target.value)}
+                  placeholder="Address or contact details"
+                  className="w-full rounded border border-surface-dim bg-white px-2 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Phone</label>
+                  <div className="flex rounded border border-surface-dim bg-white focus-within:border-brand-blue overflow-hidden">
+                    <span className="bg-surface-low px-2 py-1.5 text-[10px] font-semibold text-text-secondary border-r border-surface-dim select-none">+91</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={10}
+                      value={quickPhone}
+                      onChange={(e) => setQuickPhone(e.target.value.replace(/[^\d]/g, '').slice(0, 10))}
+                      placeholder="XXXXXXXXXX"
+                      className="flex-1 bg-transparent px-2 py-1.5 text-xs text-text-primary outline-none"
+                    />
+                  </div>
+                  {quickPhone && quickPhone.length !== 10 && (
+                    <p className="text-[9px] text-error mt-0.5">Must be 10 digits</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">WhatsApp</label>
+                  <div className="flex rounded border border-surface-dim bg-white focus-within:border-brand-blue overflow-hidden">
+                    <span className="bg-surface-low px-2 py-1.5 text-[10px] font-semibold text-text-secondary border-r border-surface-dim select-none">+91</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={10}
+                      value={quickWhatsapp}
+                      onChange={(e) => setQuickWhatsapp(e.target.value.replace(/[^\d]/g, '').slice(0, 10))}
+                      placeholder="XXXXXXXXXX"
+                      className="flex-1 bg-transparent px-2 py-1.5 text-xs text-text-primary outline-none"
+                    />
+                  </div>
+                  {quickWhatsapp && quickWhatsapp.length !== 10 && (
+                    <p className="text-[9px] text-error mt-0.5">Must be 10 digits</p>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-text-secondary mb-0.5">Credit Limit (INR)</label>
+                <input
+                  type="number"
+                  value={quickCreditLimit}
+                  onChange={(e) => setQuickCreditLimit(e.target.value)}
+                  className="w-full rounded border border-surface-dim bg-white px-2 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleQuickCustomerSubmit}
+                disabled={isCreatingCustomer || !quickName.trim() || !quickContact.trim()}
+                className="w-full rounded bg-brand-blue py-1.5 text-xs font-semibold text-white hover:bg-brand-cobalt transition disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {isCreatingCustomer ? 'Creating...' : 'Create & Select Customer'}
+              </button>
+            </div>
+          ) : (
+            <select
+              value={customer}
+              onChange={(e) => setCustomer(e.target.value)}
+              className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-2 text-sm outline-none focus:border-brand-blue"
+            >
+              <option value="">-- Walk-In Customer --</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>{c.name} (Credit Avail: ₹{c.credit_limit - c.outstanding_balance})</option>
+              ))}
+            </select>
+          )}
         </div>
         <div>
           <label className="block text-xs font-semibold text-text-secondary mb-1">Payment Method</label>
@@ -493,23 +656,17 @@ export default function Sales() {
       {/* Tabs Menu */}
       <div className="hidden md:block tabs-container border-b border-surface-low">
         <div className="tabs-scrollable space-x-6 text-sm font-medium">
-          <Link 
-            to="/erp/sales" 
+          <Link
+            to="/erp/sales"
             className={`pb-2 ${currentTab === 'create' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Create Sales Invoice
           </Link>
-          <Link 
-            to="/erp/sales?tab=history" 
+          <Link
+            to="/erp/sales?tab=history"
             className={`pb-2 ${currentTab === 'history' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Sales History Log
-          </Link>
-          <Link 
-            to="/erp/sales?tab=payments" 
-            className={`pb-2 ${currentTab === 'payments' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
-          >
-            Customer Payments Log
           </Link>
         </div>
       </div>
@@ -546,7 +703,7 @@ export default function Sales() {
             {/* Main Sale Form */}
             <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none space-y-4 lg:col-span-2">
               <h3 className="text-sm font-semibold text-text-primary">New Sales Invoice</h3>
-              
+
               {/* Add Line Item (Desktop only) */}
               {!isMobile && (
                 <div className="rounded border border-surface-low p-4 bg-surface-lowest space-y-3">
@@ -710,8 +867,8 @@ export default function Sales() {
                 <div className="space-y-3 pt-2">
                   <span className="text-xs font-semibold text-text-secondary block mb-1">Added Products</span>
                   {items.map((item, index) => (
-                    <div 
-                      key={index} 
+                    <div
+                      key={index}
                       onClick={() => {
                         setSelectedItemDetails(item);
                         setSelectedItemIndex(index);
@@ -804,7 +961,7 @@ export default function Sales() {
                     >
                       <div className="flex justify-between items-start mb-1">
                         <div>
-                          <span className="font-semibold text-text-primary text-sm">{sale.invoice_number}</span>
+                          <span className="font-semibold text-text-primary text-sm">{sale.invoice_number}</span> ({sale.payment_type})
                           <span className="text-text-secondary text-[10px] block mt-0.5">{sale.customer_name || 'Walk-In Customer'}</span>
                         </div>
                         <div className="text-right">
@@ -830,7 +987,7 @@ export default function Sales() {
                     {renderSortHeader('Invoice #', 'invoice_number', salesPag)}
                     {renderSortHeader('Date', 'timestamp', salesPag)}
                     <th className="px-4 py-4">Customer</th>
-                    <th className="px-4 py-4">Sales Staff</th>
+                    <th className="px-4 py-4">Payment Type</th>
                     {renderSortHeader('Invoice Total', 'total_amount', salesPag, true)}
                     {renderSortHeader('Actual Profit', 'profit', salesPag, true)}
                     <th className="px-4 py-4 text-center">Actions</th>
@@ -846,7 +1003,7 @@ export default function Sales() {
                           <td className="px-4 py-4 font-semibold text-brand-blue">{sale.invoice_number}</td>
                           <td className="px-4 py-4 text-text-secondary">{new Date(sale.timestamp).toLocaleString()}</td>
                           <td className="px-4 py-4 text-text-primary">{sale.customer_name || 'Walk-In Customer'}</td>
-                          <td className="px-4 py-4 text-text-secondary">{sale.employee_name || 'System Admin'}</td>
+                          <td className="px-4 py-4 text-text-secondary">{sale.payment_type}</td>
                           <td className="px-4 py-4 text-right font-semibold text-text-primary">{formatCurrency(sale.total_amount)}</td>
                           <td className="px-4 py-4 text-right font-semibold text-green-600">{formatCurrency(sale.profit)}</td>
                           <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
@@ -885,109 +1042,6 @@ export default function Sales() {
         </div>
       )}
 
-      {/* Customer Payments Log */}
-      {currentTab === 'payments' && (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 md:bg-white md:p-4 md:rounded-t-lg md:border-t md:border-x md:border-surface-low bg-transparent p-0 border-none">
-            <div className="relative w-full sm:w-72">
-              <input
-                type="text"
-                value={paymentsPag.search}
-                onChange={(e) => paymentsPag.setSearch(e.target.value)}
-                placeholder="Search customer payments..."
-                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
-              />
-              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </span>
-            </div>
-            {paymentsPag.loading && (
-              <span className="text-xs text-brand-blue animate-pulse">Loading...</span>
-            )}
-          </div>
-
-          <div className="md:rounded-b-lg md:bg-white md:border-x md:border-b md:border-surface-low bg-transparent border-none overflow-x-auto">
-            {isMobile ? (
-              <div className="space-y-3 pt-2">
-                {paymentsPag.loading ? (
-                  <div className="space-y-3 animate-pulse">
-                    <div className="h-20 bg-surface-dim/40 rounded-xl" />
-                    <div className="h-20 bg-surface-dim/40 rounded-xl" />
-                  </div>
-                ) : (
-                  paymentsPag.data.map((p) => (
-                    <div
-                      key={p.id}
-                      className="rounded-lg border border-surface-low bg-white p-3 shadow-sm text-sm"
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <div>
-                          <span className="font-semibold text-text-primary">{p.customer_name}</span>
-                          <span className="text-text-secondary text-[10px] block mt-0.5">Account: {p.payment_to_name}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-bold text-green-600">{formatCurrency(p.amount)}</span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center text-xs text-text-secondary mt-1">
-                        <span>Date</span>
-                        <span>{new Date(p.timestamp).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  ))
-                )}
-                {paymentsPag.data.length === 0 && !paymentsPag.loading && (
-                  <div className="text-center py-8 text-text-secondary text-sm">No customer payments found.</div>
-                )}
-              </div>
-            ) : (
-              <table className="min-w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-surface-low text-text-secondary font-semibold uppercase text-xs tracking-wider">
-                  <tr>
-                    {renderSortHeader('Date', 'timestamp', paymentsPag)}
-                    <th className="px-4 py-4">Customer</th>
-                    <th className="px-4 py-4">Deposit Account</th>
-                    {renderSortHeader('Payment Received', 'amount', paymentsPag, true)}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-low">
-                  {paymentsPag.loading ? (
-                    <SkeletonTable rows={paymentsPag.pageSize || 5} columns={4} />
-                  ) : (
-                    <>
-                      {paymentsPag.data.map((p) => (
-                        <tr key={p.id}>
-                          <td className="px-4 py-4 text-text-secondary">{new Date(p.timestamp).toLocaleString()}</td>
-                          <td className="px-4 py-4 font-semibold text-text-primary">{p.customer_name}</td>
-                          <td className="px-4 py-4 text-text-secondary">{p.payment_to_name}</td>
-                          <td className="px-4 py-4 text-right font-semibold text-green-600">{formatCurrency(p.amount)}</td>
-                        </tr>
-                      ))}
-                      {paymentsPag.data.length === 0 && (
-                        <tr>
-                          <td colSpan="4" className="px-4 py-8 text-center text-text-secondary">No customer payments found.</td>
-                        </tr>
-                      )}
-                    </>
-                  )}
-                </tbody>
-              </table>
-            )}
-
-            <PaginationControls
-              page={paymentsPag.page}
-              setPage={paymentsPag.setPage}
-              pageSize={paymentsPag.pageSize}
-              setPageSize={paymentsPag.setPageSize}
-              totalCount={paymentsPag.totalCount}
-              totalPages={paymentsPag.totalPages}
-              loading={paymentsPag.loading}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Sticky Bottom Bar for Mobile Checkout */}
       {isMobile && currentTab === 'create' && items.length > 0 && (
@@ -1022,7 +1076,7 @@ export default function Sales() {
                 Barcode: {selectedItemDetails.barcode || 'N/A'}
               </span>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="p-3 bg-surface-lowest rounded-lg border border-surface-low">
                 <span className="block text-xs text-text-secondary font-medium">Quantity</span>

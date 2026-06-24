@@ -65,6 +65,14 @@ export default function Products() {
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
   const brandDropdownRef = useRef(null);
 
+  // Supplier linking state
+  const [suppliersDropdown, setSuppliersDropdown] = useState([]);
+  const [selectedSupplier, setSelectedSupplier] = useState('');
+  const [supplierCost, setSupplierCost] = useState('0');
+  const [searchSupplierQuery, setSearchSupplierQuery] = useState('');
+  const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
+  const supplierDropdownRef = useRef(null);
+
   const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [isSavingBrand, setIsSavingBrand] = useState(false);
 
@@ -81,6 +89,10 @@ export default function Products() {
     setShowModelDropdown(false);
     setSearchBrandQuery('');
     setShowBrandDropdown(false);
+    setSelectedSupplier('');
+    setSupplierCost('0');
+    setSearchSupplierQuery('');
+    setShowSupplierDropdown(false);
   };
 
   const handleStartEdit = (p) => {
@@ -243,12 +255,15 @@ export default function Products() {
     Promise.all([
       api.categories.list(),
       api.brands.list(),
-      api.mobileModels.list()
+      api.mobileModels.list(),
+      api.suppliers.list()
     ])
-      .then(([c, b, m]) => {
+      .then(([c, b, m, s]) => {
         setCategoriesDropdown(c);
         setBrandsDropdown(b);
         setMobileModelsDropdown(m || []);
+        const sList = (s && s.results) || (Array.isArray(s) && s) || [];
+        setSuppliersDropdown(sList);
         setDropdownsLoading(false);
       })
       .catch((err) => {
@@ -269,6 +284,9 @@ export default function Products() {
       }
       if (tabBrandDropdownRef.current && !tabBrandDropdownRef.current.contains(event.target)) {
         setTabShowBrandDropdown(false);
+      }
+      if (supplierDropdownRef.current && !supplierDropdownRef.current.contains(event.target)) {
+        setShowSupplierDropdown(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -332,7 +350,20 @@ export default function Products() {
       : api.products.create(data);
 
     action
-      .then(() => {
+      .then(async (productRes) => {
+        // Link supplier if selected (only on create, or if supplier changed)
+        if (!editingProduct && selectedSupplier) {
+          try {
+            await api.supplierProducts.create({
+              product: productRes.id,
+              supplier: parseInt(selectedSupplier),
+              current_cost: parseFloat(supplierCost) || 0,
+              selling_price: parseFloat(sellingPrice) || 0,
+            });
+          } catch (supErr) {
+            console.error('Supplier link failed:', supErr);
+          }
+        }
         setShowForm(false);
         setEditingProduct(null);
         resetProductForm();
@@ -623,6 +654,62 @@ export default function Products() {
             className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
           />
         </div>
+
+        {/* Supplier linking — only on new product */}
+        {!editingProduct && (
+          <>
+            <div ref={supplierDropdownRef} className="relative">
+              <label className="block text-xs font-semibold text-text-secondary mb-1">Link Supplier <span className="font-normal text-text-secondary">(optional)</span></label>
+              <input
+                type="text"
+                placeholder="Search supplier..."
+                value={searchSupplierQuery}
+                onChange={(e) => {
+                  setSearchSupplierQuery(e.target.value);
+                  setShowSupplierDropdown(true);
+                  if (!e.target.value) setSelectedSupplier('');
+                }}
+                onFocus={() => setShowSupplierDropdown(true)}
+                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue"
+              />
+              {showSupplierDropdown && (
+                <div className="absolute z-30 w-full mt-1 bg-white border border-surface-dim rounded shadow-lg max-h-48 overflow-y-auto">
+                  {suppliersDropdown
+                    .filter(s => s.name.toLowerCase().includes(searchSupplierQuery.toLowerCase()))
+                    .slice(0, 10)
+                    .map(s => (
+                      <div
+                        key={s.id}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setSelectedSupplier(s.id.toString());
+                          setSearchSupplierQuery(s.name);
+                          setShowSupplierDropdown(false);
+                        }}
+                        className="px-3 py-2 hover:bg-surface-low text-xs cursor-pointer text-text-primary border-b border-surface-low last:border-b-0"
+                      >
+                        {s.name}
+                      </div>
+                    ))}
+                  {suppliersDropdown.filter(s => s.name.toLowerCase().includes(searchSupplierQuery.toLowerCase())).length === 0 && (
+                    <div className="px-3 py-2 text-xs text-text-secondary">No suppliers found.</div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-text-secondary mb-1">Purchase Cost</label>
+              <input
+                type="number"
+                step="0.01"
+                value={supplierCost}
+                onChange={(e) => setSupplierCost(e.target.value)}
+                disabled={!selectedSupplier}
+                className="w-full rounded border border-surface-dim bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-brand-blue disabled:opacity-40"
+              />
+            </div>
+          </>
+        )}
 
         <div ref={modelDropdownRef} className="col-span-2 relative">
           <label className="block text-xs font-semibold text-text-secondary mb-1">Suitable Mobile Models (Tags)</label>
