@@ -578,7 +578,9 @@ export default function Purchases() {
       alert('Name and Barcode are required.');
       return;
     }
-    const supplierId = poMode === 'supplier' ? parseInt(supplier) : parseInt(qcSupplierId);
+    const supplierId = (poMode === 'supplier' || poMode === 'direct')
+      ? parseInt(poMode === 'direct' ? receivingPO?.supplier : supplier)
+      : parseInt(qcSupplierId);
     if (!supplierId) {
       alert('Please select a supplier for this product.');
       return;
@@ -599,15 +601,22 @@ export default function Purchases() {
         selling_price: parseFloat(qcSellingPrice) || 0,
       });
       // 3. Auto-select into PO form
-      setSelectedProductObj(newProduct);
-      setProductSearch(`${newProduct.name} (${newProduct.barcode})`);
-      setCost(qcCost);
-      setNewSellingPrice(qcSellingPrice);
-      if (poMode === 'product') {
-        const supProdList = await api.supplierProducts.list({ product_id: newProduct.id });
-        const list = (supProdList && supProdList.results) || (Array.isArray(supProdList) && supProdList) || [];
-        setProductSuppliers(list);
-        setSelectedProductSupplierId(supplierId.toString());
+      if (poMode === 'direct') {
+        setRecSelectedProductObj(newProduct);
+        setRecProductSearch(`${newProduct.name} (${newProduct.barcode})`);
+        setRecCost(qcCost);
+        setRecNewSellingPrice(qcSellingPrice);
+      } else {
+        setSelectedProductObj(newProduct);
+        setProductSearch(`${newProduct.name} (${newProduct.barcode})`);
+        setCost(qcCost);
+        setNewSellingPrice(qcSellingPrice);
+        if (poMode === 'product') {
+          const supProdList = await api.supplierProducts.list({ product_id: newProduct.id });
+          const list = (supProdList && supProdList.results) || (Array.isArray(supProdList) && supProdList) || [];
+          setProductSuppliers(list);
+          setSelectedProductSupplierId(supplierId.toString());
+        }
       }
       setShowQuickCreate(false);
       setQcName(''); setQcBarcode(''); setQcSellingPrice('0'); setQcCost('0'); setQcSupplierId('');
@@ -893,6 +902,36 @@ export default function Purchases() {
     setShowReceiveModal(true);
   };
 
+  const handleOpenDirectPurchase = (supplierObj) => {
+    const mockPO = {
+      id: 'Direct',
+      supplier: supplierObj.id,
+      supplier_name: supplierObj.name,
+      invoice_number: '',
+      additional_costs: 0,
+      payment_type: 'Cash',
+      paid_from: bankAccounts.length > 0 ? bankAccounts[0].id : null,
+      deducted_credit: 0,
+      items: []
+    };
+    setReceivingPO(mockPO);
+    setRecInvoiceNumber('');
+    setRecAdditionalCosts('0');
+    setRecRounding('0');
+    setRecPaymentType('Cash');
+    setRecPaidFrom(bankAccounts.length > 0 ? bankAccounts[0].id.toString() : '');
+    setRecPayOldCredit(false);
+    setRecDeductSupplierCredit(false);
+    setRecDeductAmount('0');
+    setRecItems([]);
+    setRecProductSearch('');
+    setRecSelectedProductObj(null);
+    setRecQty('1');
+    setRecCost('0');
+    setRecNewSellingPrice('');
+    setShowReceiveModal(true);
+  };
+
   const handleCancelPO = (id) => {
     if (confirm("Are you sure you want to completely CANCEL and delete this Purchase Order? This action cannot be undone.")) {
       setIsCancellingPO(true);
@@ -1010,17 +1049,51 @@ export default function Purchases() {
     };
 
     setIsReceivingPO(true);
-    api.purchases.receive(receivingPO.id, payload)
-      .then((res) => {
-        alert(res.message);
-        setShowReceiveModal(false);
-        setReceivingPO(null);
-        receivePag.refresh();
-        historyPag.refresh();
-        loadDropdowns();
-      })
-      .catch((err) => alert(err.message))
-      .finally(() => setIsReceivingPO(false));
+    if (receivingPO.id === 'Direct') {
+      const createPayload = {
+        supplier: receivingPO.supplier,
+        invoice_number: recInvoiceNumber,
+        additional_costs: parseFloat(recAdditionalCosts || 0),
+        payment_type: recPaymentType,
+        paid_from: recPaymentType !== 'Credit' ? parseInt(recPaidFrom) : null,
+        total_amount: totalAmt,
+        deducted_credit: recDeductSupplierCredit ? parseFloat(recDeductAmount || 0) : 0,
+        items: recItems.map(item => ({
+          product: item.product,
+          quantity: item.quantity,
+          purchase_cost: item.purchase_cost,
+          new_selling_price: item.new_selling_price !== '' && item.new_selling_price !== null ? parseFloat(item.new_selling_price) : null
+        }))
+      };
+
+      api.purchases.create(createPayload)
+        .then((newPo) => {
+          return api.purchases.receive(newPo.id, payload);
+        })
+        .then((res) => {
+          alert('Direct purchase processed successfully! Stock and financials updated.');
+          setShowReceiveModal(false);
+          setReceivingPO(null);
+          receivePag.refresh();
+          historyPag.refresh();
+          loadDropdowns();
+          setPoMode(null);
+        })
+        .catch((err) => alert(`Direct purchase failed: ${err.message}`))
+        .finally(() => setIsReceivingPO(false));
+    } else {
+      api.purchases.receive(receivingPO.id, payload)
+        .then((res) => {
+          alert(res.message);
+          setShowReceiveModal(false);
+          setReceivingPO(null);
+          receivePag.refresh();
+          historyPag.refresh();
+          loadDropdowns();
+        })
+        .catch((err) => alert(err.message))
+        .finally(() => setIsReceivingPO(false));
+    }
   };
 
   const handleOpenReturnModal = (po) => {
@@ -1763,7 +1836,7 @@ export default function Purchases() {
       {currentTab === 'create' && !poMode && (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-lg border border-surface-low shadow-sm space-y-6">
           <h3 className="text-lg font-semibold text-text-primary">Choose Purchase Order Mode</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-3xl">
             <button
               onClick={() => setPoMode('supplier')}
               className="flex flex-col items-center p-6 border border-surface-dim hover:border-brand-blue rounded-lg bg-surface-lowest hover:bg-surface-light transition text-center space-y-3 group"
@@ -1787,11 +1860,27 @@ export default function Purchases() {
               </div>
               <span className="font-semibold text-sm text-text-primary">Multiple Shop</span>
             </button>
+
+            <button
+              onClick={() => {
+                setPoMode('direct');
+                setSupplierSearch('');
+                setShowSupplierDropdown(false);
+              }}
+              className="flex flex-col items-center p-6 border border-surface-dim hover:border-brand-blue rounded-lg bg-surface-lowest hover:bg-surface-light transition text-center space-y-3 group"
+            >
+              <div className="rounded-full bg-emerald-100 p-3 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              <span className="font-semibold text-sm text-text-primary">Purchase without PO(Single Shop)</span>
+            </button>
           </div>
         </div>
       )}
 
-      {currentTab === 'create' && poMode && (
+      {currentTab === 'create' && (poMode === 'supplier' || poMode === 'product') && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Main PO Info */}
           <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none space-y-4 lg:col-span-2">
@@ -2169,6 +2258,76 @@ export default function Purchases() {
           <div className="rounded-lg bg-white p-6 shadow-sm border border-surface-low h-fit space-y-4 hidden lg:block" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
             <h3 className="text-sm font-semibold text-text-primary">Billing & Settlement</h3>
             {renderBillingForm()}
+          </div>
+        </div>
+      )}
+
+      {currentTab === 'create' && poMode === 'direct' && (
+        <div className="md:rounded-lg md:bg-white p-6 md:shadow-sm md:border md:border-surface-low space-y-4 max-w-md mx-auto">
+          <div className="flex justify-between items-center">
+            <h3 className="text-base md:text-lg font-bold text-text-primary">
+              Purchase Without PO
+            </h3>
+            <button
+              type="button"
+              onClick={() => setPoMode(null)}
+              className="inline-flex items-center rounded border border-surface-dim bg-white px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-low transition cursor-pointer"
+            >
+              <svg className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+              <span>Change Mode</span>
+            </button>
+          </div>
+
+          <div ref={supplierDropdownRef} className="relative w-full">
+            <label className="block text-xs font-semibold text-text-secondary mb-1">Select Supplier</label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search & select supplier..."
+                value={supplierSearch}
+                onChange={(e) => {
+                  setSupplierSearch(e.target.value);
+                  setShowSupplierDropdown(true);
+                }}
+                onFocus={() => {
+                  setSupplierSearch('');
+                  setShowSupplierDropdown(true);
+                }}
+                className="w-full rounded border border-surface-dim bg-white pl-3 pr-8 py-3 md:py-2 text-sm text-text-primary outline-none focus:border-brand-blue search-input-mobile"
+              />
+              {supplierSearching && (
+                <span className="absolute right-8 top-3.5 md:top-2.5 text-[10px] text-brand-blue animate-pulse">Searching...</span>
+              )}
+              <span className="absolute right-2.5 top-3.5 md:top-2.5 text-text-secondary pointer-events-none">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
+            </div>
+            {showSupplierDropdown && (
+              <div className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-sm shadow-lg ring-1 ring-black/5 focus:outline-none border border-surface-dim">
+                {suppliers.length === 0 ? (
+                  <div className="px-3 py-2 text-text-secondary">No suppliers found.</div>
+                ) : (
+                  suppliers.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        setSupplierSearch(s.name);
+                        setShowSupplierDropdown(false);
+                        handleOpenDirectPurchase(s);
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-surface-low text-text-primary font-medium border-b border-surface-lowest last:border-0"
+                    >
+                      {s.name}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -2723,7 +2882,7 @@ export default function Purchases() {
             <div className="flex justify-between items-center p-4 border-b border-surface-low bg-surface-lowest">
               <div>
                 <h3 className="text-sm font-bold text-text-primary">
-                  Receive & Post Purchase Order (PO-{receivingPO.id})
+                  {receivingPO.id === 'Direct' ? 'Purchase without PO' : `Receive & Post Purchase Order (PO-${receivingPO.id})`}
                 </h3>
                 <p className="text-[11px] text-text-secondary">Supplier: <span className="font-semibold text-text-primary">{receivingPO.supplier_name}</span></p>
               </div>
@@ -2732,6 +2891,9 @@ export default function Purchases() {
                 onClick={() => {
                   setShowReceiveModal(false);
                   setReceivingPO(null);
+                  if (poMode === 'direct') {
+                    setPoMode(null);
+                  }
                 }}
                 className="text-text-secondary hover:text-text-primary text-sm font-bold p-1"
               >
@@ -3360,17 +3522,18 @@ export default function Purchases() {
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="p-4 border-t border-surface-low bg-surface-lowest flex justify-between items-center">
-              <button
-                type="button"
-                disabled={isCancellingPO || isReceivingPO}
-                onClick={() => handleCancelPO(receivingPO.id)}
-                className="rounded bg-error text-white px-4 py-2 text-xs font-bold hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center space-x-1"
-              >
-                {isCancellingPO && <Spinner size="xs" />}
-                <span>Cancel Order</span>
-              </button>
+            <div className={`p-4 border-t border-surface-low bg-surface-lowest flex ${receivingPO.id === 'Direct' ? 'justify-end' : 'justify-between'} items-center`}>
+              {receivingPO.id !== 'Direct' && (
+                <button
+                  type="button"
+                  disabled={isCancellingPO || isReceivingPO}
+                  onClick={() => handleCancelPO(receivingPO.id)}
+                  className="rounded bg-error text-white px-4 py-2 text-xs font-bold hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center space-x-1"
+                >
+                  {isCancellingPO && <Spinner size="xs" />}
+                  <span>Cancel Order</span>
+                </button>
+              )}
 
               <div className="flex space-x-2">
                 <button
@@ -3379,6 +3542,9 @@ export default function Purchases() {
                   onClick={() => {
                     setShowReceiveModal(false);
                     setReceivingPO(null);
+                    if (poMode === 'direct') {
+                      setPoMode(null);
+                    }
                   }}
                   className="rounded border border-surface-dim px-4 py-2 text-xs text-text-secondary hover:bg-surface-low transition-colors"
                 >
@@ -3391,7 +3557,7 @@ export default function Purchases() {
                   className="rounded bg-green-600 px-4 py-2 text-xs font-bold text-white hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center space-x-1"
                 >
                   {isReceivingPO && <Spinner size="xs" />}
-                  <span>Receive PO</span>
+                  <span>{receivingPO.id === 'Direct' ? 'Submit Purchase' : 'Receive PO'}</span>
                 </button>
               </div>
             </div>
@@ -4194,9 +4360,10 @@ export default function Purchases() {
                   }
 
                   const encodedText = encodeURIComponent(text);
-                  const whatsappPhone = supplierDetail?.whatsapp_number || supplierDetail?.contact_number || '';
-                  const url = whatsappPhone
-                    ? `https://wa.me/${whatsappPhone.replace(/[^0-9]/g, '')}?text=${encodedText}`
+                  const cleanPhone = (supplierDetail?.whatsapp_number || supplierDetail?.contact_number || '').replace(/[^0-9]/g, '');
+                  const waNumber = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+                  const url = waNumber
+                    ? `https://wa.me/${waNumber}?text=${encodedText}`
                     : `https://wa.me/?text=${encodedText}`;
                   window.open(url, '_blank');
                 }}
@@ -4359,7 +4526,7 @@ export default function Purchases() {
               <div>
                 <h3 className="text-sm font-bold text-text-primary">Quick-Create Product</h3>
                 <p className="text-[10px] text-text-secondary mt-0.5">
-                  {poMode === 'supplier'
+                  {(poMode === 'supplier' || poMode === 'direct')
                     ? `Will be linked to the selected supplier`
                     : 'Select a supplier to link this product to'}
                 </p>

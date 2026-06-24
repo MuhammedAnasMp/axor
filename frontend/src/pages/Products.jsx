@@ -259,9 +259,9 @@ export default function Products() {
       api.suppliers.list()
     ])
       .then(([c, b, m, s]) => {
-        setCategoriesDropdown(c);
-        setBrandsDropdown(b);
-        setMobileModelsDropdown(m || []);
+        setCategoriesDropdown((c && c.results) || (Array.isArray(c) && c) || []);
+        setBrandsDropdown((b && b.results) || (Array.isArray(b) && b) || []);
+        setMobileModelsDropdown((m && m.results) || (Array.isArray(m) && m) || []);
         const sList = (s && s.results) || (Array.isArray(s) && s) || [];
         setSuppliersDropdown(sList);
         setDropdownsLoading(false);
@@ -271,6 +271,17 @@ export default function Products() {
         setDropdownsLoading(false);
       });
   };
+
+  const tabChangeRef = useRef(false);
+  useEffect(() => {
+    if (tabChangeRef.current) {
+      if (currentTab === 'products') {
+        loadDropdowns();
+      }
+    } else {
+      tabChangeRef.current = true;
+    }
+  }, [currentTab]);
 
   useEffect(() => {
     loadDropdowns();
