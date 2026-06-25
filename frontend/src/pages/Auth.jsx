@@ -19,41 +19,7 @@ export default function Auth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const [logoClicks, setLogoClicks] = useState(0);
-  const [logoClickTimer, setLogoClickTimer] = useState(null);
 
-  const handleLogoClick = () => {
-    if (logoClickTimer) {
-      clearTimeout(logoClickTimer);
-    }
-    const nextClicks = logoClicks + 1;
-    setLogoClicks(nextClicks);
-    if (nextClicks >= 5) {
-      const isCurrentlyTest = localStorage.getItem('is_test_device') === 'true';
-      localStorage.setItem('is_test_device', !isCurrentlyTest ? 'true' : 'false');
-      alert(`Test Device Mode: ${!isCurrentlyTest ? 'ENABLED 🧪' : 'DISABLED ❌'}`);
-      setLogoClicks(0);
-      window.location.reload();
-    } else {
-      const timer = setTimeout(() => {
-        setLogoClicks(0);
-      }, 2000);
-      setLogoClickTimer(timer);
-    }
-  };
-
-  const [isTestDevice] = useState(localStorage.getItem('is_test_device') === 'true');
-  const [localApiUrl, setLocalApiUrl] = useState(localStorage.getItem('local_api_url') || 'http://172.16.4.167:8001/api');
-  const [prodApiUrl, setProdApiUrl] = useState(localStorage.getItem('production_api_url') || 'https://axor-0r99.onrender.com/api');
-  const [activeApiMode, setActiveApiMode] = useState(localStorage.getItem('active_api_mode') || 'local');
-
-  const saveApiSettings = (localUrl, prodUrl, mode) => {
-    localStorage.setItem('local_api_url', localUrl);
-    localStorage.setItem('production_api_url', prodUrl);
-    localStorage.setItem('active_api_mode', mode);
-    alert('API Settings Saved!');
-    window.location.reload();
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -102,8 +68,7 @@ export default function Auth() {
           <img
             src="/icon_for_website-removebg-preview_no_border.png"
             alt="Axor Logo"
-            onClick={handleLogoClick}
-            className="h-16 w-16 mb-2 cursor-pointer select-none object-contain transition-transform hover:scale-105"
+            className="h-16 w-16 mb-2 select-none object-contain transition-transform hover:scale-105"
           />
           <h2 className="text-2xl font-semibold tracking-tight text-text-primary">
             {isLogin ? 'Login to Axon' : 'Create an Account'}
@@ -220,71 +185,7 @@ export default function Auth() {
           </button>
         </div>
 
-        {isTestDevice && (
-          <div className="mt-6 border-t border-dashed border-surface-low pt-4 space-y-3">
-            <h3 className="text-xs font-bold text-brand-blue flex items-center">
-              🧪 Developer API Settings
-            </h3>
 
-            <div className="space-y-2">
-              <div>
-                <label className="block text-[10px] font-semibold text-text-secondary mb-1">Local API URL</label>
-                <input
-                  type="text"
-                  value={localApiUrl}
-                  onChange={(e) => setLocalApiUrl(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-semibold text-text-secondary mb-1">Production API URL</label>
-                <input
-                  type="text"
-                  value={prodApiUrl}
-                  onChange={(e) => setProdApiUrl(e.target.value)}
-                  className="w-full rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-semibold text-text-secondary mb-1">Active Environment</label>
-                <div className="flex space-x-4 mt-1">
-                  <label className="flex items-center space-x-1.5 text-xs text-text-primary cursor-pointer select-none">
-                    <input
-                      type="radio"
-                      name="api_mode"
-                      value="local"
-                      checked={activeApiMode === 'local'}
-                      onChange={() => setActiveApiMode('local')}
-                      className="text-brand-blue focus:ring-brand-blue"
-                    />
-                    <span>Local</span>
-                  </label>
-                  <label className="flex items-center space-x-1.5 text-xs text-text-primary cursor-pointer select-none">
-                    <input
-                      type="radio"
-                      name="api_mode"
-                      value="production"
-                      checked={activeApiMode === 'production'}
-                      onChange={() => setActiveApiMode('production')}
-                      className="text-brand-blue focus:ring-brand-blue"
-                    />
-                    <span>Production</span>
-                  </label>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => saveApiSettings(localApiUrl, prodApiUrl, activeApiMode)}
-                className="w-full mt-2 rounded bg-surface-low border border-surface-dim text-text-primary hover:bg-surface-dim py-1.5 text-xs font-semibold transition cursor-pointer"
-              >
-                Save & Apply Settings
-              </button>
-            </div>
-          </div>
-        )}
 
         <div className="mt-4 text-center border-t border-surface-low pt-3">
           <span className="text-[10px] text-text-secondary font-medium">
