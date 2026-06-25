@@ -914,12 +914,18 @@ export default function Stock() {
                       </div>
                       <div className="text-right flex-shrink-0">
                         <span className="inline-block text-xs font-bold px-2 py-0.5 rounded bg-red-50 text-error border border-error/10">
-                          Qty: {h.quantity_changed}
+                          Qty: {Math.abs(h.quantity_changed)}
                         </span>
                       </div>
                     </div>
 
-                    {/* Row 2: Timestamp, Reason */}
+                    {/* Row 2: Avg Cost & Total Loss */}
+                    <div className="flex justify-between items-center text-xs text-text-secondary">
+                      <span>Avg Cost: ₹{parseFloat(h.average_cost || 0).toFixed(2)}</span>
+                      <span className="font-semibold text-error">Loss: ₹{(Math.abs(h.quantity_changed) * parseFloat(h.average_cost || 0)).toFixed(2)}</span>
+                    </div>
+
+                    {/* Row 3: Timestamp, Reason */}
                     <div className="flex justify-between items-center pt-2 border-t border-dashed border-surface-low text-xs text-text-secondary">
                       <span className="text-[11px]">
                         {new Date(h.timestamp).toLocaleDateString()} {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -949,13 +955,15 @@ export default function Stock() {
                   <tr>
                     {renderSortHeader('Timestamp', 'timestamp', damagedPag)}
                     {renderSortHeader('Product', 'product__name', damagedPag)}
+                    <th className="px-4 py-3 text-right">Avg Cost</th>
                     {renderSortHeader('Qty Damaged', 'quantity_changed', damagedPag)}
+                    <th className="px-4 py-3 text-right">Total Loss</th>
                     <th className="px-4 py-3">Damage Reason / Notes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-low">
                   {damagedPag.loading ? (
-                    <SkeletonTable rows={damagedPag.pageSize || 5} columns={4} />
+                    <SkeletonTable rows={damagedPag.pageSize || 5} columns={6} />
                   ) : (
                     <>
                       {damagedPag.data.map((h) => (
@@ -975,15 +983,21 @@ export default function Stock() {
                               )}
                             </div>
                           </td>
+                          <td className="px-4 py-4 text-right font-medium text-text-secondary">
+                            ₹{parseFloat(h.average_cost || 0).toFixed(2)}
+                          </td>
                           <td className="px-4 py-4 text-right font-semibold text-error">
-                            {h.quantity_changed}
+                            {Math.abs(h.quantity_changed)}
+                          </td>
+                          <td className="px-4 py-4 text-right font-semibold text-error">
+                            ₹{(Math.abs(h.quantity_changed) * parseFloat(h.average_cost || 0)).toFixed(2)}
                           </td>
                           <td className="px-4 py-4 text-text-secondary">{h.description}</td>
                         </tr>
                       ))}
                       {damagedPag.data.length === 0 && (
                         <tr>
-                          <td colSpan="4" className="px-4 py-8 text-center text-text-secondary">No damage logs found.</td>
+                          <td colSpan="6" className="px-4 py-8 text-center text-text-secondary">No damage logs found.</td>
                         </tr>
                       )}
                     </>
@@ -1208,11 +1222,19 @@ export default function Stock() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Quantity Damaged</span>
-                    <div className="text-sm font-bold text-error mt-0.5">{selectedStockDetails.quantity_changed} units</div>
+                    <div className="text-sm font-bold text-error mt-0.5">{Math.abs(selectedStockDetails.quantity_changed)} units</div>
                   </div>
                   <div>
                     <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Timestamp</span>
                     <div className="text-sm text-text-primary mt-0.5">{new Date(selectedStockDetails.timestamp).toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Average Cost</span>
+                    <div className="text-sm font-bold text-text-primary mt-0.5">₹{parseFloat(selectedStockDetails.average_cost || 0).toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Total Loss</span>
+                    <div className="text-sm font-bold text-error mt-0.5">₹{(Math.abs(selectedStockDetails.quantity_changed) * parseFloat(selectedStockDetails.average_cost || 0)).toFixed(2)}</div>
                   </div>
                 </div>
 

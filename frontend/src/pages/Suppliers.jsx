@@ -129,6 +129,9 @@ export default function Suppliers() {
   // Pagination hook for mappings tab
   const mappingPag = usePagination(api.supplierProducts.list, 10, currentTab === 'mappings');
 
+  // Pagination hook for payment logs tab
+  const paymentsPag = usePagination(api.supplierPayments.list, 10, currentTab === 'payments');
+
   // Form states
   const [showForm, setShowForm] = useState(false);
   const [showMappingForm, setShowMappingForm] = useState(false);
@@ -378,6 +381,24 @@ export default function Suppliers() {
         className="px-4 py-3 cursor-pointer hover:bg-surface-low select-none transition-colors"
       >
         <div className="flex items-center space-x-1">
+          <span>{label}</span>
+          <span className="text-text-secondary">
+            {isSorted ? (isDesc ? '↓' : '↑') : '↕'}
+          </span>
+        </div>
+      </th>
+    );
+  };
+
+  const renderSortHeaderForPag = (label, field, pagObj, isRight = false) => {
+    const isSorted = pagObj.ordering === field || pagObj.ordering === `-${field}`;
+    const isDesc = pagObj.ordering === `-${field}`;
+    return (
+      <th
+        onClick={() => pagObj.handleSort(field)}
+        className={`px-4 py-4 cursor-pointer hover:bg-surface-low select-none transition-colors ${isRight ? 'text-right' : 'text-left'}`}
+      >
+        <div className={`flex items-center space-x-1 ${isRight ? 'justify-end' : ''}`}>
           <span>{label}</span>
           <span className="text-text-secondary">
             {isSorted ? (isDesc ? '↓' : '↑') : '↕'}
@@ -754,7 +775,43 @@ export default function Suppliers() {
             >
               Supplier Mappings
             </Link>
+            <Link
+              to="/erp/suppliers?tab=payments"
+              className={`pb-2 ${currentTab === 'payments' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
+            >
+              Payment Logs
+            </Link>
           </div>
+        </div>
+      )}
+
+      {/* Tabs (Mobile) */}
+      {isMobile && (
+        <div className="flex border-b border-surface-low mb-4">
+          <Link
+            to="/erp/suppliers"
+            className={`flex-1 text-center py-2.5 text-xs font-semibold transition ${
+              currentTab === 'directory' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'
+            }`}
+          >
+            Directory
+          </Link>
+          <Link
+            to="/erp/suppliers?tab=mappings"
+            className={`flex-1 text-center py-2.5 text-xs font-semibold transition ${
+              currentTab === 'mappings' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'
+            }`}
+          >
+            Mappings
+          </Link>
+          <Link
+            to="/erp/suppliers?tab=payments"
+            className={`flex-1 text-center py-2.5 text-xs font-semibold transition ${
+              currentTab === 'payments' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'
+            }`}
+          >
+            Payment Logs
+          </Link>
         </div>
       )}
 
@@ -1082,13 +1139,13 @@ export default function Suppliers() {
             ) : (
               <div className="divide-y divide-surface-low text-sm border border-surface-low rounded-lg bg-white overflow-hidden">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
+                  <thead className="bg-surface-low text-text-secondary font-semibold uppercase text-xs tracking-wider">
                     <tr>
-                      {renderSortHeader('Product SKU', 'product__name')}
+                      {renderSortHeaderForPag('Product SKU', 'product__name', mappingPag)}
                       <th>Barcode</th>
                       <th>Supplier</th>
                       <th>RSP</th>
-                      {renderSortHeader('Negotiated Cost', 'current_cost')}
+                      {renderSortHeaderForPag('Negotiated Cost', 'current_cost', mappingPag)}
                       <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -1148,6 +1205,111 @@ export default function Suppliers() {
                 />
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Supplier Payment Logs Tab */}
+      {currentTab === 'payments' && (
+        <div className="space-y-4">
+          {/* Search & loading bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 md:bg-white md:p-4 md:rounded-t-lg md:border-t md:border-x md:border-surface-low bg-transparent p-0 border-none">
+            <div className="relative w-full sm:w-72">
+              <input
+                type="text"
+                value={paymentsPag.search}
+                onChange={(e) => paymentsPag.setSearch(e.target.value)}
+                placeholder="Search supplier payments..."
+                className="w-full rounded border border-surface-dim bg-white pl-9 pr-3 py-3 md:py-2 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue placeholder:text-text-secondary search-input-mobile"
+              />
+              <span className="absolute left-3 top-3.5 md:top-2.5 text-text-secondary">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+            </div>
+            {paymentsPag.loading && (
+              <span className="text-xs text-brand-blue animate-pulse">Loading...</span>
+            )}
+          </div>
+
+          <div className="md:rounded-b-lg md:bg-white md:border-x md:border-b md:border-surface-low bg-transparent border-none overflow-x-auto">
+            {isMobile ? (
+              <div className="space-y-3 pt-2">
+                {paymentsPag.loading ? (
+                  <div className="space-y-3 animate-pulse">
+                    <div className="h-20 bg-surface-dim/40 rounded-xl" />
+                    <div className="h-20 bg-surface-dim/40 rounded-xl" />
+                  </div>
+                ) : (
+                  paymentsPag.data.map((p) => (
+                    <div
+                      key={p.id}
+                      className="rounded-lg border border-surface-low bg-white p-3 shadow-sm text-sm"
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <div>
+                          <span className="font-semibold text-text-primary">{p.supplier_name}</span>
+                          <span className="text-text-secondary text-[10px] block mt-0.5">Account: {p.payment_from_name}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-bold text-error">{formatCurrency(p.amount)}</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center text-xs text-text-secondary mt-1">
+                        <span>Date</span>
+                        <span>{new Date(p.timestamp).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+                {paymentsPag.data.length === 0 && !paymentsPag.loading && (
+                  <div className="text-center py-8 text-text-secondary text-sm">No supplier payments found.</div>
+                )}
+              </div>
+            ) : (
+              <table className="min-w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-surface-low text-text-secondary font-semibold uppercase text-xs tracking-wider">
+                  <tr>
+                    {renderSortHeaderForPag('Date', 'timestamp', paymentsPag)}
+                    <th className="px-4 py-4">Supplier</th>
+                    <th className="px-4 py-4">Account</th>
+                    {renderSortHeaderForPag('Amount', 'amount', paymentsPag, true)}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-low">
+                  {paymentsPag.loading ? (
+                    <SkeletonTable rows={paymentsPag.pageSize || 5} columns={4} />
+                  ) : (
+                    <>
+                      {paymentsPag.data.map((p) => (
+                        <tr key={p.id}>
+                          <td className="px-4 py-4 text-text-secondary">{new Date(p.timestamp).toLocaleString()}</td>
+                          <td className="px-4 py-4 font-semibold text-text-primary">{p.supplier_name}</td>
+                          <td className="px-4 py-4 text-text-secondary">{p.payment_from_name}</td>
+                          <td className="px-4 py-4 text-right font-semibold text-error">{formatCurrency(p.amount)}</td>
+                        </tr>
+                      ))}
+                      {paymentsPag.data.length === 0 && (
+                        <tr>
+                          <td colSpan="4" className="px-4 py-8 text-center text-text-secondary">No supplier payments found.</td>
+                        </tr>
+                      )}
+                    </>
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            <PaginationControls
+              page={paymentsPag.page}
+              setPage={paymentsPag.setPage}
+              pageSize={paymentsPag.pageSize}
+              setPageSize={paymentsPag.setPageSize}
+              totalCount={paymentsPag.totalCount}
+              totalPages={paymentsPag.totalPages}
+              loading={paymentsPag.loading}
+            />
           </div>
         </div>
       )}

@@ -45,7 +45,7 @@ export default function Dashboard() {
 
         {/* Skeleton Cards Grid */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 7 }).map((_, idx) => (
+          {Array.from({ length: 8 }).map((_, idx) => (
             <SkeletonCard key={idx} />
           ))}
         </div>
@@ -208,6 +208,18 @@ export default function Dashboard() {
       icon: (
         <svg className="h-6 w-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2" />
+        </svg>
+      )
+    },
+    {
+      title: "Inventory Value (Tally)",
+      value: formatCurrency(metrics?.inventory_value_selling || 0),
+      subtext: `Purchased Cost: ${formatCurrency(metrics?.inventory_value_cost || 0)} | Profit Potential: ${formatCurrency(metrics?.inventory_profit || 0)}`,
+      color: "border-l-4 border-rose-500 bg-white",
+      textColor: "text-rose-500",
+      icon: (
+        <svg className="h-6 w-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
       )
     }

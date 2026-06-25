@@ -193,7 +193,8 @@ class StockViewSet(viewsets.ModelViewSet):
                     product=product,
                     quantity_changed=-qty,
                     action_type='Transfer',
-                    description=f"Transferred OUT from {from_desc} to {to_desc}"
+                    description=f"Transferred OUT from {from_desc} to {to_desc}",
+                    average_cost=product.average_cost
                 )
 
                 # Log increment (simulate receiving end or log destination)
@@ -201,7 +202,8 @@ class StockViewSet(viewsets.ModelViewSet):
                     product=product,
                     quantity_changed=qty,
                     action_type='Transfer',
-                    description=f"Transferred IN to {to_desc} from {from_desc}"
+                    description=f"Transferred IN to {to_desc} from {from_desc}",
+                    average_cost=product.average_cost
                 )
 
                 # Re-add to stock (net is same for simple single-depot representation, or represents relocation)
@@ -231,7 +233,8 @@ class StockViewSet(viewsets.ModelViewSet):
                     product=product,
                     quantity_changed=difference,
                     action_type='Adjustment',
-                    description=f"Adjustment: {reason}. Stock count changed by {difference}"
+                    description=f"Adjustment: {reason}. Stock count changed by {difference}",
+                    average_cost=product.average_cost
                 )
 
                 return Response({"message": "Adjustment saved successfully", "stock": StockSerializer(stock).data})
@@ -258,12 +261,12 @@ class StockViewSet(viewsets.ModelViewSet):
                 stock.quantity -= qty
                 stock.save()
 
-                # Log Stock History
                 StockHistory.objects.create(
                     product=product,
                     quantity_changed=-qty,
                     action_type='Damage',
-                    description=f"Damaged items: {reason}"
+                    description=f"Damaged items: {reason}",
+                    average_cost=product.average_cost
                 )
 
                 # Calculate damage cost (qty * WAC average_cost)
@@ -695,7 +698,8 @@ class PurchaseViewSet(viewsets.ModelViewSet):
                         product=product,
                         quantity_changed=new_qty,
                         action_type='Add',
-                        description=f"Received via Purchase PO#{purchase.id}"
+                        description=f"Received via Purchase PO#{purchase.id}",
+                        average_cost=product.average_cost
                     )
 
                 # 6. Financial Settlement
@@ -877,7 +881,8 @@ class PurchaseViewSet(viewsets.ModelViewSet):
                         product=product,
                         quantity_changed=-qty,
                         action_type='Remove',
-                        description=f"Returned to Supplier ({qty} units @ ₹{return_cost}) from Purchase PO#{purchase.id}"
+                        description=f"Returned to Supplier ({qty} units @ ₹{return_cost}) from Purchase PO#{purchase.id}",
+                        average_cost=product.average_cost
                     )
 
                     # Update the PurchaseItem returned_qty
@@ -1089,7 +1094,8 @@ class SaleViewSet(viewsets.ModelViewSet):
                         product=prod,
                         quantity_changed=-qty,
                         action_type='Remove',
-                        description=f"Sold via Invoice#{invoice_number}"
+                        description=f"Sold via Invoice#{invoice_number}",
+                        average_cost=prod.average_cost
                     )
 
                 # Set profit on sale
@@ -1142,7 +1148,8 @@ class SaleViewSet(viewsets.ModelViewSet):
                         product=product,
                         quantity_changed=item.quantity,
                         action_type='Add',
-                        description=f"Returned from Sale Invoice#{sale.invoice_number}"
+                        description=f"Returned from Sale Invoice#{sale.invoice_number}",
+                        average_cost=product.average_cost
                     )
 
                 # Financial adjust
@@ -1221,6 +1228,15 @@ def dashboard_metrics(request):
     # Pending Customer Receivables (Outstanding customer balances)
     pending_customer_receivables = Customer.objects.aggregate(total=Sum('outstanding_balance'))['total'] or Decimal(0)
 
+    # Inventory Valuation
+    inventory_value_selling = Stock.objects.aggregate(
+        total=Sum(F('quantity') * F('product__selling_price'))
+    )['total'] or Decimal(0)
+    inventory_value_cost = Stock.objects.aggregate(
+        total=Sum(F('quantity') * F('product__average_cost'))
+    )['total'] or Decimal(0)
+    inventory_profit = inventory_value_selling - inventory_value_cost
+
     # Recent Sales / Purchases
     recent_sales = SaleSerializer(Sale.objects.all().order_by('-timestamp')[:5], many=True).data
     recent_purchases = PurchaseSerializer(Purchase.objects.all().order_by('-timestamp')[:5], many=True).data
@@ -1234,6 +1250,9 @@ def dashboard_metrics(request):
         "me_payable_to_supplier": float(me_payable_to_supplier),
         "supplier_payable_to_me": float(supplier_payable_to_me),
         "pending_customer_receivables": float(pending_customer_receivables),
+        "inventory_value_selling": float(inventory_value_selling),
+        "inventory_value_cost": float(inventory_value_cost),
+        "inventory_profit": float(inventory_profit),
         "recent_sales": recent_sales,
         "recent_purchases": recent_purchases
     })

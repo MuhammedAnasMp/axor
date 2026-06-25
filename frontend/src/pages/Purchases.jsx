@@ -538,6 +538,10 @@ export default function Purchases() {
 
   const handleAddLineItem = () => {
     if (!selectedProductObj) return;
+    if (items.some(i => i.product === selectedProductObj.id)) {
+      alert('This product is already in the order. Edit the quantity in the list below.');
+      return;
+    }
     if (poMode === 'product' && !selectedProductSupplierId) {
       alert('Please select a supplier for this product.');
       return;
@@ -980,30 +984,23 @@ export default function Purchases() {
   const handleAddRecLineItem = () => {
     if (!recSelectedProductObj) return;
 
-    // Check if item already exists in PO
+    // Block duplicates
     const existingIdx = recItems.findIndex(item => item.product === recSelectedProductObj.id);
     if (existingIdx > -1) {
-      const updated = [...recItems];
-      updated[existingIdx].quantity += parseInt(recQty);
-      if (parseFloat(recCost) > 0) {
-        updated[existingIdx].purchase_cost = parseFloat(recCost);
-      }
-      if (recNewSellingPrice !== '') {
-        updated[existingIdx].new_selling_price = parseFloat(recNewSellingPrice);
-      }
-      setRecItems(updated);
-    } else {
-      const newItem = {
-        product: recSelectedProductObj.id,
-        name: recSelectedProductObj.name,
-        barcode: recSelectedProductObj.barcode,
-        quantity: parseInt(recQty),
-        purchase_cost: parseFloat(recCost),
-        new_selling_price: recNewSellingPrice !== '' ? parseFloat(recNewSellingPrice) : null,
-        selling_price: parseFloat(recSelectedProductObj.selling_price || 0)
-      };
-      setRecItems([...recItems, newItem]);
+      alert('This product is already in the list. Edit the quantity directly in the table below.');
+      return;
     }
+
+    const newItem = {
+      product: recSelectedProductObj.id,
+      name: recSelectedProductObj.name,
+      barcode: recSelectedProductObj.barcode,
+      quantity: parseInt(recQty),
+      purchase_cost: parseFloat(recCost),
+      new_selling_price: recNewSellingPrice !== '' ? parseFloat(recNewSellingPrice) : null,
+      selling_price: parseFloat(recSelectedProductObj.selling_price || 0)
+    };
+    setRecItems([...recItems, newItem]);
 
     setRecSelectedProductObj(null);
     setRecProductSearch('');
@@ -1043,7 +1040,7 @@ export default function Purchases() {
       rounding: parseFloat(recRounding || 0),
       total_amount: totalAmt,
       payment_type: recPaymentType,
-      paid_from: recPaymentType !== 'Credit' ? parseInt(recPaidFrom) : null,
+      paid_from: (recPaymentType !== 'Credit' || parseFloat(recAdditionalCosts || 0) > 0) ? parseInt(recPaidFrom) || null : null,
       paid_old_credit: getPaidOldCreditVal(),
       deducted_credit: recDeductSupplierCredit ? parseFloat(recDeductAmount || 0) : 0
     };
@@ -1055,7 +1052,7 @@ export default function Purchases() {
         invoice_number: recInvoiceNumber,
         additional_costs: parseFloat(recAdditionalCosts || 0),
         payment_type: recPaymentType,
-        paid_from: recPaymentType !== 'Credit' ? parseInt(recPaidFrom) : null,
+        paid_from: (recPaymentType !== 'Credit' || parseFloat(recAdditionalCosts || 0) > 0) ? parseInt(recPaidFrom) || null : null,
         total_amount: totalAmt,
         deducted_credit: recDeductSupplierCredit ? parseFloat(recDeductAmount || 0) : 0,
         items: recItems.map(item => ({
@@ -2006,72 +2003,82 @@ export default function Purchases() {
                       {searchedProducts.length === 0 ? (
                         <div className="px-3 py-2 text-text-secondary">No products found.</div>
                       ) : (
-                        searchedProducts.map((p) => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedProductObj(p);
-                              setProductSearch(`${p.name} (${p.barcode})`);
-                              setShowDropdown(false);
-                              setNewSellingPrice(p.selling_price.toString());
+                        searchedProducts.map((p) => {
+                          const isAdded = items.some(i => i.product === p.id);
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              disabled={isAdded}
+                              onClick={() => {
+                                setSelectedProductObj(p);
+                                setProductSearch(`${p.name} (${p.barcode})`);
+                                setShowDropdown(false);
+                                setNewSellingPrice(p.selling_price.toString());
 
-                              if (poMode === 'supplier') {
-                                // Fetch Negotiated Cost and Validate Mapping
-                                api.supplierProducts.list({ supplier_id: supplier, product_id: p.id })
-                                  .then((res) => {
-                                    const mapping = (res && res.results && res.results[0]) || (Array.isArray(res) && res[0]);
-                                    if (mapping) {
-                                      setCost(mapping.current_cost.toString());
-                                    } else {
-                                      alert(`Product '${p.name}' is not mapped to this supplier! Please establish mapping in Product Management.`);
-                                      setSelectedProductObj(null);
-                                      setProductSearch('');
+                                if (poMode === 'supplier') {
+                                  // Fetch Negotiated Cost and Validate Mapping
+                                  api.supplierProducts.list({ supplier_id: supplier, product_id: p.id })
+                                    .then((res) => {
+                                      const mapping = (res && res.results && res.results[0]) || (Array.isArray(res) && res[0]);
+                                      if (mapping) {
+                                        setCost(mapping.current_cost.toString());
+                                      } else {
+                                        alert(`Product '${p.name}' is not mapped to this supplier! Please establish mapping in Product Management.`);
+                                        setSelectedProductObj(null);
+                                        setProductSearch('');
+                                        setCost('0');
+                                      }
+                                    })
+                                    .catch((err) => {
+                                      console.error(err);
                                       setCost('0');
-                                    }
-                                  })
-                                  .catch((err) => {
-                                    console.error(err);
-                                    setCost('0');
-                                  });
-                              } else {
-                                // Fetch all supplier mappings for this product
-                                api.supplierProducts.list({ product_id: p.id })
-                                  .then((res) => {
-                                    const list = (res && res.results) || (Array.isArray(res) && res) || [];
-                                    setProductSuppliers(list);
-                                    if (list.length > 0) {
-                                      setSelectedProductSupplierId(list[0].supplier.toString());
-                                      setCost(list[0].current_cost.toString());
-                                    } else {
-                                      alert(`Product '${p.name}' is not mapped to any supplier! Please establish mapping in Product Management.`);
-                                      setSelectedProductObj(null);
-                                      setProductSearch('');
+                                    });
+                                } else {
+                                  // Fetch all supplier mappings for this product
+                                  api.supplierProducts.list({ product_id: p.id })
+                                    .then((res) => {
+                                      const list = (res && res.results) || (Array.isArray(res) && res) || [];
+                                      setProductSuppliers(list);
+                                      if (list.length > 0) {
+                                        setSelectedProductSupplierId(list[0].supplier.toString());
+                                        setCost(list[0].current_cost.toString());
+                                      } else {
+                                        alert(`Product '${p.name}' is not mapped to any supplier! Please establish mapping in Product Management.`);
+                                        setSelectedProductObj(null);
+                                        setProductSearch('');
+                                        setCost('0');
+                                      }
+                                    })
+                                    .catch((err) => {
+                                      console.error(err);
                                       setCost('0');
-                                    }
-                                  })
-                                  .catch((err) => {
-                                    console.error(err);
-                                    setCost('0');
-                                  });
-                              }
-                            }}
-                            className="w-full text-left px-3 py-2 hover:bg-surface-low text-text-primary font-medium border-b border-surface-lowest last:border-0"
-                          >
-                            <div>
-                              <span className="font-semibold">{p.name}</span> <span className="text-text-secondary">({p.barcode})</span>
-                              {p.suitable_models_details && p.suitable_models_details.length > 0 && (
-                                <div className="flex flex-wrap gap-0.5 mt-0.5">
-                                  {p.suitable_models_details.map((m) => (
-                                    <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
-                                      {m.brand_name} {m.model_name}
-                                    </span>
-                                  ))}
-                                </div>
+                                    });
+                                }
+                              }}
+                              className={`w-full text-left px-3 py-2 border-b border-surface-lowest last:border-0 font-medium flex items-center justify-between ${isAdded
+                                ? 'bg-green-50 text-text-secondary cursor-not-allowed opacity-70'
+                                : 'hover:bg-surface-low text-text-primary'
+                                }`}
+                            >
+                              <div>
+                                <span className="font-semibold">{p.name}</span> <span className="text-text-secondary">({p.barcode})</span>
+                                {p.suitable_models_details && p.suitable_models_details.length > 0 && (
+                                  <div className="flex flex-wrap gap-0.5 mt-0.5">
+                                    {p.suitable_models_details.map((m) => (
+                                      <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
+                                        {m.brand_name} {m.model_name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              {isAdded && (
+                                <span className="ml-2 flex-shrink-0 text-[9px] font-bold text-green-700 bg-green-100 border border-green-300 rounded px-1.5 py-0.5">✓ Added</span>
                               )}
-                            </div>
-                          </button>
-                        ))
+                            </button>
+                          );
+                        })
                       )}
                       {productSearch.trim() && (
                         <button
@@ -2534,6 +2541,7 @@ export default function Purchases() {
                   {renderSortHeader('Date', 'timestamp', historyPag)}
                   {renderSortHeader('Supplier', 'supplier__name', historyPag)}
                   <th className="px-4 py-4 text-right">Landed Cost</th>
+                  <th className="px-4 py-4 text-right">Payment Type</th>
                   {renderSortHeader('Total Amount', 'total_amount', historyPag)}
                   {renderSortHeader('Status', 'is_received', historyPag)}
                   <th className="px-4 py-4 text-center">Actions</th>
@@ -2549,6 +2557,7 @@ export default function Purchases() {
                       <td className="px-4 py-4 text-text-secondary">{new Date(p.timestamp).toLocaleString()}</td>
                       <td className="px-4 py-4 text-text-primary">{p.supplier_name}</td>
                       <td className="px-4 py-4 text-right text-text-secondary">{formatCurrency(p.additional_costs)}</td>
+                      <td className="px-4 py-4 text-right text-text-secondary">{p.payment_type}</td>
                       <td className="px-4 py-4 text-right font-semibold text-text-primary">{formatCurrency(p.total_amount)}</td>
                       <td className="px-4 py-4 text-center">
                         <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold ${p.status === 'Returned' ? 'bg-red-100 text-red-800' :
@@ -3060,39 +3069,49 @@ export default function Purchases() {
                                 ) : recSearchedProducts.length === 0 ? (
                                   <div className="px-3 py-1.5 text-xs text-text-secondary">No mapped product found</div>
                                 ) : (
-                                  recSearchedProducts.map((p) => (
-                                    <button
-                                      key={p.id}
-                                      type="button"
-                                      onClick={() => {
-                                        setRecSelectedProductObj(p);
-                                        setRecProductSearch(`${p.name} (${p.barcode})`);
-                                        setRecShowDropdown(false);
-                                        setRecNewSellingPrice(p.selling_price.toString());
-                                        api.supplierProducts.list({ product_id: p.id, supplier_id: receivingPO.supplier })
-                                          .then((res) => {
-                                            const list = (res && res.results) || (Array.isArray(res) && res) || [];
-                                            if (list.length > 0) {
-                                              setRecCost(list[0].current_cost.toString());
-                                            }
-                                          });
-                                      }}
-                                      className="w-full text-left px-3 py-1.5 hover:bg-surface-low text-text-primary font-medium border-b border-surface-lowest last:border-0"
-                                    >
-                                      <div>
-                                        <span className="font-semibold text-xs">{p.name}</span> <span className="text-[10px] text-text-secondary">({p.barcode})</span>
-                                        {p.suitable_models_details && p.suitable_models_details.length > 0 && (
-                                          <div className="flex flex-wrap gap-0.5 mt-0.5">
-                                            {p.suitable_models_details.map((m) => (
-                                              <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
-                                                {m.brand_name} {m.model_name}
-                                              </span>
-                                            ))}
-                                          </div>
+                                  recSearchedProducts.map((p) => {
+                                    const isAdded = recItems.some(i => i.product === p.id);
+                                    return (
+                                      <button
+                                        key={p.id}
+                                        type="button"
+                                        disabled={isAdded}
+                                        onClick={() => {
+                                          setRecSelectedProductObj(p);
+                                          setRecProductSearch(`${p.name} (${p.barcode})`);
+                                          setRecShowDropdown(false);
+                                          setRecNewSellingPrice(p.selling_price.toString());
+                                          api.supplierProducts.list({ product_id: p.id, supplier_id: receivingPO.supplier })
+                                            .then((res) => {
+                                              const list = (res && res.results) || (Array.isArray(res) && res) || [];
+                                              if (list.length > 0) {
+                                                setRecCost(list[0].current_cost.toString());
+                                              }
+                                            });
+                                        }}
+                                        className={`w-full text-left px-3 py-1.5 border-b border-surface-lowest last:border-0 font-medium flex items-center justify-between ${isAdded
+                                          ? 'bg-green-50 text-text-secondary cursor-not-allowed opacity-70'
+                                          : 'hover:bg-surface-low text-text-primary'
+                                          }`}
+                                      >
+                                        <div>
+                                          <span className="font-semibold text-xs">{p.name}</span> <span className="text-[10px] text-text-secondary">({p.barcode})</span>
+                                          {p.suitable_models_details && p.suitable_models_details.length > 0 && (
+                                            <div className="flex flex-wrap gap-0.5 mt-0.5">
+                                              {p.suitable_models_details.map((m) => (
+                                                <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
+                                                  {m.brand_name} {m.model_name}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                        {isAdded && (
+                                          <span className="ml-2 flex-shrink-0 text-[9px] font-bold text-green-700 bg-green-100 border border-green-300 rounded px-1.5 py-0.5">✓ Added</span>
                                         )}
-                                      </div>
-                                    </button>
-                                  ))
+                                      </button>
+                                    );
+                                  })
                                 )}
                               </div>
                             )}
@@ -3280,39 +3299,49 @@ export default function Purchases() {
                           ) : recSearchedProducts.length === 0 ? (
                             <div className="px-3 py-1.5 text-xs text-text-secondary">No mapped product found</div>
                           ) : (
-                            recSearchedProducts.map((p) => (
-                              <button
-                                key={p.id}
-                                type="button"
-                                onClick={() => {
-                                  setRecSelectedProductObj(p);
-                                  setRecProductSearch(`${p.name} (${p.barcode})`);
-                                  setRecShowDropdown(false);
-                                  setRecNewSellingPrice(p.selling_price.toString());
-                                  api.supplierProducts.list({ product_id: p.id, supplier_id: receivingPO.supplier })
-                                    .then((res) => {
-                                      const list = (res && res.results) || (Array.isArray(res) && res) || [];
-                                      if (list.length > 0) {
-                                        setRecCost(list[0].current_cost.toString());
-                                      }
-                                    });
-                                }}
-                                className="w-full text-left px-3 py-1.5 hover:bg-surface-low text-text-primary font-medium border-b border-surface-lowest last:border-0"
-                              >
-                                <div>
-                                  <span className="font-semibold text-xs">{p.name}</span> <span className="text-[10px] text-text-secondary">({p.barcode})</span>
-                                  {p.suitable_models_details && p.suitable_models_details.length > 0 && (
-                                    <div className="flex flex-wrap gap-0.5 mt-0.5">
-                                      {p.suitable_models_details.map((m) => (
-                                        <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
-                                          {m.brand_name} {m.model_name}
-                                        </span>
-                                      ))}
-                                    </div>
+                            recSearchedProducts.map((p) => {
+                              const isAdded = recItems.some(i => i.product === p.id);
+                              return (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  disabled={isAdded}
+                                  onClick={() => {
+                                    setRecSelectedProductObj(p);
+                                    setRecProductSearch(`${p.name} (${p.barcode})`);
+                                    setRecShowDropdown(false);
+                                    setRecNewSellingPrice(p.selling_price.toString());
+                                    api.supplierProducts.list({ product_id: p.id, supplier_id: receivingPO.supplier })
+                                      .then((res) => {
+                                        const list = (res && res.results) || (Array.isArray(res) && res) || [];
+                                        if (list.length > 0) {
+                                          setRecCost(list[0].current_cost.toString());
+                                        }
+                                      });
+                                  }}
+                                  className={`w-full text-left px-3 py-1.5 border-b border-surface-lowest last:border-0 font-medium flex items-center justify-between ${isAdded
+                                    ? 'bg-green-50 text-text-secondary cursor-not-allowed opacity-70'
+                                    : 'hover:bg-surface-low text-text-primary'
+                                    }`}
+                                >
+                                  <div>
+                                    <span className="font-semibold text-xs">{p.name}</span> <span className="text-[10px] text-text-secondary">({p.barcode})</span>
+                                    {p.suitable_models_details && p.suitable_models_details.length > 0 && (
+                                      <div className="flex flex-wrap gap-0.5 mt-0.5">
+                                        {p.suitable_models_details.map((m) => (
+                                          <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
+                                            {m.brand_name} {m.model_name}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {isAdded && (
+                                    <span className="ml-2 flex-shrink-0 text-[9px] font-bold text-green-700 bg-green-100 border border-green-300 rounded px-1.5 py-0.5">✓ Added</span>
                                   )}
-                                </div>
-                              </button>
-                            ))
+                                </button>
+                              );
+                            })
                           )}
                         </div>
                       )}
@@ -3378,6 +3407,21 @@ export default function Purchases() {
                       onChange={(e) => setRecAdditionalCosts(e.target.value)}
                       className="w-full rounded border border-surface-dim bg-white px-3 py-1.5 text-xs text-text-primary outline-none focus:border-brand-blue"
                     />
+                    {recPaymentType === 'Credit' && parseFloat(recAdditionalCosts || 0) > 0 && (
+                      <div className="mt-2">
+                        <label className="block text-xs font-semibold text-amber-700 mb-1">Expense Account (for additional cost)</label>
+                        <select
+                          value={recPaidFrom}
+                          onChange={(e) => setRecPaidFrom(e.target.value)}
+                          className="w-full rounded border border-amber-400 bg-amber-50 px-3 py-1.5 text-xs text-text-primary outline-none focus:border-amber-500"
+                        >
+                          <option value="">-- Select account --</option>
+                          {bankAccounts.map((b) => (
+                            <option key={b.id} value={b.id}>{b.name} (₹{b.balance})</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-text-secondary mb-1">Rounding / Discount (INR)</label>

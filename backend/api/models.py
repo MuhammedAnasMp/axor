@@ -107,6 +107,7 @@ class StockHistory(models.Model):
     quantity_changed = models.IntegerField()
     action_type = models.CharField(max_length=50, choices=ACTIONS)
     description = models.TextField(blank=True)
+    average_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
