@@ -156,7 +156,7 @@ export default function Products() {
         modelName: parsedModelName,
         label: parsedBrand.id === 'new'
           ? `+ Create Brand "${parsedBrand.name}" & Model "${parsedModelName}"`
-          : `+ Create Model "${parsedModelName}" under Brand "${parsedBrand.name}"`
+          : `+ Create Brand "${parsedBrand.name}" & Model "${parsedModelName}"  `
       });
     }
 

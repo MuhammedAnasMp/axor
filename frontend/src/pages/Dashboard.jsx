@@ -168,6 +168,7 @@ export default function Dashboard() {
     {
       title: "Low Stock Items",
       value: metrics?.low_stock_count || 0,
+      subtext: `Total Items: ${metrics?.total_products_count || 0}`,
       color: "border-l-4 border-error bg-white",
       textColor: "text-error",
       icon: (

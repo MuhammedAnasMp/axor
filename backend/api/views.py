@@ -1219,6 +1219,7 @@ def dashboard_metrics(request):
 
     # Low Stock Items (Stock qty < 10)
     low_stock_count = Stock.objects.filter(quantity__lt=10).count()
+    total_products_count = Product.objects.count()
 
     # Supplier Payables: split into me_payable_to_supplier and supplier_payable_to_me
     me_payable_to_supplier = Supplier.objects.filter(outstanding_balance__gt=0).aggregate(total=Sum('outstanding_balance'))['total'] or Decimal(0)
@@ -1247,6 +1248,7 @@ def dashboard_metrics(request):
         "cash_in_hand": float(cash_in_hand),
         "bank_balance": float(bank_balance),
         "low_stock_count": low_stock_count,
+        "total_products_count": total_products_count,
         "me_payable_to_supplier": float(me_payable_to_supplier),
         "supplier_payable_to_me": float(supplier_payable_to_me),
         "pending_customer_receivables": float(pending_customer_receivables),

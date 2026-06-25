@@ -6,7 +6,7 @@ import { usePagination } from '../utils/usePagination';
 import PaginationControls from '../components/PaginationControls';
 import { SkeletonTable, Spinner } from '../components/Skeleton';
 import MobileBottomSheet from '../components/MobileBottomSheet';
-
+import { TrashIcon } from "@heroicons/react/24/solid";
 
 export default function Purchases() {
   const [searchParams] = useSearchParams();
@@ -1630,172 +1630,7 @@ export default function Purchases() {
     );
   };
 
-  const drawPOImage = (includeCost, includeRsp) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
 
-    const width = 800;
-    const items = detailsPO.items || [];
-
-    const itemRowHeight = 35;
-    const tableTop = 320;
-    const tableHeight = 40 + (items.length * itemRowHeight);
-    const totalsTop = tableTop + tableHeight + 20;
-    const footerTop = totalsTop + 130;
-    const height = footerTop + 100;
-
-    canvas.width = width;
-    canvas.height = height;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.fillStyle = '#1e3a8a';
-    ctx.fillRect(0, 0, width, 120);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px sans-serif';
-    ctx.fillText('PURCHASE ORDER', 40, 52);
-
-    ctx.font = '14px sans-serif';
-    ctx.fillText(`PO ID: PO-${detailsPO.id}`, 40, 82);
-    ctx.fillText(`Date: ${new Date(detailsPO.timestamp).toLocaleDateString()}`, width - 240, 82);
-
-    ctx.fillStyle = '#1f2937';
-    ctx.font = 'bold 15px sans-serif';
-    ctx.fillText('SUPPLIER INFO', 40, 160);
-
-    ctx.font = '13px sans-serif';
-    ctx.fillStyle = '#4b5563';
-    ctx.fillText(`Name: ${detailsPO.supplier_name}`, 40, 185);
-    if (supplierDetail?.contact_number || supplierDetail?.whatsapp_number) {
-      ctx.fillText(`Contact: ${supplierDetail.whatsapp_number || supplierDetail.contact_number}`, 40, 205);
-    }
-    if (detailsPO.invoice_number) {
-      ctx.fillText(`Ref Invoice: ${detailsPO.invoice_number}`, 40, 225);
-    }
-
-    ctx.fillStyle = '#1f2937';
-    ctx.font = 'bold 15px sans-serif';
-    ctx.fillText('OUR BUSINESS INFO', width / 2 + 40, 160);
-
-    ctx.font = '13px sans-serif';
-    ctx.fillStyle = '#4b5563';
-    const bizLines = (shareBusinessInfo || 'Axor').split('\n');
-    bizLines.forEach((line, index) => {
-      ctx.fillText(line, width / 2 + 40, 185 + (index * 20));
-    });
-
-    ctx.fillStyle = '#f3f4f6';
-    ctx.fillRect(40, tableTop, width - 80, 40);
-
-    const cols = [];
-    cols.push({ name: 'PRODUCT', x: 50, align: 'left' });
-
-    let nextX = 350;
-    cols.push({ name: 'QTY', x: nextX, align: 'right' });
-    nextX += 80;
-
-    if (includeCost) {
-      cols.push({ name: 'UNIT COST', x: nextX, align: 'right' });
-      nextX += 110;
-    }
-    if (includeRsp) {
-      cols.push({ name: 'RSP', x: nextX, align: 'right' });
-      nextX += 110;
-    }
-    cols.push({ name: 'SUBTOTAL', x: width - 50, align: 'right' });
-
-    ctx.fillStyle = '#374151';
-    ctx.font = 'bold 12px sans-serif';
-    cols.forEach(col => {
-      ctx.textAlign = col.align;
-      ctx.fillText(col.name, col.x, tableTop + 24);
-    });
-
-    ctx.textAlign = 'left';
-
-    let currentY = tableTop + 40;
-    ctx.font = '12px sans-serif';
-    items.forEach((item, index) => {
-      if (index % 2 === 1) {
-        ctx.fillStyle = '#fafafa';
-        ctx.fillRect(40, currentY, width - 80, itemRowHeight);
-      }
-
-      ctx.strokeStyle = '#f3f4f6';
-      ctx.beginPath();
-      ctx.moveTo(40, currentY + itemRowHeight);
-      ctx.lineTo(width - 40, currentY + itemRowHeight);
-      ctx.stroke();
-
-      ctx.fillStyle = '#1f2937';
-
-      let pName = item.product_name || '';
-      if (pName.length > 38) pName = pName.substring(0, 35) + '...';
-      ctx.textAlign = 'left';
-      ctx.fillText(pName, 50, currentY + 22);
-
-      ctx.textAlign = 'right';
-      const colQty = cols.find(c => c.name === 'QTY');
-      ctx.fillText(item.quantity.toString(), colQty.x, currentY + 22);
-
-      if (includeCost) {
-        const colCost = cols.find(c => c.name === 'UNIT COST');
-        ctx.fillText(`₹${item.purchase_cost.toFixed(2)}`, colCost.x, currentY + 22);
-      }
-
-      if (includeRsp) {
-        const colRsp = cols.find(c => c.name === 'RSP');
-        const rspVal = item.selling_price || 0;
-        ctx.fillText(`₹${rspVal.toFixed(2)}`, colRsp.x, currentY + 22);
-      }
-
-      const colSub = cols.find(c => c.name === 'SUBTOTAL');
-      ctx.fillText(`₹${(item.quantity * item.purchase_cost).toFixed(2)}`, colSub.x, currentY + 22);
-
-      currentY += itemRowHeight;
-    });
-
-    ctx.textAlign = 'left';
-
-    ctx.strokeStyle = '#e5e7eb';
-    ctx.beginPath();
-    ctx.moveTo(40, totalsTop);
-    ctx.lineTo(width - 40, totalsTop);
-    ctx.stroke();
-
-    ctx.fillStyle = '#4b5563';
-    ctx.font = '13px sans-serif';
-
-    let labelX = width - 280;
-    let valueX = width - 50;
-
-    ctx.fillText('Payment Method:', labelX, totalsTop + 30);
-    ctx.textAlign = 'right';
-    ctx.fillText(detailsPO.payment_type, valueX, totalsTop + 30);
-    ctx.textAlign = 'left';
-
-    if (detailsPO.additional_costs > 0) {
-      ctx.fillText('Landed Cost:', labelX, totalsTop + 55);
-      ctx.textAlign = 'right';
-      ctx.fillText(`₹${detailsPO.additional_costs.toFixed(2)}`, valueX, totalsTop + 55);
-      ctx.textAlign = 'left';
-    }
-
-    ctx.fillStyle = '#1e3a8a';
-    ctx.font = 'bold 15px sans-serif';
-    ctx.fillText('Total Amount:', labelX, totalsTop + 85);
-    ctx.textAlign = 'right';
-    ctx.fillText(`₹${detailsPO.total_amount.toFixed(2)}`, valueX, totalsTop + 85);
-    ctx.textAlign = 'left';
-
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = 'italic 11px sans-serif';
-    ctx.fillText('Generated automatically by Axon Business Platform.', 40, footerTop + 40);
-
-    return canvas.toDataURL('image/png');
-  };
 
   return (
     <div className="space-y-6">
@@ -1897,12 +1732,14 @@ export default function Purchases() {
                   setItems([]);
                   setSupplier('');
                 }}
-                className="text-xs text-brand-blue hover:underline font-semibold flex items-center"
+                className="inline-flex items-center rounded border border-surface-dim bg-white px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-low transition cursor-pointer"
+
+
               >
                 <svg className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
-                <span>Change Mode</span>
+                <span  >Change Mode</span>
               </button>
             </div>
 
@@ -1961,224 +1798,114 @@ export default function Purchases() {
             )}
 
             {/* Add Line Item subform */}
-            <div className="rounded border border-surface-low p-4 bg-surface-lowest space-y-3">
-              <span className="text-xs font-semibold text-brand-blue">Add Product to Order</span>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <div ref={dropdownRef} className={`${poMode === 'product' ? 'sm:col-span-1' : 'sm:col-span-2'} relative`}>
-                  <div className="flex justify-between items-center mb-0.5">
-                    <label className="block text-[11px] font-semibold text-text-secondary">Search & Select Product</label>
-                    <button
-                      type="button"
-                      onClick={handleOpenViewAllPopup}
-                      className="text-[10px] text-brand-blue hover:underline font-semibold flex items-center"
-                      title="View all products"
-                    >
-                      <span className="hidden sm:inline">View All</span>
-                      <span className="sm:hidden p-1 bg-brand-blue/10 rounded-full text-brand-blue active:bg-brand-blue/20">
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </span>
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Type product name or barcode..."
-                      value={productSearch}
-                      onChange={(e) => {
-                        setProductSearch(e.target.value);
-                        setShowDropdown(true);
-                      }}
-                      onFocus={() => setShowDropdown(true)}
-                      className="w-full rounded border border-surface-dim bg-white pl-3 pr-8 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue search-input-mobile"
-                    />
-                    {searching && (
-                      <span className="absolute right-2.5 top-3 md:top-2 text-[10px] text-brand-blue animate-pulse">Searching...</span>
-                    )}
-                  </div>
-                  {showDropdown && (productSearch.trim() !== '' || searchedProducts.length > 0) && (
-                    <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-xs shadow-lg ring-1 ring-black/5 focus:outline-none border border-surface-dim">
-                      {searchedProducts.length === 0 ? (
-                        <div className="px-3 py-2 text-text-secondary">No products found.</div>
-                      ) : (
-                        searchedProducts.map((p) => {
-                          const isAdded = items.some(i => i.product === p.id);
-                          return (
-                            <button
-                              key={p.id}
-                              type="button"
-                              disabled={isAdded}
-                              onClick={() => {
-                                setSelectedProductObj(p);
-                                setProductSearch(`${p.name} (${p.barcode})`);
-                                setShowDropdown(false);
-                                setNewSellingPrice(p.selling_price.toString());
-
-                                if (poMode === 'supplier') {
-                                  // Fetch Negotiated Cost and Validate Mapping
-                                  api.supplierProducts.list({ supplier_id: supplier, product_id: p.id })
-                                    .then((res) => {
-                                      const mapping = (res && res.results && res.results[0]) || (Array.isArray(res) && res[0]);
-                                      if (mapping) {
-                                        setCost(mapping.current_cost.toString());
-                                      } else {
-                                        alert(`Product '${p.name}' is not mapped to this supplier! Please establish mapping in Product Management.`);
-                                        setSelectedProductObj(null);
-                                        setProductSearch('');
-                                        setCost('0');
-                                      }
-                                    })
-                                    .catch((err) => {
-                                      console.error(err);
-                                      setCost('0');
-                                    });
-                                } else {
-                                  // Fetch all supplier mappings for this product
-                                  api.supplierProducts.list({ product_id: p.id })
-                                    .then((res) => {
-                                      const list = (res && res.results) || (Array.isArray(res) && res) || [];
-                                      setProductSuppliers(list);
-                                      if (list.length > 0) {
-                                        setSelectedProductSupplierId(list[0].supplier.toString());
-                                        setCost(list[0].current_cost.toString());
-                                      } else {
-                                        alert(`Product '${p.name}' is not mapped to any supplier! Please establish mapping in Product Management.`);
-                                        setSelectedProductObj(null);
-                                        setProductSearch('');
-                                        setCost('0');
-                                      }
-                                    })
-                                    .catch((err) => {
-                                      console.error(err);
-                                      setCost('0');
-                                    });
-                                }
-                              }}
-                              className={`w-full text-left px-3 py-2 border-b border-surface-lowest last:border-0 font-medium flex items-center justify-between ${isAdded
-                                ? 'bg-green-50 text-text-secondary cursor-not-allowed opacity-70'
-                                : 'hover:bg-surface-low text-text-primary'
-                                }`}
-                            >
-                              <div>
-                                <span className="font-semibold">{p.name}</span> <span className="text-text-secondary">({p.barcode})</span>
-                                {p.suitable_models_details && p.suitable_models_details.length > 0 && (
-                                  <div className="flex flex-wrap gap-0.5 mt-0.5">
-                                    {p.suitable_models_details.map((m) => (
-                                      <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
-                                        {m.brand_name} {m.model_name}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                              {isAdded && (
-                                <span className="ml-2 flex-shrink-0 text-[9px] font-bold text-green-700 bg-green-100 border border-green-300 rounded px-1.5 py-0.5">✓ Added</span>
-                              )}
-                            </button>
-                          );
-                        })
-                      )}
-                      {productSearch.trim() && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowDropdown(false);
-                            setQcName(productSearch.trim());
-                            setQcBarcode('');
-                            setQcSellingPrice('0');
-                            setQcCost('0');
-                            setQcSupplierId(poMode === 'supplier' ? supplier : '');
-                            setShowQuickCreate(true);
-                          }}
-                          className="w-full text-left px-3 py-2 text-brand-blue font-bold hover:bg-brand-blue/10 border-t border-surface-low flex items-center gap-1.5"
-                        >
-                          <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                          </svg>
-                          Create product "{productSearch.trim()}"
-                        </button>
-                      )}
+            {!selectedProductObj ? (
+              <button
+                type="button"
+                onClick={handleOpenViewAllPopup}
+                className="w-full rounded-lg border border-dashed border-brand-blue/40 bg-brand-blue/5 hover:bg-brand-blue/10 text-brand-blue py-4 text-sm font-semibold flex items-center justify-center gap-2 transition"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Product
+              </button>
+            ) : (
+              <div className="rounded border border-surface-low p-4 bg-surface-lowest space-y-3 animate-in fade-in duration-200">
+                <div className="flex justify-between items-center pb-1 border-b border-surface-low/60">
+                  <div>
+                    <span className="text-xs font-bold text-brand-blue">Selected Product</span>
+                    <div className="text-xs text-text-primary font-semibold">
+                      {selectedProductObj.name} <span className="text-text-secondary font-normal">({selectedProductObj.barcode})</span>
                     </div>
-                  )}
-                </div>
-
-                {poMode === 'product' && (
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Supplier (Price)</label>
-                    <select
-                      value={selectedProductSupplierId}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setSelectedProductSupplierId(val);
-                        const mapped = productSuppliers.find(ps => ps.supplier.toString() === val);
-                        if (mapped) {
-                          setCost(mapped.current_cost.toString());
-                        }
-                      }}
-                      className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue"
-                      disabled={!selectedProductObj}
-                    >
-                      {!selectedProductObj ? (
-                        <option value="">Select a product first</option>
-                      ) : (
-                        <>
-                          <option value="">-- Select Supplier --</option>
-                          {productSuppliers.map((ps) => (
-                            <option key={ps.supplier} value={ps.supplier}>
-                              {ps.supplier_name} (₹{ps.current_cost})
-                            </option>
-                          ))}
-                        </>
-                      )}
-                    </select>
                   </div>
-                )}
-
-                <div className="col-span-full grid grid-cols-3 gap-2.5">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Quantity</label>
-                    <input
-                      type="number"
-                      value={qty}
-                      onChange={(e) => setQty(e.target.value)}
-                      className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Unit Cost (INR)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={cost}
-                      onChange={(e) => setCost(e.target.value)}
-                      className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-secondary mb-0.5 truncate" title="New Retail Selling Price">New Retail Price</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="Same"
-                      value={newSellingPrice}
-                      onChange={(e) => setNewSellingPrice(e.target.value)}
-                      className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none"
-                    />
-                  </div>
-                </div>
-                <div className="col-span-full flex items-end pt-1">
                   <button
                     type="button"
-                    onClick={handleAddLineItem}
-                    className="w-full rounded bg-brand-blue py-3 md:py-1.5 text-sm md:text-xs font-semibold text-white hover:bg-brand-cobalt transition"
+                    onClick={() => {
+                      setSelectedProductObj(null);
+                      setProductSearch('');
+                      setQty('1');
+                      setCost('0');
+                      setNewSellingPrice('');
+                      setProductSuppliers([]);
+                      setSelectedProductSupplierId('');
+                    }}
+                    className="text-text-secondary hover:text-text-primary text-[10px] font-semibold border border-surface-dim hover:bg-surface-low rounded px-2 py-0.5 transition-colors"
                   >
-                    Add to Cart
+                    Change
                   </button>
                 </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {poMode === 'product' && (
+                    <div className="sm:col-span-full">
+                      <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Supplier (Price)</label>
+                      <select
+                        value={selectedProductSupplierId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedProductSupplierId(val);
+                          const mapped = productSuppliers.find(ps => ps.supplier.toString() === val);
+                          if (mapped) {
+                            setCost(mapped.current_cost.toString());
+                          }
+                        }}
+                        className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue"
+                      >
+                        <option value="">-- Select Supplier --</option>
+                        {productSuppliers.map((ps) => (
+                          <option key={ps.supplier} value={ps.supplier}>
+                            {ps.supplier_name} (₹{ps.current_cost})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="col-span-full grid grid-cols-3 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Quantity</label>
+                      <input
+                        type="number"
+                        value={qty}
+                        onChange={(e) => setQty(e.target.value)}
+                        className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-text-secondary mb-0.5">Unit Cost (INR)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={cost}
+                        onChange={(e) => setCost(e.target.value)}
+                        className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-text-secondary mb-0.5 truncate" title="New Retail Selling Price">New Retail Price</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Same"
+                        value={newSellingPrice}
+                        onChange={(e) => setNewSellingPrice(e.target.value)}
+                        className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="col-span-full flex items-end pt-1">
+                    <button
+                      type="button"
+                      onClick={handleAddLineItem}
+                      className="w-full rounded bg-brand-blue py-3 md:py-1.5 text-sm md:text-xs font-semibold text-white hover:bg-brand-cobalt transition"
+                    >
+                      Add to Cart
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Line Items Table */}
             <div className="overflow-x-auto pt-2 hidden lg:block">
@@ -2259,6 +1986,8 @@ export default function Purchases() {
                 </tbody>
               </table>
             </div>
+
+
           </div>
 
           {/* Supplier, Payment & Totals */}
@@ -2279,6 +2008,7 @@ export default function Purchases() {
               type="button"
               onClick={() => setPoMode(null)}
               className="inline-flex items-center rounded border border-surface-dim bg-white px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-low transition cursor-pointer"
+
             >
               <svg className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -2421,7 +2151,7 @@ export default function Purchases() {
           <div className="block md:hidden space-y-4">
             {receivePag.loading ? (
               Array.from({ length: 3 }).map((_, idx) => (
-                <div key={idx} className="border border-surface-low rounded-lg p-4 bg-white space-y-3 shadow-sm animate-pulse">
+                <div key={idx} className="border border-surface-low rounded-lg p-4 bg-gray-100 space-y-3 shadow-sm animate-pulse">
                   <div className="flex justify-between items-start border-b border-surface-low pb-2">
                     <div className="space-y-2">
                       <div className="h-4 w-20 bg-surface-dim/50 rounded" />
@@ -2437,7 +2167,7 @@ export default function Purchases() {
               ))
             ) : (
               receivePag.data.map((p) => (
-                <div key={p.id} className="border border-surface-low rounded-lg p-4 bg-white space-y-3 shadow-sm">
+                <div key={p.id} className="border border-surface-low rounded-lg p-4 bg-gray-100 space-y-3 shadow-sm">
                   <div className="flex justify-between items-start border-b border-surface-low pb-2">
                     <div>
                       <span
@@ -2605,7 +2335,7 @@ export default function Purchases() {
           <div className="block md:hidden space-y-4">
             {historyPag.loading ? (
               Array.from({ length: 3 }).map((_, idx) => (
-                <div key={idx} className="border border-surface-low rounded-lg p-4 bg-white space-y-3 shadow-sm animate-pulse">
+                <div key={idx} className="border border-surface-low rounded-lg p-4 bg-gray-100 space-y-3 shadow-sm animate-pulse">
                   <div className="flex justify-between items-start border-b border-surface-low pb-2">
                     <div className="space-y-2">
                       <div className="h-4 w-20 bg-surface-dim/50 rounded" />
@@ -2621,7 +2351,7 @@ export default function Purchases() {
               ))
             ) : (
               historyPag.data.map((p) => (
-                <div key={p.id} className="border border-surface-low rounded-lg p-4 bg-white space-y-3 shadow-sm">
+                <div key={p.id} className="border border-surface-low rounded-lg p-4 bg-gray-100 space-y-3 shadow-sm">
                   <div className="flex justify-between items-start border-b border-surface-low pb-2">
                     <div>
                       <span
@@ -3181,7 +2911,7 @@ export default function Purchases() {
                   const sell = item.new_selling_price !== null && item.new_selling_price !== undefined && item.new_selling_price !== '' ? parseFloat(item.new_selling_price) : parseFloat(item.selling_price || 0);
                   const itemProfit = item.quantity * (sell - item.purchase_cost);
                   return (
-                    <div key={idx} className="border border-surface-low rounded-lg p-4 bg-white space-y-3 shadow-sm">
+                    <div key={idx} className="border border-surface-low rounded-lg p-4 bg-gray-100 space-y-3 shadow-sm">
                       <div className="flex justify-between items-start border-b border-surface-low pb-2">
                         <div>
                           <div className="font-semibold text-sm text-text-primary">{item.name}</div>
@@ -3206,7 +2936,7 @@ export default function Purchases() {
                             onClick={() => handleRemoveRecLineItem(idx)}
                             className="text-error hover:underline text-xs"
                           >
-                            Remove Item
+                            <TrashIcon height={15} width={15} />
                           </button>
                         </div>
                       </div>
@@ -3260,137 +2990,87 @@ export default function Purchases() {
                 })}
 
                 {/* Inline Add Row for mobile */}
-                <div className="border border-surface-low rounded-lg p-4 bg-surface-lowest space-y-3">
-                  <span className="text-xs font-bold text-brand-blue block">Add Product to Receive</span>
-                  <div className="space-y-3">
-                    <div className="relative" ref={recDropdownRef}>
-                      <div className="flex justify-between items-center mb-1">
-                        <label className="block text-[11px] font-semibold text-text-secondary">Search Mapped Product</label>
-                        <button
-                          type="button"
-                          onClick={handleOpenRecViewAllPopup}
-                          className="text-[10px] text-brand-blue hover:underline font-semibold flex items-center"
-                          title="View all products"
-                        >
-                          <span className="hidden sm:inline">View All</span>
-                          <span className="sm:hidden p-1 bg-brand-blue/10 rounded-full text-brand-blue active:bg-brand-blue/20">
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </span>
-                        </button>
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="Search supplier product..."
-                        value={recProductSearch}
-                        onChange={(e) => {
-                          setRecProductSearch(e.target.value);
-                          setRecShowDropdown(true);
-                        }}
-                        onFocus={() => setRecShowDropdown(true)}
-                        className="w-full rounded border border-surface-dim bg-white px-3 py-2.5 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue search-input-mobile"
-                      />
-                      {recShowDropdown && (recProductSearch.trim() !== '' || recSearching) && (
-                        <div className="absolute left-0 right-0 z-30 mt-1 max-h-48 overflow-y-auto rounded-md bg-white border border-surface-low shadow-lg">
-                          {recSearching ? (
-                            <div className="px-3 py-1.5 text-xs text-text-secondary animate-pulse">Searching...</div>
-                          ) : recSearchedProducts.length === 0 ? (
-                            <div className="px-3 py-1.5 text-xs text-text-secondary">No mapped product found</div>
-                          ) : (
-                            recSearchedProducts.map((p) => {
-                              const isAdded = recItems.some(i => i.product === p.id);
-                              return (
-                                <button
-                                  key={p.id}
-                                  type="button"
-                                  disabled={isAdded}
-                                  onClick={() => {
-                                    setRecSelectedProductObj(p);
-                                    setRecProductSearch(`${p.name} (${p.barcode})`);
-                                    setRecShowDropdown(false);
-                                    setRecNewSellingPrice(p.selling_price.toString());
-                                    api.supplierProducts.list({ product_id: p.id, supplier_id: receivingPO.supplier })
-                                      .then((res) => {
-                                        const list = (res && res.results) || (Array.isArray(res) && res) || [];
-                                        if (list.length > 0) {
-                                          setRecCost(list[0].current_cost.toString());
-                                        }
-                                      });
-                                  }}
-                                  className={`w-full text-left px-3 py-1.5 border-b border-surface-lowest last:border-0 font-medium flex items-center justify-between ${isAdded
-                                    ? 'bg-green-50 text-text-secondary cursor-not-allowed opacity-70'
-                                    : 'hover:bg-surface-low text-text-primary'
-                                    }`}
-                                >
-                                  <div>
-                                    <span className="font-semibold text-xs">{p.name}</span> <span className="text-[10px] text-text-secondary">({p.barcode})</span>
-                                    {p.suitable_models_details && p.suitable_models_details.length > 0 && (
-                                      <div className="flex flex-wrap gap-0.5 mt-0.5">
-                                        {p.suitable_models_details.map((m) => (
-                                          <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
-                                            {m.brand_name} {m.model_name}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                  {isAdded && (
-                                    <span className="ml-2 flex-shrink-0 text-[9px] font-bold text-green-700 bg-green-100 border border-green-300 rounded px-1.5 py-0.5">✓ Added</span>
-                                  )}
-                                </button>
-                              );
-                            })
-                          )}
+                {!recSelectedProductObj ? (
+                  <button
+                    type="button"
+                    onClick={handleOpenRecViewAllPopup}
+                    className="w-full rounded-lg border border-dashed border-brand-blue/40 bg-brand-blue/5 hover:bg-brand-blue/10 text-brand-blue py-4 text-sm font-semibold flex items-center justify-center gap-2 transition"
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Product to Receive
+                  </button>
+                ) : (
+                  <div className="border border-surface-low rounded-lg p-4 bg-surface-lowest space-y-3 animate-in fade-in duration-200">
+                    <div className="flex justify-between items-center pb-1 border-b border-surface-low/60">
+                      <div>
+                        <span className="text-xs font-bold text-brand-blue">Selected Product</span>
+                        <div className="text-xs text-text-primary font-semibold">
+                          {recSelectedProductObj.name} <span className="text-text-secondary font-normal">({recSelectedProductObj.barcode})</span>
                         </div>
-                      )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRecSelectedProductObj(null);
+                          setRecProductSearch('');
+                          setRecQty('1');
+                          setRecCost('0');
+                          setRecNewSellingPrice('');
+                        }}
+                        className="text-text-secondary hover:text-text-primary text-[10px] font-semibold border border-surface-dim hover:bg-surface-low rounded px-2 py-0.5 transition-colors"
+                      >
+                        Change
+                      </button>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-text-secondary mb-1">Qty</label>
-                        <input
-                          type="number"
-                          placeholder="Qty"
-                          value={recQty}
-                          onChange={(e) => setRecQty(e.target.value)}
-                          className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs text-right text-text-primary outline-none focus:border-brand-blue"
-                        />
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-text-secondary mb-1">Qty</label>
+                          <input
+                            type="number"
+                            placeholder="Qty"
+                            value={recQty}
+                            onChange={(e) => setRecQty(e.target.value)}
+                            className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs text-right text-text-primary outline-none focus:border-brand-blue"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-text-secondary mb-1">Cost (₹)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="Cost"
+                            value={recCost}
+                            onChange={(e) => setRecCost(e.target.value)}
+                            className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs text-right text-text-primary outline-none focus:border-brand-blue"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-text-secondary mb-1">Retail (₹)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="Selling"
+                            value={recNewSellingPrice}
+                            onChange={(e) => setRecNewSellingPrice(e.target.value)}
+                            className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs text-right text-text-primary outline-none focus:border-brand-blue"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-[11px] font-semibold text-text-secondary mb-1">Cost (₹)</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          placeholder="Cost"
-                          value={recCost}
-                          onChange={(e) => setRecCost(e.target.value)}
-                          className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs text-right text-text-primary outline-none focus:border-brand-blue"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-semibold text-text-secondary mb-1">Retail (₹)</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          placeholder="Selling"
-                          value={recNewSellingPrice}
-                          onChange={(e) => setRecNewSellingPrice(e.target.value)}
-                          className="w-full rounded border border-surface-dim bg-white px-3 py-3 md:py-1 text-sm md:text-xs text-right text-text-primary outline-none focus:border-brand-blue"
-                        />
-                      </div>
-                    </div>
 
-                    <button
-                      type="button"
-                      onClick={handleAddRecLineItem}
-                      className="w-full rounded bg-brand-blue py-2 text-xs font-semibold text-white hover:bg-brand-cobalt transition"
-                    >
-                      Add to Receive List
-                    </button>
+                      <button
+                        type="button"
+                        onClick={handleAddRecLineItem}
+                        className="w-full rounded bg-brand-blue py-2.5 text-xs font-semibold text-white hover:bg-brand-cobalt transition"
+                      >
+                        Add to Receive List
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
 
@@ -3878,7 +3558,7 @@ export default function Purchases() {
                 {returnItems.map((item, idx) => {
                   const isExpanded = !!expandedReturnRows[item.product];
                   return (
-                    <div key={item.product} className="border border-surface-low rounded-lg p-4 bg-white space-y-3 shadow-sm">
+                    <div key={item.product} className="border border-surface-low rounded-lg p-4 bg-gray-100 space-y-3 shadow-sm">
                       <div className="flex justify-between items-start border-b border-surface-low pb-2">
                         <div>
                           <div className="font-semibold text-sm text-text-primary">{item.name}</div>
