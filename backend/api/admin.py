@@ -8,6 +8,8 @@ from .models import (
     Stock,
     StockHistory,
     Supplier,
+    SupplierProduct,
+    SupplierCostHistory,
     Customer,
     BankAccount,
     MoneyTransfer,
@@ -20,7 +22,10 @@ from .models import (
     Sale,
     SaleItem,
     CustomerPayment,
+    EmployeeSalaryPayment,
+    EmployeeAdvance,
     EmployeeAttendance,
+    EmployeePayrollAuditTrail,
     PurchaseReturn,
     PurchaseReturnItem,
     OTAUpdateBundle
@@ -196,3 +201,38 @@ class MobileModelAdmin(admin.ModelAdmin):
     list_display = ('brand', 'model_name',)
     list_filter = ('brand',)
     search_fields = ('brand__name', 'model_name',)
+
+
+@admin.register(SupplierProduct)
+class SupplierProductAdmin(admin.ModelAdmin):
+    list_display = ('supplier', 'product', 'current_cost')
+    list_filter = ('supplier', 'product')
+    search_fields = ('supplier__name', 'product__name')
+
+
+@admin.register(SupplierCostHistory)
+class SupplierCostHistoryAdmin(admin.ModelAdmin):
+    list_display = ('supplier', 'product', 'cost', 'selling_price', 'timestamp')
+    list_filter = ('supplier', 'product', 'timestamp')
+    search_fields = ('supplier__name', 'product__name')
+
+
+@admin.register(EmployeeSalaryPayment)
+class EmployeeSalaryPaymentAdmin(admin.ModelAdmin):
+    list_display = ('employee', 'basic_salary', 'allowance', 'advance', 'total_paid', 'status', 'timestamp')
+    list_filter = ('status', 'timestamp', 'employee')
+    search_fields = ('employee__user__username',)
+
+
+@admin.register(EmployeeAdvance)
+class EmployeeAdvanceAdmin(admin.ModelAdmin):
+    list_display = ('employee', 'amount', 'status', 'timestamp')
+    list_filter = ('status', 'timestamp', 'employee')
+    search_fields = ('employee__user__username',)
+
+
+@admin.register(EmployeePayrollAuditTrail)
+class EmployeePayrollAuditTrailAdmin(admin.ModelAdmin):
+    list_display = ('salary_payment', 'action', 'timestamp')
+    list_filter = ('action', 'timestamp')
+    search_fields = ('salary_payment__employee__user__username',)
