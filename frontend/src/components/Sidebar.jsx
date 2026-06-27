@@ -228,11 +228,16 @@ export default function Sidebar() {
   }
 
   const handleTabClick = (item, isMobile = false) => {
-    if (collapsed && !isMobile) {
-      setCollapsed(false);
-    }
     if (item.subItems) {
       setOpenTab(openTab === item.id ? null : item.id);
+      if (item.subItems.length > 0) {
+        const firstSub = item.subItems[0];
+        if (firstSub.isExternal) {
+          window.open(firstSub.path, '_blank', 'noopener,noreferrer');
+        } else {
+          navigate(firstSub.path);
+        }
+      }
     } else {
       setOpenTab(null);
       if (isMobile) setDrawerOpen(false);

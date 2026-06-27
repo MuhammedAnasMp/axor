@@ -1718,7 +1718,7 @@ export default function Purchases() {
           <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low bg-transparent border-none space-y-4 lg:col-span-2">
             <div className="flex justify-between items-center">
               <h3 className="text-base md:text-lg font-bold text-text-primary">
-                {poMode === 'product' ? 'Multiple Shop Purchase Order' : 'Single Shop Purchase Order'}
+                {poMode === 'product' ? 'Multiple Shop PO' : 'Single Shop PO'}
               </h3>
               <button
                 type="button"
@@ -2089,7 +2089,7 @@ export default function Purchases() {
               </span>
             </div>
             {activeLoading && (
-              <span className="text-xs text-brand-blue animate-pulse">Loading...</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />
             )}
           </div>
 
@@ -2111,8 +2111,8 @@ export default function Purchases() {
                   <SkeletonTable rows={5} columns={7} />
                 ) : (
                   receivePag.data.map((p) => (
-                    <tr key={p.id} className="hover:bg-surface-bright">
-                      <td className="px-4 py-4 font-semibold text-brand-blue cursor-pointer hover:underline" onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}>PO-{p.id}</td>
+                    <tr key={p.id} className="hover:bg-surface-bright  " onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}>
+                      <td className="px-4 py-4 font-semibold text-brand-blue cursor-pointer hover:underline" >PO-{p.id}</td>
                       <td className="px-4 py-4 text-text-primary">{p.supplier_name}</td>
                       <td className="px-4 py-4 text-text-secondary font-mono">{p.invoice_number || '-'}</td>
                       <td className="px-4 py-4 text-text-secondary">{p.payment_type}</td>
@@ -2259,7 +2259,7 @@ export default function Purchases() {
               </span>
             </div>
             {activeLoading && (
-              <span className="text-xs text-brand-blue animate-pulse">Loading...</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />
             )}
           </div>
 
@@ -2282,8 +2282,8 @@ export default function Purchases() {
                   <SkeletonTable rows={5} columns={7} />
                 ) : (
                   historyPag.data.map((p) => (
-                    <tr key={p.id} className="hover:bg-surface-bright">
-                      <td className="px-4 py-4 font-semibold text-brand-blue cursor-pointer hover:underline" onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}>PO-{p.id}</td>
+                    <tr key={p.id} className="hover:bg-surface-bright" onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}>
+                      <td className="px-4 py-4 font-semibold text-brand-blue cursor-pointer hover:underline" >PO-{p.id}</td>
                       <td className="px-4 py-4 text-text-secondary">{new Date(p.timestamp).toLocaleString()}</td>
                       <td className="px-4 py-4 text-text-primary">{p.supplier_name}</td>
                       <td className="px-4 py-4 text-right text-text-secondary">{formatCurrency(p.additional_costs)}</td>

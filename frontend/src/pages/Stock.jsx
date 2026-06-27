@@ -523,7 +523,7 @@ export default function Stock() {
               </span>
             </div>
             {activeLoading && (
-              <span className="text-xs text-brand-blue animate-pulse">Loading...</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />
             )}
           </div>
 
@@ -709,7 +709,7 @@ export default function Stock() {
               </span>
             </div>
             {activeLoading && (
-              <span className="text-xs text-brand-blue animate-pulse">Loading...</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />
             )}
           </div>
 
@@ -876,7 +876,7 @@ export default function Stock() {
               </span>
             </div>
             {activeLoading && (
-              <span className="text-xs text-brand-blue animate-pulse">Loading...</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />
             )}
           </div>
 

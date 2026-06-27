@@ -986,7 +986,7 @@ export default function Products() {
               </span>
             </div>
             {activeLoading && (
-              <span className="text-xs text-brand-blue animate-pulse">Loading...</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />
             )}
           </div>
 
@@ -1258,7 +1258,7 @@ export default function Products() {
                 placeholder="Search categories..."
                 className="rounded border border-surface-dim bg-white px-3 py-2.5 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue w-64 search-input-mobile"
               />
-              {activeLoading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
+              {activeLoading && <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />}
             </div>
 
             {isMobile ? (
@@ -1407,7 +1407,7 @@ export default function Products() {
                 placeholder="Search brands..."
                 className="rounded border border-surface-dim bg-white px-3 py-2.5 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue w-64 search-input-mobile"
               />
-              {activeLoading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
+              {activeLoading && <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />}
             </div>
 
             {isMobile ? (
@@ -1612,7 +1612,7 @@ export default function Products() {
                 placeholder="Search models or brands..."
                 className="rounded border border-surface-dim bg-white px-3 py-2.5 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue w-64 search-input-mobile"
               />
-              {activeLoading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
+              {activeLoading && <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />}
             </div>
 
             {isMobile ? (
@@ -1716,7 +1716,7 @@ export default function Products() {
       {currentTab === 'cost-history' && (
         <div className="md:rounded-lg md:bg-white p-0 md:p-6 md:shadow-sm md:border md:border-surface-low" style={isMobile ? {} : { boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
 
-          {activeLoading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
+          {activeLoading && <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />}
 
           <div className="flex items-center justify-between mb-4 gap-4">
             <input

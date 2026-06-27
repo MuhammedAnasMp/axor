@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../utils/api';
 import { SkeletonCard, SkeletonTable } from '../components/Skeleton';
 import MobileBottomSheet from '../components/MobileBottomSheet';
@@ -8,6 +9,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -130,6 +132,7 @@ export default function Dashboard() {
       value: formatCurrency(metrics?.sales_today || 0),
       color: "border-l-4 border-primary bg-white",
       textColor: "text-primary",
+      path: "/erp/sales?tab=history",
       icon: (
         <svg className="h-6 w-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -141,6 +144,7 @@ export default function Dashboard() {
       value: formatCurrency(metrics?.profit_today || 0),
       color: "border-l-4 border-green-600 bg-white",
       textColor: "text-green-600",
+      path: "/erp/sales?tab=history",
       icon: (
         <svg className="h-6 w-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -152,6 +156,7 @@ export default function Dashboard() {
       value: formatCurrency(metrics?.cash_in_hand || 0),
       color: "border-l-4 border-amber-500 bg-white",
       textColor: "text-amber-500",
+      path: "/erp/accounts",
       icon: (
         <svg className="h-6 w-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -163,6 +168,7 @@ export default function Dashboard() {
       value: formatCurrency(metrics?.bank_balance || 0),
       color: "border-l-4 border-secondary bg-white",
       textColor: "text-secondary",
+      path: "/erp/accounts",
       icon: (
         <svg className="h-6 w-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -175,6 +181,7 @@ export default function Dashboard() {
       subtext: `Total Items: ${metrics?.total_products_count || 0}`,
       color: "border-l-4 border-error bg-white",
       textColor: "text-error",
+      path: "/erp/stock",
       icon: (
         <svg className="h-6 w-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -203,6 +210,7 @@ export default function Dashboard() {
         : netCustomerTally < 0
           ? "text-amber-600"
           : "text-text-secondary",
+      path: "/erp/customers",
       icon: (
         <svg className="h-6 w-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20H7m0 0v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -231,6 +239,7 @@ export default function Dashboard() {
         : netTally < 0
           ? "text-teal-600"
           : "text-text-secondary",
+      path: "/erp/suppliers",
       icon: (
         <svg className="h-6 w-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2" />
@@ -247,6 +256,7 @@ export default function Dashboard() {
       ),
       color: "border-l-4 border-rose-500 bg-white",
       textColor: "text-rose-500",
+      path: "/erp/stock",
       icon: (
         <svg className="h-6 w-6 text-green-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -267,7 +277,8 @@ export default function Dashboard() {
         {cards.map((card, idx) => (
           <div
             key={idx}
-            className={`rounded-lg p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${card.color}`}
+            className={`rounded-lg p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md cursor-pointer ${card.color}`}
+            onClick={() => card.path && navigate(card.path)}
             style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}
           >
             <div className="flex items-center justify-between">
@@ -296,7 +307,7 @@ export default function Dashboard() {
               {metrics?.recent_sales?.map((sale, i) => (
                 <div
                   key={i}
-                  onClick={() => setSelectedTransaction({ ...sale, type: 'sale' })}
+                  onClick={() => navigate('/erp/sales?tab=history')}
                   className="p-3.5 hover:bg-surface-bright transition-colors cursor-pointer space-y-2 text-sm"
                 >
                   <div className="flex justify-between items-start gap-3">
@@ -330,7 +341,11 @@ export default function Dashboard() {
                 </thead>
                 <tbody className="divide-y divide-surface-low">
                   {metrics?.recent_sales?.map((sale, i) => (
-                    <tr key={i} className="hover:bg-surface-bright">
+                    <tr
+                      key={i}
+                      onClick={() => navigate('/erp/sales?tab=history')}
+                      className="hover:bg-surface-bright cursor-pointer"
+                    >
                       <td className="px-4 py-4 font-medium text-brand-blue">{sale.invoice_number}</td>
                       <td className="px-4 py-4 text-text-primary">{sale.customer_name || 'Walk-In Customer'}</td>
                       <td className="px-4 py-4 text-text-secondary">{sale.payment_type}</td>
@@ -356,7 +371,7 @@ export default function Dashboard() {
               {metrics?.recent_purchases?.map((pur, i) => (
                 <div
                   key={i}
-                  onClick={() => setSelectedTransaction({ ...pur, type: 'purchase' })}
+                  onClick={() => navigate('/erp/purchases?tab=history')}
                   className="p-3.5 hover:bg-surface-bright transition-colors cursor-pointer space-y-2 text-sm"
                 >
                   <div className="flex justify-between items-start gap-3">
@@ -391,7 +406,11 @@ export default function Dashboard() {
                 </thead>
                 <tbody className="divide-y divide-surface-low">
                   {metrics?.recent_purchases?.map((pur, i) => (
-                    <tr key={i} className="hover:bg-surface-bright">
+                    <tr
+                      key={i}
+                      onClick={() => navigate('/erp/purchases?tab=history')}
+                      className="hover:bg-surface-bright cursor-pointer"
+                    >
                       <td className="px-4 py-4 font-medium text-brand-blue">PO-{pur.id}</td>
                       <td className="px-4 py-4 text-text-primary">{pur.supplier_name}</td>
                       <td className="px-4 py-4">

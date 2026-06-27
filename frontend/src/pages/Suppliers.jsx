@@ -841,7 +841,7 @@ export default function Suppliers() {
               </span>
             </div>
             {pag.loading && (
-              <span className="text-xs text-brand-blue animate-pulse">Loading...</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />
             )}
           </div>
 
@@ -1059,7 +1059,7 @@ export default function Suppliers() {
                 placeholder="Search matrix by product/supplier..."
                 className="w-full sm:w-64 rounded border border-surface-dim bg-white px-3 py-2.5 md:py-1.5 text-sm md:text-xs text-text-primary outline-none focus:border-brand-blue search-input-mobile"
               />
-              {mappingPag.loading && <span className="text-xs text-brand-blue animate-pulse">Loading...</span>}
+              {mappingPag.loading && <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />}
             </div>
 
             {isMobile ? (
@@ -1229,7 +1229,7 @@ export default function Suppliers() {
               </span>
             </div>
             {paymentsPag.loading && (
-              <span className="text-xs text-brand-blue animate-pulse">Loading...</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />
             )}
           </div>
 

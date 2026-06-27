@@ -235,6 +235,12 @@ input, textarea {
     font-size: 0.875rem !important;
   }
 
+  @media (max-width: 767.98px) {
+    input.search-input-mobile {
+      width: 100% !important;
+    }
+  }
+
 
   /* 4. Tab View Containers & Scroll Bar sitting */
   .tabs-container {
