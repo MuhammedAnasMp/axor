@@ -120,6 +120,10 @@ export default function Dashboard() {
   const theyOwe = metrics?.supplier_payable_to_me || 0;
   const netTally = weOwe - theyOwe;
 
+  const custTheyOweUs = metrics?.customer_payable_to_me || 0;
+  const custWeOweThem = metrics?.me_payable_to_customer || 0;
+  const netCustomerTally = custTheyOweUs - custWeOweThem;
+
   const cards = [
     {
       title: "Today's Sales",
@@ -178,10 +182,27 @@ export default function Dashboard() {
       )
     },
     {
-      title: "Customer Receivables",
-      value: formatCurrency(metrics?.pending_customer_receivables || 0),
-      color: "border-l-4 border-indigo-600 bg-white",
-      textColor: "text-indigo-600",
+      title: "Customer Balance (Tally)",
+      value: netCustomerTally > 0
+        ? `${formatCurrency(netCustomerTally)} (They Owe)`
+        : netCustomerTally < 0
+          ? `${formatCurrency(Math.abs(netCustomerTally))} (We Owe)`
+          : `${formatCurrency(0)} (Settled)`,
+      subtext: (
+        <>
+          We Owe: <span className="text-red-600">{formatCurrency(custWeOweThem)}</span> | They Owe: <span className="text-green-600">{formatCurrency(custTheyOweUs)}</span>
+        </>
+      ),
+      color: netCustomerTally > 0
+        ? "border-l-4 border-indigo-600 bg-white"
+        : netCustomerTally < 0
+          ? "border-l-4 border-amber-600 bg-white"
+          : "border-l-4 border-gray-400 bg-white",
+      textColor: netCustomerTally > 0
+        ? "text-indigo-600"
+        : netCustomerTally < 0
+          ? "text-amber-600"
+          : "text-text-secondary",
       icon: (
         <svg className="h-6 w-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20H7m0 0v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -195,7 +216,11 @@ export default function Dashboard() {
         : netTally < 0
           ? `${formatCurrency(Math.abs(netTally))} (They Owe)`
           : `${formatCurrency(0)} (Settled)`,
-      subtext: `We Owe: ${formatCurrency(weOwe)} | They Owe: ${formatCurrency(theyOwe)}`,
+      subtext: (
+        <>
+          We Owe: <span className="text-red-600">{formatCurrency(weOwe)}</span> | They Owe: <span className="text-green-600">{formatCurrency(theyOwe)}</span>
+        </>
+      ),
       color: netTally > 0
         ? "border-l-4 border-purple-600 bg-white"
         : netTally < 0
@@ -215,11 +240,15 @@ export default function Dashboard() {
     {
       title: "Inventory Value (Tally)",
       value: formatCurrency(metrics?.inventory_value_selling || 0),
-      subtext: `Purchased Cost: ${formatCurrency(metrics?.inventory_value_cost || 0)} | Profit Potential: ${formatCurrency(metrics?.inventory_profit || 0)}`,
+      subtext: (
+        <>
+          Purchased Cost: {formatCurrency(metrics?.inventory_value_cost || 0)} | Profit Potential: <span className="text-green-600">{formatCurrency(metrics?.inventory_profit || 0)}</span>
+        </>
+      ),
       color: "border-l-4 border-rose-500 bg-white",
       textColor: "text-rose-500",
       icon: (
-        <svg className="h-6 w-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-6 w-6 text-green-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
       )

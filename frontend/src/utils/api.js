@@ -1,5 +1,19 @@
 export const getBaseUrl = () => {
-  return import.meta.env.VITE_API_URL || 'http://172.16.4.167:8001/api';
+  const envUrl = import.meta.env.VITE_API_URL || 'http://172.16.4.167:8001/api';
+  
+  // Detect Capacitor/native platform
+  const isNative = typeof window !== 'undefined' && (
+    window.Capacitor || 
+    window.location.origin.startsWith('capacitor:') || 
+    window.location.origin.startsWith('http://localhost')
+  );
+
+  // If running on mobile/Capacitor and VITE_API_URL is relative, use the absolute production URL
+  if (isNative && envUrl.startsWith('/')) {
+    return 'https://axor-0r99.onrender.com/api';
+  }
+  
+  return envUrl;
 };
 
 // Helper to get CSRF token from cookies (if needed)

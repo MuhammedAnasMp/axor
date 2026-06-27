@@ -1227,6 +1227,9 @@ def dashboard_metrics(request):
     supplier_payable_to_me = abs(supplier_payable_to_me)
 
     # Pending Customer Receivables (Outstanding customer balances)
+    customer_payable_to_me = Customer.objects.filter(outstanding_balance__gt=0).aggregate(total=Sum('outstanding_balance'))['total'] or Decimal(0)
+    me_payable_to_customer = Customer.objects.filter(outstanding_balance__lt=0).aggregate(total=Sum('outstanding_balance'))['total'] or Decimal(0)
+    me_payable_to_customer = abs(me_payable_to_customer)
     pending_customer_receivables = Customer.objects.aggregate(total=Sum('outstanding_balance'))['total'] or Decimal(0)
 
     # Inventory Valuation
@@ -1251,6 +1254,8 @@ def dashboard_metrics(request):
         "total_products_count": total_products_count,
         "me_payable_to_supplier": float(me_payable_to_supplier),
         "supplier_payable_to_me": float(supplier_payable_to_me),
+        "customer_payable_to_me": float(customer_payable_to_me),
+        "me_payable_to_customer": float(me_payable_to_customer),
         "pending_customer_receivables": float(pending_customer_receivables),
         "inventory_value_selling": float(inventory_value_selling),
         "inventory_value_cost": float(inventory_value_cost),

@@ -20,13 +20,10 @@ function copyAndroid() {
 
   const sourceApk = path.join(frontendDir, 'android/app/build/outputs/apk/debug/app-debug.apk');
   const destApk = path.join(applicationDir, `Axon-${version}.apk`);
-  const destApkGeneric = path.join(applicationDir, 'Axon.apk');
-  
+
   if (fs.existsSync(sourceApk)) {
     fs.copyFileSync(sourceApk, destApk);
     console.log(`✓ Copied APK to ${destApk}`);
-    fs.copyFileSync(sourceApk, destApkGeneric);
-    console.log(`✓ Copied APK to ${destApkGeneric}`);
   } else {
     console.error(`✗ Source APK not found at: ${sourceApk}`);
   }
@@ -38,7 +35,7 @@ function copyWindows() {
   const version = packageJson.version || '1.0.0';
 
   const distElectronDir = path.join(frontendDir, 'dist_electron');
-  
+
   const setupFile = `Axon Setup ${version}.exe`;
   const portableFile = `Axon ${version}.exe`;
 
@@ -54,7 +51,7 @@ function copyWindows() {
     console.log(`✓ Copied Windows Installer to ${destSetup}`);
     copied = true;
   }
-  
+
   if (fs.existsSync(sourcePortable)) {
     fs.copyFileSync(sourcePortable, destPortable);
     console.log(`✓ Copied Windows Portable to ${destPortable}`);
