@@ -230,7 +230,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Dashboard</h2>
-        <p className="text-xs text-text-secondary">xxOverview of today's key performance indicators and operations.</p>
+        <p className="text-xs text-text-secondary">Overview of today's key performance indicators and operations.</p>
       </div>
 
       {/* Metrics Cards Grid */}
@@ -337,9 +337,8 @@ export default function Dashboard() {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <div className="font-bold text-brand-blue">{formatCurrency(pur.total_amount)}</div>
-                      <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold mt-1 ${
-                        pur.is_received ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
+                      <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold mt-1 ${pur.is_received ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
                         {pur.is_received ? 'Received' : 'Pending'}
                       </span>
                     </div>
@@ -431,9 +430,8 @@ export default function Dashboard() {
                 <div>
                   <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Order Status</span>
                   <div className="mt-1">
-                    <span className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${
-                      selectedTransaction.is_received ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                    }`}>
+                    <span className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${selectedTransaction.is_received ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
                       {selectedTransaction.is_received ? 'Received' : 'Pending'}
                     </span>
                   </div>

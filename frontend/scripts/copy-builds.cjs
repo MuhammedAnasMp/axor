@@ -14,12 +14,19 @@ if (!fs.existsSync(applicationDir)) {
 const type = process.argv[2]; // 'android', 'windows', or 'both'
 
 function copyAndroid() {
+  const packageJsonPath = path.join(frontendDir, 'package.json');
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const version = packageJson.version || '1.0.0';
+
   const sourceApk = path.join(frontendDir, 'android/app/build/outputs/apk/debug/app-debug.apk');
-  const destApk = path.join(applicationDir, 'Axon.apk');
+  const destApk = path.join(applicationDir, `Axon-${version}.apk`);
+  const destApkGeneric = path.join(applicationDir, 'Axon.apk');
   
   if (fs.existsSync(sourceApk)) {
     fs.copyFileSync(sourceApk, destApk);
     console.log(`✓ Copied APK to ${destApk}`);
+    fs.copyFileSync(sourceApk, destApkGeneric);
+    console.log(`✓ Copied APK to ${destApkGeneric}`);
   } else {
     console.error(`✗ Source APK not found at: ${sourceApk}`);
   }
