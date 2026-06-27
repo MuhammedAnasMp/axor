@@ -8,3 +8,16 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 )
+
+// Register PWA Service Worker
+if ('serviceWorker' in navigator && !window.electronAPI) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('PWA ServiceWorker registered successfully: ', registration.scope);
+      })
+      .catch((error) => {
+        console.log('PWA ServiceWorker registration failed: ', error);
+      });
+  });
+}

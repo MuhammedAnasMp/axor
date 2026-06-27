@@ -17,6 +17,7 @@ import VisualReports from './pages/VisualReports';
 import Sales from './pages/Sales';
 import POS from './pages/POS';
 import { useOTAUpdate } from './utils/useOTAUpdate';
+import IOSInstallPrompt from './components/iOSInstallPrompt';
 
 
 function ERPLayout() {
@@ -51,6 +52,9 @@ export default function App() {
 
   return (
     <>
+      {/* iOS PWA Installation Guide */}
+      <IOSInstallPrompt />
+
       {/* OTA Status Banners */}
       {status === 'checking' && (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-brand-blue text-white text-[10px] py-1 px-4 flex items-center justify-between font-semibold shadow-inner">
