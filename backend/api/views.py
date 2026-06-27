@@ -1700,13 +1700,22 @@ def check_ota_update(request):
 
     # If user's APK native wrapper is too old for this bundle
     if client_native < req_native:
-        apk_download_url = request.build_absolute_uri("/media/apks/latest-axon.apk")
-        return Response({
-            "update_available": True,
-            "update_type": "APK_REINSTALL",
-            "message": "A major native app update is required. Please download the new APK.",
-            "download_url": apk_download_url
-        })
+        if platform == "electron":
+            exe_download_url = request.build_absolute_uri("/media/apps/latest-axon.exe")
+            return Response({
+                "update_available": True,
+                "update_type": "APK_REINSTALL",
+                "message": "A major desktop app update is required. Please download the new Windows application.",
+                "download_url": exe_download_url
+            })
+        else:
+            apk_download_url = request.build_absolute_uri("/media/apks/latest-axon.apk")
+            return Response({
+                "update_available": True,
+                "update_type": "APK_REINSTALL",
+                "message": "A major native app update is required. Please download the new APK.",
+                "download_url": apk_download_url
+            })
 
     # If a newer web asset version is available
     if client_web < target_web:

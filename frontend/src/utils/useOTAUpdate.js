@@ -126,7 +126,7 @@ export function useOTAUpdate() {
 
       if (updateData.is_mandatory) {
         // Immediate reload for critical updates
-        await applyElectronUpdate();
+        await applyElectronUpdate(updateData.version);
       }
     } catch (err) {
       console.error('Electron Download failed:', err);
@@ -166,9 +166,13 @@ export function useOTAUpdate() {
     }
   };
 
-  const applyElectronUpdate = async () => {
+  const applyElectronUpdate = async (version) => {
     try {
-      await window.electronAPI.applyUpdate(updateInfo.version);
+      const targetVersion = version || (updateInfo && updateInfo.version);
+      if (!targetVersion) {
+        throw new Error('No update version available.');
+      }
+      await window.electronAPI.applyUpdate(targetVersion);
     } catch (err) {
       console.error('Failed to apply Electron update:', err);
       setStatus('error');
@@ -190,7 +194,7 @@ export function useOTAUpdate() {
     updateInfo,
     applyUpdate: () => {
       if (window.electronAPI) {
-        applyElectronUpdate();
+        applyElectronUpdate(updateInfo?.version);
       } else if (downloadedBundle) {
         applyMobileUpdate(downloadedBundle);
       }

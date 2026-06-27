@@ -98,13 +98,15 @@ export default function App() {
           <div className="bg-white p-6 rounded-lg max-w-md w-full shadow-2xl mx-4">
             <h3 className="text-base font-bold text-error">Critical Update Required</h3>
             <p className="text-xs text-text-secondary mt-2">
-              This version of the app requires native components that are not present in your current installation.
+              {window.electronAPI
+                ? "This version of the app requires a new desktop installer to be downloaded and installed."
+                : "This version of the app requires native wrapper components that are not present in your current installation."}
             </p>
             <a
               href={updateInfo?.download_url}
               className="mt-4 block text-center bg-brand-blue text-white text-xs py-2 rounded font-medium shadow cursor-pointer"
             >
-              Download APK Installer (.apk)
+              {window.electronAPI ? "Download Windows Installer (.exe)" : "Download APK Installer (.apk)"}
             </a>
           </div>
         </div>
