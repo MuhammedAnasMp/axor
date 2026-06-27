@@ -29,7 +29,7 @@ def ping_view(request):
     return JsonResponse({"ping": "test ok"})
 
 def serve_react(request, path=''):
-    dist_dir = settings.BASE_DIR.parent / 'frontend' / 'dist'
+    dist_dir = settings.BASE_DIR / 'dist'
     
     # Default to index.html
     if not path:
