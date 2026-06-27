@@ -76,7 +76,7 @@ function cmdBuild({ withPush = false } = {}) {
   fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8');
 
   console.log('📦 Compiling frontend assets...');
-  const buildSuccess = runCommand('npx vite build', { cwd: frontendDir });
+  const buildSuccess = runCommand('npm run build', { cwd: frontendDir });
   if (!buildSuccess) {
     console.error('❌ Build failed. Restoring original version...');
     packageJson.version = oldVersion;
