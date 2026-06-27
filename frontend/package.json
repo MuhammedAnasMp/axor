@@ -1,7 +1,7 @@
 {
   "name": "axon",
   "private": true,
-  "version": "1.0.66",
+  "version": "1.0.68",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "electron:start": "electron electron/main.cjs",
     "build-exe": "vite build && electron-builder --win && node scripts/copy-builds.cjs windows",
-    "apk": "vite build && npx cap sync && cd android && .\\gradlew.bat assembleDebug && node scripts/copy-builds.cjs android",
+    "apk": "vite build && npx cap sync && cd android && .\\gradlew.bat assembleDebug && cd .. && node scripts/copy-builds.cjs android",
     "aapk": "npm run apk",
     "exe": "npm run build-exe",
     "both": "npm run apk && npm run exe"
