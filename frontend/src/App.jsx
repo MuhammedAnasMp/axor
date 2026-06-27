@@ -1,5 +1,7 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Outlet, Navigate, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { api } from './utils/api';
 import Protected from './components/Protected';
 import Sidebar from './components/Sidebar';
 import ComingSoon from './pages/ComingSoon';
@@ -19,6 +21,47 @@ import POS from './pages/POS';
 import { useOTAUpdate } from './utils/useOTAUpdate';
 import IOSInstallPrompt from './components/iOSInstallPrompt';
 
+
+const LAST_PAGE_KEY = 'axon_last_page';
+
+// Saves the current route to localStorage whenever user navigates within /erp or /pos
+function LastPageTracker() {
+  const location = useLocation();
+  useEffect(() => {
+    const path = location.pathname + location.search;
+    if (path.startsWith('/erp') || path.startsWith('/pos')) {
+      localStorage.setItem(LAST_PAGE_KEY, path);
+    }
+  }, [location]);
+  return null;
+}
+
+// On root "/", redirect authenticated users to their last visited page
+function RootRedirect() {
+  const { data: user, isLoading } = useQuery({
+    queryKey: ['authUser'],
+    queryFn: () => api.auth.me(),
+    retry: false,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-surface">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-blue border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  if (user) {
+    const lastPage = localStorage.getItem(LAST_PAGE_KEY);
+    if (lastPage && (lastPage.startsWith('/erp') || lastPage.startsWith('/pos'))) {
+      return <Navigate to={lastPage} replace />;
+    }
+    return <Navigate to="/erp" replace />;
+  }
+
+  return <ComingSoon />;
+}
 
 function ERPLayout() {
   return (
@@ -117,9 +160,10 @@ export default function App() {
       )}
 
       <BrowserRouter>
+        <LastPageTracker />
         <Routes>
-          {/* Landing Page (E-Commerce Coming Soon) */}
-          <Route path="/" element={<ComingSoon />} />
+          {/* Landing Page — redirects to last page if authenticated */}
+          <Route path="/" element={<RootRedirect />} />
 
           {/* Authentication */}
           <Route path="/login" element={<Auth />} />

@@ -68,6 +68,18 @@ export default function POS() {
   const barcodeInputRef = useRef(null);
   const navigate = useNavigate();
 
+  // Long-press product detail
+  const [longPressProduct, setLongPressProduct] = useState(null);
+  const longPressTimer = useRef(null);
+
+  const handlePressStart = (p) => {
+    longPressTimer.current = setTimeout(() => setLongPressProduct(p), 500);
+  };
+  const handlePressEnd = () => {
+    clearTimeout(longPressTimer.current);
+  };
+
+
   useEffect(() => {
     if (bankAccounts && bankAccounts.length > 0 && !paidTo) {
       setPaidTo(bankAccounts[0].id.toString());
@@ -322,7 +334,7 @@ export default function POS() {
   });
 
   return (
-    <div className="flex flex-col h-screen bg-surface md:flex-row overflow-hidden text-text-primary">
+    <div className="flex flex-col h-screen bg-surface md:flex-row overflow-hidden text-text-primary pt-2 ">
 
       {/* Products Left Panel */}
       <div className="flex-1 flex flex-col h-1/2 md:h-full overflow-hidden border-r border-surface-dim">
@@ -366,7 +378,7 @@ export default function POS() {
         </div>
 
         {/* Product Grid / List */}
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col space-y-2 sm:grid sm:grid-cols-3 lg:grid-cols-4 sm:gap-3 sm:space-y-0">
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col space-y-2 sm:grid sm:grid-cols-3 lg:grid-cols-4 sm:gap-3 sm:space-y-0 sm:items-start sm:content-start">
           {loading ? (
             Array.from({ length: 8 }).map((_, idx) => (
               <POSProductSkeleton key={idx} />
@@ -374,13 +386,31 @@ export default function POS() {
           ) : filteredProducts.length === 0 ? (
             <div className="col-span-full py-8 text-center text-xs text-text-secondary">No products found.</div>
           ) : (
-            filteredProducts.map((p) => (
+            filteredProducts.map((p) => {
+              const cartItem = cart.find(c => c.id === p.id);
+              const inCart = !!cartItem;
+              return (
               <button
                 key={p.id}
                 onClick={() => addToCart(p)}
                 disabled={isSubmittingCheckout}
-                className="flex flex-row sm:flex-col bg-white rounded-lg border border-surface-low p-2 sm:p-3 hover:-translate-y-0.5 transition shadow-sm hover:shadow text-left disabled:opacity-50 disabled:pointer-events-none items-center sm:items-start w-full"
+                className={`flex flex-row sm:flex-col rounded-lg border p-2 sm:p-3 hover:-translate-y-0.5 transition shadow-sm hover:shadow text-left disabled:opacity-50 disabled:pointer-events-none items-center sm:items-start w-full sm:h-44 overflow-hidden relative ${
+                  inCart
+                    ? 'bg-accent-blue/5 border-brand-blue ring-1 ring-brand-blue/30'
+                    : 'bg-white border-surface-low'
+                }`}
+                onMouseDown={() => handlePressStart(p)}
+                onMouseUp={handlePressEnd}
+                onMouseLeave={handlePressEnd}
+                onTouchStart={() => handlePressStart(p)}
+                onTouchEnd={handlePressEnd}
               >
+                {/* Quantity badge */}
+                {inCart && (
+                  <span className="absolute top-1.5 right-1.5 z-10 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-brand-blue text-white text-[9px] font-bold px-1 shadow">
+                    {cartItem.quantity}
+                  </span>
+                )}
                 <div className="h-10 w-10 sm:h-20 sm:w-full rounded bg-surface border border-surface-low overflow-hidden flex-shrink-0 sm:mb-2 mr-3 sm:mr-0">
                   {p.image_url ? (
                     <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
@@ -388,27 +418,33 @@ export default function POS() {
                     <div className="h-full w-full flex items-center justify-center text-[10px] text-text-secondary">No image</div>
                   )}
                 </div>
-                <div className="flex-1 min-w-0 flex flex-col justify-between sm:w-full">
+                <div className="flex-1 min-w-0 flex flex-col sm:w-full">
                   <div className="flex flex-col sm:block">
-                    <span className="text-xs font-semibold text-text-primary line-clamp-1 sm:line-clamp-2 leading-tight">{p.name}</span>
+                    <span className={`text-xs font-semibold line-clamp-1 sm:line-clamp-2 leading-tight ${inCart ? 'text-brand-blue' : 'text-text-primary'}`}>{p.name}</span>
+                    {/* Model tags — mobile: wrap, desktop: single nowrap line */}
                     {p.suitable_models_details && p.suitable_models_details.length > 0 && (
-                      <div className="flex flex-wrap gap-0.5 mt-1">
-                        {p.suitable_models_details.map(m => (
-                          <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold">
+                      <div className="flex flex-wrap sm:flex-nowrap gap-0.5 mt-1 overflow-hidden">
+                        {p.suitable_models_details.slice(0, 2).map(m => (
+                          <span key={m.id} className="inline-block px-1 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[8px] font-semibold whitespace-nowrap">
                             {m.brand_name} {m.model_name}
                           </span>
                         ))}
+                        {p.suitable_models_details.length > 2 && (
+                          <span className="inline-block px-1 py-0.5 rounded bg-surface text-text-secondary text-[8px] font-semibold whitespace-nowrap">+{p.suitable_models_details.length - 2}</span>
+                        )}
                       </div>
                     )}
-                    <span className="text-[9px] sm:text-[10px] text-text-secondary font-mono mt-0.5 block">{p.barcode}</span>
+                    {/* Barcode: mobile only */}
+                    <span className="sm:hidden text-[9px] text-text-secondary font-mono mt-0.5 block">{p.barcode}</span>
                   </div>
-                  <div className="flex items-center justify-between mt-1 sm:mt-2 pt-1 border-t border-surface-low sm:w-full">
+                  <div className="flex items-center justify-between mt-1 sm:mt-auto pt-1 border-t border-surface-low sm:w-full">
                     <span className="text-xs font-bold text-brand-blue">{formatCurrency(p.selling_price)}</span>
                     <span className="text-[9px] sm:text-[10px] text-text-secondary bg-surface px-1.5 py-0.5 rounded">Stock: {p.stock_qty}</span>
                   </div>
                 </div>
               </button>
-            ))
+              );
+            })
           )}
         </div>
       </div>
@@ -612,6 +648,59 @@ export default function POS() {
       >
         {renderCheckoutForm(true)}
       </MobileBottomSheet>
+
+      {/* Long-press Product Detail Modal */}
+      {longPressProduct && (
+        <div
+          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setLongPressProduct(null)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {longPressProduct.image_url ? (
+              <img src={longPressProduct.image_url} alt={longPressProduct.name} className="w-full h-48 object-cover" />
+            ) : (
+              <div className="w-full h-32 flex items-center justify-center bg-surface text-text-secondary text-xs">No image</div>
+            )}
+            <div className="p-4 space-y-3">
+              <h3 className="font-bold text-sm text-text-primary leading-snug">{longPressProduct.name}</h3>
+              <div className="flex items-center justify-between">
+                <span className="text-base font-bold text-brand-blue">{formatCurrency(longPressProduct.selling_price)}</span>
+                <span className="text-xs text-text-secondary bg-surface px-2 py-0.5 rounded">Stock: {longPressProduct.stock_qty}</span>
+              </div>
+              <div className="text-[10px] text-text-secondary font-mono">Barcode: {longPressProduct.barcode}</div>
+              {longPressProduct.suitable_models_details && longPressProduct.suitable_models_details.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-semibold text-text-secondary mb-1">Compatible Models:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {longPressProduct.suitable_models_details.map(m => (
+                      <span key={m.id} className="px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold">
+                        {m.brand_name} {m.model_name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => { addToCart(longPressProduct); setLongPressProduct(null); }}
+                  className="flex-1 rounded bg-brand-blue py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition"
+                >
+                  Add to Cart
+                </button>
+                <button
+                  onClick={() => setLongPressProduct(null)}
+                  className="px-4 rounded bg-surface text-xs font-semibold text-text-secondary hover:bg-surface-dim transition"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

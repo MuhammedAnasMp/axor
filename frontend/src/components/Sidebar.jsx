@@ -117,7 +117,8 @@ export default function Sidebar() {
       ),
       subItems: [
         { title: 'Supplier', path: '/erp/suppliers' },
-        { title: 'Mapping', path: '/erp/suppliers?tab=mappings' }
+        { title: 'Mapping', path: '/erp/suppliers?tab=mappings' },
+        { title: 'Payments', path: '/erp/suppliers?tab=payments' }
       ]
     },
     {
@@ -128,7 +129,11 @@ export default function Sidebar() {
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
-      )
+      ),
+      subItems: [
+        { title: 'Directory', path: '/erp/customers' },
+        { title: 'Payments', path: '/erp/customers?tab=payments' }
+      ]
     },
     {
       id: 6,
@@ -870,7 +875,7 @@ export default function Sidebar() {
                   <svg className="h-5 w-5 text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
-                  <span>Go to POS Terminal</span>
+                  <span>Go to POS</span>
                 </Link>
                 <button
                   onClick={() => {
@@ -882,7 +887,7 @@ export default function Sidebar() {
                   <svg className="h-5 w-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
-                  <span>Log Out Securely</span>
+                  <span>Log Out</span>
                 </button>
                 <div className="text-center pt-3 border-t border-surface-low/55 mt-2">
                   <span className="text-[10px] text-text-secondary font-semibold">
