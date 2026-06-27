@@ -23,11 +23,26 @@ function POSProductSkeleton() {
   );
 }
 
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+
 export default function POS() {
-  const [products, setProducts] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [bankAccounts, setBankAccounts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  const { data: rawProducts = [], isLoading: productsLoading } = useQuery({
+    queryKey: ['posProducts'],
+    queryFn: () => api.products.list(),
+  });
+  const { data: customers = [], isLoading: customersLoading } = useQuery({
+    queryKey: ['posCustomers'],
+    queryFn: () => api.customers.list(),
+  });
+  const { data: bankAccounts = [], isLoading: bankAccountsLoading } = useQuery({
+    queryKey: ['posBankAccounts'],
+    queryFn: () => api.bankAccounts.list(),
+  });
+
+  const products = rawProducts.filter(prod => prod.status);
+  const loading = productsLoading || customersLoading || bankAccountsLoading;
   const [isSubmittingCheckout, setIsSubmittingCheckout] = useState(false);
 
   // POS State
@@ -53,25 +68,11 @@ export default function POS() {
   const barcodeInputRef = useRef(null);
   const navigate = useNavigate();
 
-  const loadData = () => {
-    setLoading(true);
-    Promise.all([api.products.list(), api.customers.list(), api.bankAccounts.list()])
-      .then(([p, c, b]) => {
-        setProducts(p.filter(prod => prod.status)); // Only active products
-        setCustomers(c);
-        setBankAccounts(b);
-        if (b.length > 0) setPaidTo(b[0].id.toString());
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
-  };
-
   useEffect(() => {
-    loadData();
-  }, []);
+    if (bankAccounts && bankAccounts.length > 0 && !paidTo) {
+      setPaidTo(bankAccounts[0].id.toString());
+    }
+  }, [bankAccounts, paidTo]);
 
   // Handle barcode scanning simulation
   const handleBarcodeSearch = (e) => {
@@ -202,7 +203,9 @@ export default function POS() {
         setSelectedCustomer('');
         setShowReceipt(true);
         setShowCheckoutSheet(false);
-        loadData();
+        queryClient.invalidateQueries({ queryKey: ['posProducts'] });
+        queryClient.invalidateQueries({ queryKey: ['posCustomers'] });
+        queryClient.invalidateQueries({ queryKey: ['posBankAccounts'] });
       })
       .catch((err) => alert(err.message))
       .finally(() => setIsSubmittingCheckout(false));

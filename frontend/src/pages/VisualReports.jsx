@@ -1,21 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../utils/api';
 
 export default function VisualReports() {
-  const [reportData, setReportData] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.dashboard.reports()
-      .then((data) => {
-        setReportData(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
-  }, []);
+  const { data: reportData, isLoading: loading } = useQuery({
+    queryKey: ['dashboardReports'],
+    queryFn: () => api.dashboard.reports(),
+  });
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('en-IN', {

@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../utils/api';
 import { SkeletonCard, SkeletonTable } from '../components/Skeleton';
 import MobileBottomSheet from '../components/MobileBottomSheet';
 
 export default function Dashboard() {
-  const [metrics, setMetrics] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const navigate = useNavigate();
@@ -17,17 +16,10 @@ export default function Dashboard() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    api.dashboard.metrics()
-      .then((data) => {
-        setMetrics(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
-  }, []);
+  const { data: metrics, isLoading: loading } = useQuery({
+    queryKey: ['dashboardMetrics'],
+    queryFn: () => api.dashboard.metrics(),
+  });
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('en-IN', {

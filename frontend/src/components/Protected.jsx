@@ -1,22 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../utils/api';
 
 export default function Protected({ children }) {
-  const [loading, setLoading] = useState(true);
-  const [authenticated, setAuthenticated] = useState(false);
-
-  useEffect(() => {
-    api.auth.me()
-      .then((user) => {
-        setAuthenticated(true);
-        setLoading(false);
-      })
-      .catch(() => {
-        setAuthenticated(false);
-        setLoading(false);
-      });
-  }, []);
+  const { data: user, isLoading: loading, isError } = useQuery({
+    queryKey: ['authUser'],
+    queryFn: () => api.auth.me(),
+    retry: false,
+  });
 
   if (loading) {
     return (
@@ -25,6 +17,8 @@ export default function Protected({ children }) {
       </div>
     );
   }
+
+  const authenticated = !!user && !isError;
 
   if (!authenticated) {
     return <Navigate to="/login" replace />;

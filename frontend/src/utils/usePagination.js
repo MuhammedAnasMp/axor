@@ -1,13 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 export function usePagination(apiListFunc, initialPageSize = 10, enabled = true, extraParams = {}) {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [search, setSearch] = useState('');
   const [ordering, setOrdering] = useState('');
-  const [totalCount, setTotalCount] = useState(0);
 
   // Debounced search term
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -23,46 +21,40 @@ export function usePagination(apiListFunc, initialPageSize = 10, enabled = true,
 
   const extraParamsString = JSON.stringify(extraParams);
 
-  const fetchList = useCallback(() => {
-    if (!enabled) return;
-    setLoading(true);
-    const params = {
-      page,
-      page_size: pageSize,
-      ...JSON.parse(extraParamsString)
-    };
-    if (debouncedSearch) {
-      params.search = debouncedSearch;
-    }
-    if (ordering) {
-      params.ordering = ordering;
-    }
+  // Compute stable query parameters
+  const params = {
+    page,
+    page_size: pageSize,
+    ...JSON.parse(extraParamsString)
+  };
+  if (debouncedSearch) {
+    params.search = debouncedSearch;
+  }
+  if (ordering) {
+    params.ordering = ordering;
+  }
 
-    apiListFunc(params)
-      .then((res) => {
-        if (res && res.results !== undefined) {
-          setData(res.results);
-          setTotalCount(res.count || 0);
-        } else if (Array.isArray(res)) {
-          setData(res);
-          setTotalCount(res.length);
-        } else {
-          setData([]);
-          setTotalCount(0);
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
-  }, [apiListFunc, page, pageSize, debouncedSearch, ordering, enabled, extraParamsString]);
+  // Derive a stable and unique query key for react-query
+  const queryKey = ['pagination', apiListFunc.toString(), params];
 
-  useEffect(() => {
-    if (enabled) {
-      fetchList();
+  const { data: queryData, isLoading, refetch } = useQuery({
+    queryKey,
+    queryFn: () => apiListFunc(params),
+    enabled: !!enabled,
+  });
+
+  // Extract pagination details from response format
+  let data = [];
+  let totalCount = 0;
+  if (queryData) {
+    if (queryData.results !== undefined) {
+      data = queryData.results;
+      totalCount = queryData.count || 0;
+    } else if (Array.isArray(queryData)) {
+      data = queryData;
+      totalCount = queryData.length;
     }
-  }, [fetchList, enabled]);
+  }
 
   const totalPages = Math.ceil(totalCount / pageSize) || 1;
 
@@ -78,7 +70,7 @@ export function usePagination(apiListFunc, initialPageSize = 10, enabled = true,
 
   return {
     data,
-    loading,
+    loading: isLoading,
     page,
     setPage,
     pageSize,
@@ -89,7 +81,7 @@ export function usePagination(apiListFunc, initialPageSize = 10, enabled = true,
     setOrdering,
     totalCount,
     totalPages,
-    refresh: fetchList,
+    refresh: refetch,
     handleSort,
   };
 }
