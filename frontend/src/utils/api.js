@@ -4,13 +4,15 @@ export const getBaseUrl = () => {
   // Detect Capacitor/native platform
   const isNative = typeof window !== 'undefined' && (
     window.Capacitor || 
+    window.electronAPI ||
     window.location.origin.startsWith('capacitor:') || 
+    window.location.origin.startsWith('app://') ||
     window.location.origin.startsWith('http://localhost')
   );
 
   // If running on mobile/Capacitor and VITE_API_URL is relative, use the absolute production URL
   if (isNative && envUrl.startsWith('/')) {
-    return 'https://axor-0r99.onrender.com/api';
+    return import.meta.env.VITE_NATIVE_API_URL || 'https://axor-0r99.onrender.com/api';
   }
   
   return envUrl;
