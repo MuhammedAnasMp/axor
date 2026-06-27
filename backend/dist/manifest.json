@@ -1,0 +1,25 @@
+{
+  "name": "Axon Business Platform",
+  "short_name": "Axon",
+  "description": "Manage your enterprise resources, stock inventory, retail point of sale, supplier ledgers, and employee payroll from one central dashboard.",
+  "start_url": "/login",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "categories": ["business", "finance"],
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
