@@ -8,8 +8,24 @@ import { SkeletonTable, Spinner } from '../components/Skeleton';
 import FloatingActionButton from '../components/FloatingActionButton';
 
 export default function Stock() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams("all");
   const currentTab = searchParams.get('tab') || 'current';
+  const period = searchParams.get('period') || sessionStorage.getItem('period_stock') || 'today';
+
+  useEffect(() => {
+    if (!searchParams.has('period')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('period', period);
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, period, setSearchParams]);
+
+  useEffect(() => {
+    const urlPeriod = searchParams.get('period');
+    if (urlPeriod) {
+      sessionStorage.setItem('period_stock', urlPeriod);
+    }
+  }, [searchParams]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedStockDetails, setSelectedStockDetails] = useState(null);
 
@@ -25,8 +41,8 @@ export default function Stock() {
 
   // Pagination hooks for each tab
   const stockPag = usePagination(api.stocks.list, 10, currentTab === 'current');
-  const historyPag = usePagination(api.stockHistory.list, 10, currentTab === 'history');
-  const damagedPag = usePagination(api.stockHistory.list, 10, currentTab === 'damaged', { action_type: 'Damage' });
+  const historyPag = usePagination(api.stockHistory.list, 10, currentTab === 'history', { period });
+  const damagedPag = usePagination(api.stockHistory.list, 10, currentTab === 'damaged', { action_type: 'Damage', period });
 
   // Modals / Actions
   const [showAdjustModal, setShowAdjustModal] = useState(false);
@@ -708,6 +724,78 @@ export default function Stock() {
                 </svg>
               </span>
             </div>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <label htmlFor="history-period-select" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Period:</label>
+              {!period.startsWith('custom_') ? (
+                <select
+                  id="history-period-select"
+                  value={period}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const nextParams = new URLSearchParams(searchParams);
+                    if (val === 'custom') {
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      nextParams.set('period', `custom_${todayStr}_${todayStr}`);
+                    } else {
+                      nextParams.set('period', val);
+                    }
+                    setSearchParams(nextParams);
+                  }}
+                  className="rounded border border-surface-dim bg-white px-2.5 py-1 text-xs font-semibold text-text-primary outline-none focus:border-brand-blue shadow-xs cursor-pointer w-full sm:w-auto"
+                >
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="this_week">This Week</option>
+                  <option value="this_month">This Month</option>
+                  <option value="last_30_days">Last 30 Days</option>
+                  <option value="all">All Time</option>
+                  <option value="custom">Custom Range...</option>
+                </select>
+              ) : (() => {
+                const parts = period.split('_');
+                const startDate = parts[1] || '';
+                const endDate = parts[2] || '';
+                return (
+                  <div className="flex items-center space-x-1.5 animate-in fade-in duration-150">
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', `custom_${e.target.value}_${endDate}`);
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue"
+                    />
+                    <span className="text-xs text-text-secondary">to</span>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', `custom_${startDate}_${e.target.value}`);
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', 'today');
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded-full hover:bg-surface-low p-1 text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center"
+                      title="Clear custom range"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })()}
+            </div>
             {activeLoading && (
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />
             )}
@@ -874,6 +962,78 @@ export default function Stock() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <label htmlFor="damaged-period-select" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Period:</label>
+              {!period.startsWith('custom_') ? (
+                <select
+                  id="damaged-period-select"
+                  value={period}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const nextParams = new URLSearchParams(searchParams);
+                    if (val === 'custom') {
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      nextParams.set('period', `custom_${todayStr}_${todayStr}`);
+                    } else {
+                      nextParams.set('period', val);
+                    }
+                    setSearchParams(nextParams);
+                  }}
+                  className="rounded border border-surface-dim bg-white px-2.5 py-1 text-xs font-semibold text-text-primary outline-none focus:border-brand-blue shadow-xs cursor-pointer w-full sm:w-auto"
+                >
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="this_week">This Week</option>
+                  <option value="this_month">This Month</option>
+                  <option value="last_30_days">Last 30 Days</option>
+                  <option value="all">All Time</option>
+                  <option value="custom">Custom Range...</option>
+                </select>
+              ) : (() => {
+                const parts = period.split('_');
+                const startDate = parts[1] || '';
+                const endDate = parts[2] || '';
+                return (
+                  <div className="flex items-center space-x-1.5 animate-in fade-in duration-150">
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', `custom_${e.target.value}_${endDate}`);
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue"
+                    />
+                    <span className="text-xs text-text-secondary">to</span>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', `custom_${startDate}_${e.target.value}`);
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', 'today');
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded-full hover:bg-surface-low p-1 text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center"
+                      title="Clear custom range"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
             {activeLoading && (
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />
@@ -1124,34 +1284,34 @@ export default function Stock() {
       {/* Floating Action Button for mobile */}
       {((currentTab === 'current' && !showAdjustModal && !showTransferModal && !showDamageModal && !showStockMenu) ||
         (currentTab === 'damaged' && !showDamageModal)) && (
-        <FloatingActionButton
-          icon={
-            currentTab === 'current' ? (
-              <div className="relative">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
-              </div>
-            ) : currentTab === 'damaged' ? (
-              <div className="relative">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
-              </div>
-            ) : null
-          }
-          onClick={() => {
-            if (currentTab === 'current') {
-              setShowStockMenu(true);
-            } else if (currentTab === 'damaged') {
-              resetFormStates();
-              setShowDamageModal(true);
+          <FloatingActionButton
+            icon={
+              currentTab === 'current' ? (
+                <div className="relative">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+                </div>
+              ) : currentTab === 'damaged' ? (
+                <div className="relative">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+                </div>
+              ) : null
             }
-          }}
-        />
-      )}
+            onClick={() => {
+              if (currentTab === 'current') {
+                setShowStockMenu(true);
+              } else if (currentTab === 'damaged') {
+                resetFormStates();
+                setShowDamageModal(true);
+              }
+            }}
+          />
+        )}
 
       {/* Mobile Bottom Sheet for Stock Details */}
       <MobileBottomSheet

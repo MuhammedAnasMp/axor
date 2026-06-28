@@ -90,8 +90,24 @@ function ContactNumber({ number, isWhatsapp }) {
 }
 
 export default function Suppliers() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams("all");
   const currentTab = searchParams.get('tab') || 'directory';
+  const period = searchParams.get('period') || sessionStorage.getItem('period_suppliers') || 'today';
+
+  useEffect(() => {
+    if (!searchParams.has('period')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('period', period);
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, period, setSearchParams]);
+
+  useEffect(() => {
+    const urlPeriod = searchParams.get('period');
+    if (urlPeriod) {
+      sessionStorage.setItem('period_suppliers', urlPeriod);
+    }
+  }, [searchParams]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedSupplierDetails, setSelectedSupplierDetails] = useState(null);
 
@@ -130,7 +146,7 @@ export default function Suppliers() {
   const mappingPag = usePagination(api.supplierProducts.list, 10, currentTab === 'mappings');
 
   // Pagination hook for payment logs tab
-  const paymentsPag = usePagination(api.supplierPayments.list, 10, currentTab === 'payments');
+  const paymentsPag = usePagination(api.supplierPayments.list, 10, currentTab === 'payments', { period });
 
   // Form states
   const [showForm, setShowForm] = useState(false);
@@ -790,25 +806,22 @@ export default function Suppliers() {
         <div className="flex border-b border-surface-low mb-4">
           <Link
             to="/erp/suppliers"
-            className={`flex-1 text-center py-2.5 text-xs font-semibold transition ${
-              currentTab === 'directory' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'
-            }`}
+            className={`flex-1 text-center py-2.5 text-xs font-semibold transition ${currentTab === 'directory' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'
+              }`}
           >
             Directory
           </Link>
           <Link
             to="/erp/suppliers?tab=mappings"
-            className={`flex-1 text-center py-2.5 text-xs font-semibold transition ${
-              currentTab === 'mappings' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'
-            }`}
+            className={`flex-1 text-center py-2.5 text-xs font-semibold transition ${currentTab === 'mappings' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'
+              }`}
           >
             Mappings
           </Link>
           <Link
             to="/erp/suppliers?tab=payments"
-            className={`flex-1 text-center py-2.5 text-xs font-semibold transition ${
-              currentTab === 'payments' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'
-            }`}
+            className={`flex-1 text-center py-2.5 text-xs font-semibold transition ${currentTab === 'payments' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'
+              }`}
           >
             Payment Logs
           </Link>
@@ -1228,6 +1241,78 @@ export default function Suppliers() {
                 </svg>
               </span>
             </div>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <label htmlFor="payments-period-select" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Period:</label>
+              {!period.startsWith('custom_') ? (
+                <select
+                  id="payments-period-select"
+                  value={period}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const nextParams = new URLSearchParams(searchParams);
+                    if (val === 'custom') {
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      nextParams.set('period', `custom_${todayStr}_${todayStr}`);
+                    } else {
+                      nextParams.set('period', val);
+                    }
+                    setSearchParams(nextParams);
+                  }}
+                  className="rounded border border-surface-dim bg-white px-2.5 py-1 text-xs font-semibold text-text-primary outline-none focus:border-brand-blue shadow-xs cursor-pointer w-full sm:w-auto"
+                >
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="this_week">This Week</option>
+                  <option value="this_month">This Month</option>
+                  <option value="last_30_days">Last 30 Days</option>
+                  <option value="all">All Time</option>
+                  <option value="custom">Custom Range...</option>
+                </select>
+              ) : (() => {
+                const parts = period.split('_');
+                const startDate = parts[1] || '';
+                const endDate = parts[2] || '';
+                return (
+                  <div className="flex items-center space-x-1.5 animate-in fade-in duration-150">
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', `custom_${e.target.value}_${endDate}`);
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue"
+                    />
+                    <span className="text-xs text-text-secondary">to</span>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', `custom_${startDate}_${e.target.value}`);
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', 'today');
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded-full hover:bg-surface-low p-1 text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center"
+                      title="Clear custom range"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })()}
+            </div>
             {paymentsPag.loading && (
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />
             )}
@@ -1426,43 +1511,43 @@ export default function Suppliers() {
       {((currentTab === 'directory' && !showForm) ||
         (currentTab === 'mappings' && !showMappingForm)) &&
         !showPayModal && !showReceiveModal && !showMenu && (
-        <FloatingActionButton
-          icon={
-            currentTab === 'directory' ? (
-              <div className="relative">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
-              </div>
-            ) : currentTab === 'mappings' ? (
-              <div className="relative">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
-              </div>
-            ) : null
-          }
-          onClick={() => {
-            if (currentTab === 'directory') {
-              setName('');
-              setContactInfo('');
-              setWhatsappNumber('');
-              setContactNumber('');
-              setPlace('');
-              setShowForm(true);
-            } else if (currentTab === 'mappings') {
-              setMapProduct('');
-              setMapSupplier('');
-              setMapProductSearch('');
-              setMapSupplierSearch('');
-              setMapCost('0');
-              setShowMappingForm(true);
+          <FloatingActionButton
+            icon={
+              currentTab === 'directory' ? (
+                <div className="relative">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+                </div>
+              ) : currentTab === 'mappings' ? (
+                <div className="relative">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                  <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-blue rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border border-brand-blue shadow-xs">+</span>
+                </div>
+              ) : null
             }
-          }}
-        />
-      )}
+            onClick={() => {
+              if (currentTab === 'directory') {
+                setName('');
+                setContactInfo('');
+                setWhatsappNumber('');
+                setContactNumber('');
+                setPlace('');
+                setShowForm(true);
+              } else if (currentTab === 'mappings') {
+                setMapProduct('');
+                setMapSupplier('');
+                setMapProductSearch('');
+                setMapSupplierSearch('');
+                setMapCost('0');
+                setShowMappingForm(true);
+              }
+            }}
+          />
+        )}
 
       {/* Supplier Mapped Products Modal */}
       {selectedSupplierForProducts && (

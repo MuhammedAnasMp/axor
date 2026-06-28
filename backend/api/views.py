@@ -44,6 +44,40 @@ class OptionalPageNumberPagination(PageNumberPagination):
             return None
         return super().paginate_queryset(queryset, request, view)
 
+def get_date_range_for_period(period):
+    today = datetime.date.today()
+    start_date = None
+    end_date = today
+    
+    if period.startswith('custom_'):
+        parts = period.split('_')
+        if len(parts) == 3:
+            try:
+                start_date = datetime.datetime.strptime(parts[1], '%Y-%m-%d').date()
+                end_date = datetime.datetime.strptime(parts[2], '%Y-%m-%d').date()
+                return start_date, end_date
+            except ValueError:
+                pass
+
+    if period == 'today':
+        start_date = today
+    elif period == 'yesterday':
+        start_date = today - datetime.timedelta(days=1)
+        end_date = start_date
+    elif period == 'this_week':
+        start_date = today - datetime.timedelta(days=today.weekday())
+    elif period == 'this_month':
+        start_date = today.replace(day=1)
+    elif period == 'last_30_days':
+        start_date = today - datetime.timedelta(days=30)
+    elif period == 'all':
+        start_date = None
+        end_date = None
+    else:
+        start_date = today
+        
+    return start_date, end_date
+
 class AuthViewSet(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
 
@@ -109,9 +143,25 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         outstanding_advance = EmployeeAdvance.objects.filter(employee=employee, status='Pending').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
         total_salary_paid = EmployeeSalaryPayment.objects.filter(employee=employee, status='Paid').aggregate(total=Sum('total_paid'))['total'] or Decimal('0.00')
         
-        payroll_history = EmployeeSalaryPaymentSerializer(employee.salary_payments.all().order_by('-timestamp'), many=True).data
-        advance_history = EmployeeAdvanceSerializer(employee.advances.all().order_by('-timestamp'), many=True).data
-        attendance_records = EmployeeAttendanceSerializer(employee.attendances.all().order_by('-date'), many=True).data
+        payroll_qs = employee.salary_payments.all().order_by('-timestamp')
+        advance_qs = employee.advances.all().order_by('-timestamp')
+        attendance_qs = employee.attendances.all().order_by('-date')
+        
+        period = request.query_params.get('period')
+        if period:
+            start_date, end_date = get_date_range_for_period(period)
+            if start_date:
+                payroll_qs = payroll_qs.filter(timestamp__date__gte=start_date)
+                advance_qs = advance_qs.filter(timestamp__date__gte=start_date)
+                attendance_qs = attendance_qs.filter(date__gte=start_date)
+            if end_date:
+                payroll_qs = payroll_qs.filter(timestamp__date__lte=end_date)
+                advance_qs = advance_qs.filter(timestamp__date__lte=end_date)
+                attendance_qs = attendance_qs.filter(date__lte=end_date)
+                
+        payroll_history = EmployeeSalaryPaymentSerializer(payroll_qs, many=True).data
+        advance_history = EmployeeAdvanceSerializer(advance_qs, many=True).data
+        attendance_records = EmployeeAttendanceSerializer(attendance_qs, many=True).data
 
         return Response({
             "outstanding_advance_balance": float(outstanding_advance),
@@ -314,6 +364,13 @@ class StockHistoryViewSet(viewsets.ReadOnlyModelViewSet):
         action_type = self.request.query_params.get('action_type')
         if action_type:
             queryset = queryset.filter(action_type=action_type)
+        period = self.request.query_params.get('period')
+        if period:
+            start_date, end_date = get_date_range_for_period(period)
+            if start_date:
+                queryset = queryset.filter(timestamp__date__gte=start_date)
+            if end_date:
+                queryset = queryset.filter(timestamp__date__lte=end_date)
         return queryset
 
 class SupplierViewSet(viewsets.ModelViewSet):
@@ -420,20 +477,40 @@ class BankAccountViewSet(viewsets.ModelViewSet):
             return Response({"error": "One of the accounts does not exist"}, status=status.HTTP_404_NOT_FOUND)
 
 class MoneyTransferViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = MoneyTransfer.objects.all().order_by('-timestamp')
     serializer_class = MoneyTransferSerializer
     pagination_class = OptionalPageNumberPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['source_account__name', 'dest_account__name', 'amount']
     ordering_fields = ['id', 'timestamp', 'amount']
 
+    def get_queryset(self):
+        queryset = MoneyTransfer.objects.all().order_by('-timestamp')
+        period = self.request.query_params.get('period')
+        if period:
+            start_date, end_date = get_date_range_for_period(period)
+            if start_date:
+                queryset = queryset.filter(timestamp__date__gte=start_date)
+            if end_date:
+                queryset = queryset.filter(timestamp__date__lte=end_date)
+        return queryset
+
 class IncomeViewSet(viewsets.ModelViewSet):
-    queryset = Income.objects.all().order_by('-timestamp')
     serializer_class = IncomeSerializer
     pagination_class = OptionalPageNumberPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['source', 'payment_method__name', 'supplier__name', 'description']
     ordering_fields = ['id', 'timestamp', 'amount']
+
+    def get_queryset(self):
+        queryset = Income.objects.all().order_by('-timestamp')
+        period = self.request.query_params.get('period')
+        if period:
+            start_date, end_date = get_date_range_for_period(period)
+            if start_date:
+                queryset = queryset.filter(timestamp__date__gte=start_date)
+            if end_date:
+                queryset = queryset.filter(timestamp__date__lte=end_date)
+        return queryset
 
     def create(self, request, *args, **kwargs):
         with transaction.atomic():
@@ -463,12 +540,22 @@ class ExpenseCategoryViewSet(viewsets.ModelViewSet):
     ordering_fields = ['id', 'name']
 
 class ExpenseViewSet(viewsets.ModelViewSet):
-    queryset = Expense.objects.all().order_by('-timestamp')
     serializer_class = ExpenseSerializer
     pagination_class = OptionalPageNumberPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['category__name', 'payment_source__name', 'description']
     ordering_fields = ['id', 'timestamp', 'amount']
+
+    def get_queryset(self):
+        queryset = Expense.objects.all().order_by('-timestamp')
+        period = self.request.query_params.get('period')
+        if period:
+            start_date, end_date = get_date_range_for_period(period)
+            if start_date:
+                queryset = queryset.filter(timestamp__date__gte=start_date)
+            if end_date:
+                queryset = queryset.filter(timestamp__date__lte=end_date)
+        return queryset
 
     def create(self, request, *args, **kwargs):
         with transaction.atomic():
@@ -495,6 +582,13 @@ class PurchaseViewSet(viewsets.ModelViewSet):
         is_received = self.request.query_params.get('is_received')
         if is_received is not None:
             queryset = queryset.filter(is_received=is_received.lower() == 'true')
+        period = self.request.query_params.get('period')
+        if period:
+            start_date, end_date = get_date_range_for_period(period)
+            if start_date:
+                queryset = queryset.filter(timestamp__date__gte=start_date)
+            if end_date:
+                queryset = queryset.filter(timestamp__date__lte=end_date)
         return queryset
 
     def create(self, request, *args, **kwargs):
@@ -940,12 +1034,22 @@ class PurchaseViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class SupplierPaymentViewSet(viewsets.ModelViewSet):
-    queryset = SupplierPayment.objects.all().order_by('-timestamp')
     serializer_class = SupplierPaymentSerializer
     pagination_class = OptionalPageNumberPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['supplier__name', 'payment_from__name']
     ordering_fields = ['id', 'timestamp', 'amount']
+
+    def get_queryset(self):
+        queryset = SupplierPayment.objects.all().order_by('-timestamp')
+        period = self.request.query_params.get('period')
+        if period:
+            start_date, end_date = get_date_range_for_period(period)
+            if start_date:
+                queryset = queryset.filter(timestamp__date__gte=start_date)
+            if end_date:
+                queryset = queryset.filter(timestamp__date__lte=end_date)
+        return queryset
 
     def create(self, request, *args, **kwargs):
         try:
@@ -1000,15 +1104,32 @@ class SupplierCostHistoryViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(supplier_id=supplier_id)
         if product_id:
             queryset = queryset.filter(product_id=product_id)
+        period = self.request.query_params.get('period')
+        if period:
+            start_date, end_date = get_date_range_for_period(period)
+            if start_date:
+                queryset = queryset.filter(timestamp__date__gte=start_date)
+            if end_date:
+                queryset = queryset.filter(timestamp__date__lte=end_date)
         return queryset
 
 class SaleViewSet(viewsets.ModelViewSet):
-    queryset = Sale.objects.all().order_by('-timestamp')
     serializer_class = SaleSerializer
     pagination_class = OptionalPageNumberPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['invoice_number', 'customer__name', 'employee__user__username', 'payment_type']
     ordering_fields = ['id', 'timestamp', 'total_amount', 'profit']
+
+    def get_queryset(self):
+        queryset = Sale.objects.all().order_by('-timestamp')
+        period = self.request.query_params.get('period')
+        if period:
+            start_date, end_date = get_date_range_for_period(period)
+            if start_date:
+                queryset = queryset.filter(timestamp__date__gte=start_date)
+            if end_date:
+                queryset = queryset.filter(timestamp__date__lte=end_date)
+        return queryset
 
     def create(self, request, *args, **kwargs):
         data = request.data
@@ -1175,12 +1296,22 @@ class SaleViewSet(viewsets.ModelViewSet):
             return Response({"error": "Sale invoice not found"}, status=status.HTTP_404_NOT_FOUND)
 
 class CustomerPaymentViewSet(viewsets.ModelViewSet):
-    queryset = CustomerPayment.objects.all().order_by('-timestamp')
     serializer_class = CustomerPaymentSerializer
     pagination_class = OptionalPageNumberPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['customer__name', 'payment_to__name']
     ordering_fields = ['id', 'timestamp', 'amount']
+
+    def get_queryset(self):
+        queryset = CustomerPayment.objects.all().order_by('-timestamp')
+        period = self.request.query_params.get('period')
+        if period:
+            start_date, end_date = get_date_range_for_period(period)
+            if start_date:
+                queryset = queryset.filter(timestamp__date__gte=start_date)
+            if end_date:
+                queryset = queryset.filter(timestamp__date__lte=end_date)
+        return queryset
 
     def create(self, request, *args, **kwargs):
         try:
@@ -1205,10 +1336,18 @@ class CustomerPaymentViewSet(viewsets.ModelViewSet):
 
 @api_view(['GET'])
 def dashboard_metrics(request):
-    # Today's Sales, Profit, Cash in Hand, Bank Balance, Low Stock, Pending Supplier Payments
-    today = datetime.date.today()
-    sales_today = Sale.objects.filter(timestamp__date=today).aggregate(total=Sum('total_amount'))['total'] or Decimal(0)
-    profit_today = Sale.objects.filter(timestamp__date=today).aggregate(total=Sum('profit'))['total'] or Decimal(0)
+    # Support filtering sales and profits by period
+    period = request.query_params.get('period', 'today')
+    start_date, end_date = get_date_range_for_period(period)
+
+    sales_filter = {}
+    if start_date:
+        sales_filter['timestamp__date__gte'] = start_date
+    if end_date:
+        sales_filter['timestamp__date__lte'] = end_date
+
+    sales_today = Sale.objects.filter(**sales_filter).aggregate(total=Sum('total_amount'))['total'] or Decimal(0)
+    profit_today = Sale.objects.filter(**sales_filter).aggregate(total=Sum('profit'))['total'] or Decimal(0)
 
     # Cash in Hand
     cash_acct = BankAccount.objects.filter(name__icontains='Cash').first()
@@ -1280,14 +1419,26 @@ def reports_data(request):
         })
     sales_daily.reverse()
 
+    period = request.query_params.get('period')
+    best_sellers_qs = SaleItem.objects.all()
+    expense_qs = Expense.objects.all()
+    if period:
+        start_date, end_date = get_date_range_for_period(period)
+        if start_date:
+            best_sellers_qs = best_sellers_qs.filter(sale__timestamp__date__gte=start_date)
+            expense_qs = expense_qs.filter(timestamp__date__gte=start_date)
+        if end_date:
+            best_sellers_qs = best_sellers_qs.filter(sale__timestamp__date__lte=end_date)
+            expense_qs = expense_qs.filter(timestamp__date__lte=end_date)
+
     # Best Selling Products
-    best_sellers = SaleItem.objects.values('product__name').annotate(
+    best_sellers = best_sellers_qs.values('product__name').annotate(
         total_qty=Sum('quantity'),
         total_revenue=Sum(F('quantity') * F('unit_price'))
     ).order_by('-total_qty')[:5]
 
     # Expense breakdown
-    expense_breakdown = Expense.objects.values('category__name').annotate(
+    expense_breakdown = expense_qs.values('category__name').annotate(
         total_amount=Sum('amount')
     ).order_by('-total_amount')
 

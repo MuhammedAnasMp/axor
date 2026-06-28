@@ -1,11 +1,30 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../utils/api';
 
 export default function VisualReports() {
+  const [searchParams, setSearchParams] = useSearchParams("all");
+  const period = searchParams.get('period') || sessionStorage.getItem('period_reports') || 'today';
+
+  useEffect(() => {
+    if (!searchParams.has('period')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('period', period);
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, period, setSearchParams]);
+
+  useEffect(() => {
+    const urlPeriod = searchParams.get('period');
+    if (urlPeriod) {
+      sessionStorage.setItem('period_reports', urlPeriod);
+    }
+  }, [searchParams]);
+
   const { data: reportData, isLoading: loading } = useQuery({
-    queryKey: ['dashboardReports'],
-    queryFn: () => api.dashboard.reports(),
+    queryKey: ['dashboardReports', period],
+    queryFn: () => api.dashboard.reports({ period }),
   });
 
   const formatCurrency = (val) => {
@@ -111,7 +130,7 @@ export default function VisualReports() {
         {/* Sales Chart Card */}
         <div className="lg:col-span-2 rounded-lg bg-white p-6 shadow-sm" style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }}>
           <h3 className="text-sm font-semibold text-text-primary mb-6">Daily Sales Volume & Profit (Last 7 Days)</h3>
-          
+
           {/* SVG/CSS Bar Graph */}
           <div className="flex h-64 items-end justify-between px-2 pt-4 border-b border-surface-low space-x-2">
             {reportData?.sales_daily?.map((day, idx) => {
@@ -128,12 +147,12 @@ export default function VisualReports() {
 
                   <div className="w-full flex justify-center space-x-1 items-end h-48">
                     {/* Sales Column */}
-                    <div 
+                    <div
                       className="w-3 sm:w-5 bg-brand-blue rounded-t transition-all duration-500 hover:bg-brand-cobalt"
                       style={{ height: `${Math.max(salesHeight, 4)}px` }}
                     ></div>
                     {/* Profit Column */}
-                    <div 
+                    <div
                       className="w-3 sm:w-5 bg-green-500 rounded-t transition-all duration-500 hover:bg-green-600"
                       style={{ height: `${Math.max(profitHeight, 4)}px` }}
                     ></div>

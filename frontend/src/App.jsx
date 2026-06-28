@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Outlet, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from './utils/api';
 import Protected from './components/Protected';
@@ -64,6 +64,11 @@ function RootRedirect() {
 }
 
 function ERPLayout() {
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams("all");
+  const showPeriodSelect = location.pathname === '/erp' || location.pathname === '/erp/';
+  const period = searchParams.get('period') || 'today';
+
   return (
     <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-surface">
       {/* Collapsible Sidebar / Responsive Navigation Layout */}
@@ -74,7 +79,81 @@ function ERPLayout() {
         {/* Desktop-only Top Header */}
         <header className="hidden md:flex h-16 items-center justify-between px-6 bg-white border-b border-surface-low shadow-sm">
           <span className="text-xs font-semibold text-text-secondary">Axon Management Platform</span>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-4">
+            {showPeriodSelect && (
+              <div className="flex items-center space-x-2">
+                <label htmlFor="header-period-select" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Period:</label>
+                {!period.startsWith('custom_') ? (
+                  <select
+                    id="header-period-select"
+                    value={period}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const nextParams = new URLSearchParams(searchParams);
+                      if (val === 'custom') {
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        nextParams.set('period', `custom_${todayStr}_${todayStr}`);
+                      } else {
+                        nextParams.set('period', val);
+                      }
+                      setSearchParams(nextParams);
+                    }}
+                    className="rounded border border-surface-dim bg-white px-2.5 py-1 text-xs font-semibold text-text-primary outline-none focus:border-brand-blue shadow-xs cursor-pointer"
+                  >
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="this_week">This Week</option>
+                    <option value="this_month">This Month</option>
+                    <option value="last_30_days">Last 30 Days</option>
+                    <option value="all">All Time</option>
+                    <option value="custom">Custom Range...</option>
+                  </select>
+                ) : (() => {
+                  const parts = period.split('_');
+                  const startDate = parts[1] || '';
+                  const endDate = parts[2] || '';
+                  return (
+                    <div className="flex items-center space-x-1.5 animate-in fade-in duration-150">
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => {
+                          const nextParams = new URLSearchParams(searchParams);
+                          nextParams.set('period', `custom_${e.target.value}_${endDate}`);
+                          setSearchParams(nextParams);
+                        }}
+                        className="rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue"
+                      />
+                      <span className="text-xs text-text-secondary">to</span>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => {
+                          const nextParams = new URLSearchParams(searchParams);
+                          nextParams.set('period', `custom_${startDate}_${e.target.value}`);
+                          setSearchParams(nextParams);
+                        }}
+                        className="rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextParams = new URLSearchParams(searchParams);
+                          nextParams.set('period', 'today');
+                          setSearchParams(nextParams);
+                        }}
+                        className="rounded-full hover:bg-surface-low p-1 text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center"
+                        title="Clear custom range"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
             <span className="text-xs font-bold text-brand-blue bg-accent-blue/15 px-2.5 py-1 rounded-full">
               {/* Operator Console */}
             </span>

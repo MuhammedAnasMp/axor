@@ -107,7 +107,7 @@ export const api = {
   employees: {
     list: (params) => request('/employees/', { params }),
     update: (id, data) => request(`/employees/${id}/`, { method: 'PATCH', body: data }),
-    payrollSummary: (id) => request(`/employees/${id}/payroll_summary/`),
+    payrollSummary: (id, params) => request(`/employees/${id}/payroll_summary/`, { params }),
   },
   categories: {
     list: (params) => request('/categories/', { params }),
@@ -216,7 +216,7 @@ export const api = {
     bulkMark: (data) => request('/employee-attendances/bulk_mark/', { method: 'POST', body: data }),
   },
   dashboard: {
-    metrics: () => request('/dashboard/metrics/'),
-    reports: () => request('/dashboard/reports/'),
+    metrics: (params) => request('/dashboard/metrics/', { params }),
+    reports: (params) => request('/dashboard/reports/', { params }),
   }
 };

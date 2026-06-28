@@ -8,8 +8,24 @@ import MobileBottomSheet from '../components/MobileBottomSheet';
 import { SkeletonTable, Spinner } from '../components/Skeleton';
 
 export default function Expenses() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams("all");
   const currentTab = searchParams.get('tab') || 'income';
+  const period = searchParams.get('period') || sessionStorage.getItem('period_expenses') || 'today';
+
+  useEffect(() => {
+    if (!searchParams.has('period')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('period', period);
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, period, setSearchParams]);
+
+  useEffect(() => {
+    const urlPeriod = searchParams.get('period');
+    if (urlPeriod) {
+      sessionStorage.setItem('period_expenses', urlPeriod);
+    }
+  }, [searchParams]);
 
   const mainTab = (currentTab === 'income' || currentTab === 'income-history') ? 'income' : 'expense';
   const subTab = (currentTab === 'history' || currentTab === 'income-history') ? 'history' : 'add';
@@ -36,10 +52,10 @@ export default function Expenses() {
   }, []);
 
   // Paginated expense history hook
-  const pag = usePagination(api.expenses.list, 10, currentTab === 'history' || (isMobile && (currentTab === 'add' || currentTab === 'expense')));
+  const pag = usePagination(api.expenses.list, 10, currentTab === 'history' || (isMobile && (currentTab === 'add' || currentTab === 'expense')), { period });
 
   // Paginated income history hook
-  const incomePag = usePagination(api.incomes.list, 10, currentTab === 'income-history' || (isMobile && currentTab === 'income'));
+  const incomePag = usePagination(api.incomes.list, 10, currentTab === 'income-history' || (isMobile && currentTab === 'income'), { period });
 
   // Form states - Expense
   const [category, setCategory] = useState('');
@@ -426,6 +442,78 @@ export default function Expenses() {
                 </svg>
               </span>
             </div>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <label htmlFor="expense-period-select" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Period:</label>
+              {!period.startsWith('custom_') ? (
+                <select
+                  id="expense-period-select"
+                  value={period}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const nextParams = new URLSearchParams(searchParams);
+                    if (val === 'custom') {
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      nextParams.set('period', `custom_${todayStr}_${todayStr}`);
+                    } else {
+                      nextParams.set('period', val);
+                    }
+                    setSearchParams(nextParams);
+                  }}
+                  className="rounded border border-surface-dim bg-white px-2.5 py-1 text-xs font-semibold text-text-primary outline-none focus:border-brand-blue shadow-xs cursor-pointer w-full sm:w-auto"
+                >
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="this_week">This Week</option>
+                  <option value="this_month">This Month</option>
+                  <option value="last_30_days">Last 30 Days</option>
+                  <option value="all">All Time</option>
+                  <option value="custom">Custom Range...</option>
+                </select>
+              ) : (() => {
+                const parts = period.split('_');
+                const startDate = parts[1] || '';
+                const endDate = parts[2] || '';
+                return (
+                  <div className="flex items-center space-x-1.5 animate-in fade-in duration-150">
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', `custom_${e.target.value}_${endDate}`);
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue"
+                    />
+                    <span className="text-xs text-text-secondary">to</span>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', `custom_${startDate}_${e.target.value}`);
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', 'today');
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded-full hover:bg-surface-low p-1 text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center"
+                      title="Clear custom range"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })()}
+            </div>
             {pag.loading && (
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />
             )}
@@ -633,6 +721,78 @@ export default function Expenses() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <label htmlFor="income-period-select" className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Period:</label>
+              {!period.startsWith('custom_') ? (
+                <select
+                  id="income-period-select"
+                  value={period}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const nextParams = new URLSearchParams(searchParams);
+                    if (val === 'custom') {
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      nextParams.set('period', `custom_${todayStr}_${todayStr}`);
+                    } else {
+                      nextParams.set('period', val);
+                    }
+                    setSearchParams(nextParams);
+                  }}
+                  className="rounded border border-surface-dim bg-white px-2.5 py-1 text-xs font-semibold text-text-primary outline-none focus:border-brand-blue shadow-xs cursor-pointer w-full sm:w-auto"
+                >
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="this_week">This Week</option>
+                  <option value="this_month">This Month</option>
+                  <option value="last_30_days">Last 30 Days</option>
+                  <option value="all">All Time</option>
+                  <option value="custom">Custom Range...</option>
+                </select>
+              ) : (() => {
+                const parts = period.split('_');
+                const startDate = parts[1] || '';
+                const endDate = parts[2] || '';
+                return (
+                  <div className="flex items-center space-x-1.5 animate-in fade-in duration-150">
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', `custom_${e.target.value}_${endDate}`);
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue"
+                    />
+                    <span className="text-xs text-text-secondary">to</span>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', `custom_${startDate}_${e.target.value}`);
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded border border-surface-dim bg-white px-2 py-1 text-xs text-text-primary outline-none focus:border-brand-blue"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextParams = new URLSearchParams(searchParams);
+                        nextParams.set('period', 'today');
+                        setSearchParams(nextParams);
+                      }}
+                      className="rounded-full hover:bg-surface-low p-1 text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center"
+                      title="Clear custom range"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
             {incomePag.loading && (
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-blue border-t-transparent" />

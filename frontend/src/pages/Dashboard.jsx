@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../utils/api';
 import { SkeletonCard, SkeletonTable } from '../components/Skeleton';
@@ -8,6 +8,24 @@ import MobileBottomSheet from '../components/MobileBottomSheet';
 export default function Dashboard() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams("all");
+  const period = searchParams.get('period') || sessionStorage.getItem('period_dashboard') || 'today';
+
+  useEffect(() => {
+    if (!searchParams.has('period')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('period', period);
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, period, setSearchParams]);
+
+  useEffect(() => {
+    const urlPeriod = searchParams.get('period');
+    if (urlPeriod) {
+      sessionStorage.setItem('period_dashboard', urlPeriod);
+    }
+  }, [searchParams]);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,8 +35,8 @@ export default function Dashboard() {
   }, []);
 
   const { data: metrics, isLoading: loading } = useQuery({
-    queryKey: ['dashboardMetrics'],
-    queryFn: () => api.dashboard.metrics(),
+    queryKey: ['dashboardMetrics', period],
+    queryFn: () => api.dashboard.metrics({ period }),
   });
 
   const formatCurrency = (val) => {
@@ -29,12 +47,35 @@ export default function Dashboard() {
     }).format(val);
   };
 
+  const getPeriodLabel = () => {
+    if (period.startsWith('custom_')) {
+      const parts = period.split('_');
+      const start = parts[1] || '';
+      const end = parts[2] || '';
+      if (start === end) {
+        return start;
+      }
+      return `${start} to ${end}`;
+    }
+    switch (period) {
+      case 'today': return "Today's";
+      case 'yesterday': return "Yesterday's";
+      case 'this_week': return "This Week's";
+      case 'this_month': return "This Month's";
+      case 'last_30_days': return "Last 30 Days'";
+      case 'all': return "All-Time";
+      default: return "Today's";
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Dashboard</h2>
-          <p className="text-xs text-text-secondary">Overview of today's key performance indicators and operations.</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Dashboard</h2>
+            <p className="text-xs text-text-secondary">Overview of the selected period's performance indicators.</p>
+          </div>
         </div>
 
         {/* Skeleton Cards Grid */}
@@ -120,7 +161,7 @@ export default function Dashboard() {
 
   const cards = [
     {
-      title: "Today's Sales",
+      title: `${getPeriodLabel()} Sales`,
       value: formatCurrency(metrics?.sales_today || 0),
       color: "border-l-4 border-primary bg-white",
       textColor: "text-primary",
@@ -132,7 +173,7 @@ export default function Dashboard() {
       )
     },
     {
-      title: "Today's Profit",
+      title: `${getPeriodLabel()} Profit`,
       value: formatCurrency(metrics?.profit_today || 0),
       color: "border-l-4 border-green-600 bg-white",
       textColor: "text-green-600",
@@ -259,9 +300,18 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Dashboard</h2>
-        <p className="text-xs text-text-secondary">Overview of today's key performance indicators and operations.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Dashboard</h2>
+          <p className="text-xs text-text-secondary">
+            {period === 'today' && "Overview of today's key performance indicators and operations."}
+            {period === 'yesterday' && "Overview of yesterday's performance indicators."}
+            {period === 'this_week' && "Overview of this week's performance indicators."}
+            {period === 'this_month' && "Overview of this month's performance indicators."}
+            {period === 'last_30_days' && "Overview of the last 30 days' performance indicators."}
+            {period === 'all' && "Overview of all-time performance indicators."}
+          </p>
+        </div>
       </div>
 
       {/* Metrics Cards Grid */}
