@@ -4,8 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../utils/api';
 
 export default function VisualReports() {
-  const [searchParams, setSearchParams] = useSearchParams("all");
-  const period = searchParams.get('period') || sessionStorage.getItem('period_reports') || 'today';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const period = searchParams.get('period') || sessionStorage.getItem('period_reports') || 'all';
 
   useEffect(() => {
     if (!searchParams.has('period')) {

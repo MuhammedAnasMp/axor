@@ -8,14 +8,22 @@ import MobileBottomSheet from '../components/MobileBottomSheet';
 import { SkeletonTable, Spinner } from '../components/Skeleton';
 
 export default function MoneyAccounts() {
-  const [searchParams, setSearchParams] = useSearchParams("all");
-  const currentTab = searchParams.get('tab') || 'accounts';
-  const period = searchParams.get('period') || sessionStorage.getItem('period_moneyaccounts') || 'today';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get('tab') || 'cash_bank';
+  const currentTab = (rawTab === 'cash_bank' || rawTab === 'accounts') ? 'accounts' : rawTab;
+  const period = searchParams.get('period') || sessionStorage.getItem('period_moneyaccounts') || 'all';
 
   useEffect(() => {
+    let nextParams = null;
     if (!searchParams.has('period')) {
-      const nextParams = new URLSearchParams(searchParams);
+      nextParams = new URLSearchParams(nextParams || searchParams);
       nextParams.set('period', period);
+    }
+    if (!searchParams.has('tab')) {
+      nextParams = new URLSearchParams(nextParams || searchParams);
+      nextParams.set('tab', 'cash_bank');
+    }
+    if (nextParams) {
       setSearchParams(nextParams, { replace: true });
     }
   }, [searchParams, period, setSearchParams]);
@@ -157,7 +165,7 @@ export default function MoneyAccounts() {
       {/* Tabs Menu */}
       <div className="hidden md:flex border-b border-surface-low space-x-6 text-sm font-medium">
         <Link
-          to="/erp/accounts"
+          to="/erp/accounts?tab=cash_bank"
           className={`pb-2 ${currentTab === 'accounts' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
         >
           Cash & Banks

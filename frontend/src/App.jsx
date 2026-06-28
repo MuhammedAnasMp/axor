@@ -65,9 +65,9 @@ function RootRedirect() {
 
 function ERPLayout() {
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams("all");
+  const [searchParams, setSearchParams] = useSearchParams();
   const showPeriodSelect = location.pathname === '/erp' || location.pathname === '/erp/';
-  const period = searchParams.get('period') || 'today';
+  const period = searchParams.get('period') || 'all';
 
   return (
     <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-surface">

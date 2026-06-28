@@ -1337,7 +1337,7 @@ class CustomerPaymentViewSet(viewsets.ModelViewSet):
 @api_view(['GET'])
 def dashboard_metrics(request):
     # Support filtering sales and profits by period
-    period = request.query_params.get('period', 'today')
+    period = request.query_params.get('period', 'all')
     start_date, end_date = get_date_range_for_period(period)
 
     sales_filter = {}

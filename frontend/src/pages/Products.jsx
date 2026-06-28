@@ -8,14 +8,22 @@ import MobileBottomSheet from '../components/MobileBottomSheet';
 import { SkeletonTable, Spinner } from '../components/Skeleton';
 
 export default function Products() {
-  const [searchParams, setSearchParams] = useSearchParams("all");
-  const currentTab = searchParams.get('tab') || 'products';
-  const period = searchParams.get('period') || sessionStorage.getItem('period_products') || 'today';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get('tab') || 'all_products';
+  const currentTab = (rawTab === 'all_products' || rawTab === 'products') ? 'products' : rawTab;
+  const period = searchParams.get('period') || sessionStorage.getItem('period_products') || 'all';
 
   useEffect(() => {
+    let nextParams = null;
     if (!searchParams.has('period')) {
-      const nextParams = new URLSearchParams(searchParams);
+      nextParams = new URLSearchParams(nextParams || searchParams);
       nextParams.set('period', period);
+    }
+    if (!searchParams.has('tab')) {
+      nextParams = new URLSearchParams(nextParams || searchParams);
+      nextParams.set('tab', 'all_products');
+    }
+    if (nextParams) {
       setSearchParams(nextParams, { replace: true });
     }
   }, [searchParams, period, setSearchParams]);
@@ -941,7 +949,7 @@ export default function Products() {
         <div className="hidden md:block tabs-container border-b border-surface-low">
           <div className="tabs-scrollable space-x-6 text-sm font-medium">
             <Link
-              to="/erp/products"
+              to="/erp/products?tab=all_products"
               className={`pb-2 ${currentTab === 'products' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
             >
               Products

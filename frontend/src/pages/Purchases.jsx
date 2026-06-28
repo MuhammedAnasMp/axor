@@ -9,14 +9,22 @@ import MobileBottomSheet from '../components/MobileBottomSheet';
 import { TrashIcon } from "@heroicons/react/24/solid";
 
 export default function Purchases() {
-  const [searchParams, setSearchParams] = useSearchParams("all");
-  const currentTab = searchParams.get('tab') || 'create';
-  const period = searchParams.get('period') || sessionStorage.getItem('period_purchases') || 'today';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get('tab') || 'create_purchase';
+  const currentTab = (rawTab === 'create_purchase' || rawTab === 'create') ? 'create' : rawTab;
+  const period = searchParams.get('period') || sessionStorage.getItem('period_purchases') || 'all';
 
   useEffect(() => {
+    let nextParams = null;
     if (!searchParams.has('period')) {
-      const nextParams = new URLSearchParams(searchParams);
+      nextParams = new URLSearchParams(nextParams || searchParams);
       nextParams.set('period', period);
+    }
+    if (!searchParams.has('tab')) {
+      nextParams = new URLSearchParams(nextParams || searchParams);
+      nextParams.set('tab', 'create_purchase');
+    }
+    if (nextParams) {
       setSearchParams(nextParams, { replace: true });
     }
   }, [searchParams, period, setSearchParams]);
@@ -1660,7 +1668,7 @@ export default function Purchases() {
       <div className="hidden md:block tabs-container border-b border-surface-low">
         <div className="tabs-scrollable space-x-6 text-sm font-medium">
           <Link
-            to="/erp/purchases"
+            to="/erp/purchases?tab=create_purchase"
             className={`pb-2 ${currentTab === 'create' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Create Purchase Order

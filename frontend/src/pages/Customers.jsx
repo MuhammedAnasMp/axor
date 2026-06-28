@@ -90,14 +90,22 @@ function ContactNumber({ number, isWhatsapp }) {
 }
 
 export default function Customers() {
-  const [searchParams, setSearchParams] = useSearchParams("all");
-  const currentTab = searchParams.get('tab') || 'directory';
-  const period = searchParams.get('period') || sessionStorage.getItem('period_customers') || 'today';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get('tab') || 'all_customer';
+  const currentTab = (rawTab === 'all_customer' || rawTab === 'directory') ? 'directory' : rawTab;
+  const period = searchParams.get('period') || sessionStorage.getItem('period_customers') || 'all';
 
   useEffect(() => {
+    let nextParams = null;
     if (!searchParams.has('period')) {
-      const nextParams = new URLSearchParams(searchParams);
+      nextParams = new URLSearchParams(nextParams || searchParams);
       nextParams.set('period', period);
+    }
+    if (!searchParams.has('tab')) {
+      nextParams = new URLSearchParams(nextParams || searchParams);
+      nextParams.set('tab', 'all_customer');
+    }
+    if (nextParams) {
       setSearchParams(nextParams, { replace: true });
     }
   }, [searchParams, period, setSearchParams]);
@@ -524,7 +532,7 @@ export default function Customers() {
       <div className="hidden md:block tabs-container border-b border-surface-low">
         <div className="tabs-scrollable space-x-6 text-sm font-medium">
           <Link
-            to="/erp/customers"
+            to="/erp/customers?tab=all_customer"
             className={`pb-2 ${currentTab === 'directory' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
           >
             Directory
@@ -542,7 +550,7 @@ export default function Customers() {
       {isMobile && (
         <div className="flex border-b border-surface-low">
           <Link
-            to="/erp/customers"
+            to="/erp/customers?tab=all_customer"
             className={`flex-1 text-center py-2.5 text-xs font-semibold transition ${currentTab === 'directory' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'
               }`}
           >

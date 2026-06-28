@@ -49,9 +49,9 @@ export default function Employees() {
   const [bankAccounts, setBankAccounts] = useState([]);
 
   // Detail view navigation tab state
-  const [searchParams, setSearchParams] = useSearchParams("all");
+  const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'Profile';
-  const period = searchParams.get('period') || sessionStorage.getItem('period_employees') || 'today';
+  const period = searchParams.get('period') || sessionStorage.getItem('period_employees') || 'all';
 
   useEffect(() => {
     if (!searchParams.has('period')) {

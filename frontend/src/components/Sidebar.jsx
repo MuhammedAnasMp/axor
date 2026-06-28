@@ -2,21 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api, getBaseUrl } from '../utils/api';
-
+import { BarsArrowDownIcon } from "@heroicons/react/24/solid";
 const CURRENT_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0';
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [openTab, setOpenTab] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showMobileRail, setShowMobileRail] = useState(() => {
+    return localStorage.getItem('axon_mobile_rail') === 'true';
+  });
+  const [activePopover, setActivePopover] = useState(null);
+  const timerRef = React.useRef(null);
+  const isLongPress = React.useRef(false);
   const [currentUser, setCurrentUser] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams("all");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
+  useEffect(() => {
+    localStorage.setItem('axon_mobile_rail', showMobileRail ? 'true' : 'false');
+  }, [showMobileRail]);
+
   const showPeriodSelect = location.pathname === '/erp' || location.pathname === '/erp/';
-  const period = searchParams.get('period') || 'today';
+  const period = searchParams.get('period') || 'all';
 
   useEffect(() => {
     const handleFocusChange = () => {
@@ -88,7 +98,7 @@ export default function Sidebar() {
         </svg>
       ),
       subItems: [
-        { title: 'Products', path: '/erp/products' },
+        { title: 'Products', path: '/erp/products?tab=all_products' },
         { title: 'Cost History', path: '/erp/products?tab=cost-history' },
         { title: 'Categories', path: '/erp/products?tab=categories' },
         { title: 'Brands', path: '/erp/products?tab=brands' },
@@ -105,7 +115,7 @@ export default function Sidebar() {
         </svg>
       ),
       subItems: [
-        { title: 'Current Stock', path: '/erp/stock' },
+        { title: 'Current Stock', path: '/erp/stock?tab=current_stock' },
         { title: 'Stock History', path: '/erp/stock?tab=history' },
         { title: 'Damaged Items', path: '/erp/stock?tab=damaged' }
       ]
@@ -120,7 +130,7 @@ export default function Sidebar() {
         </svg>
       ),
       subItems: [
-        { title: 'Supplier', path: '/erp/suppliers' },
+        { title: 'Supplier', path: '/erp/suppliers?tab=all_supllier' },
         { title: 'Mapping', path: '/erp/suppliers?tab=mappings' },
         { title: 'Payments', path: '/erp/suppliers?tab=payments' }
       ]
@@ -135,7 +145,7 @@ export default function Sidebar() {
         </svg>
       ),
       subItems: [
-        { title: 'Directory', path: '/erp/customers' },
+        { title: 'Directory', path: '/erp/customers?tab=all_customer' },
         { title: 'Payments', path: '/erp/customers?tab=payments' }
       ]
     },
@@ -149,7 +159,7 @@ export default function Sidebar() {
         </svg>
       ),
       subItems: [
-        { title: 'Create Purchase', path: '/erp/purchases' },
+        { title: 'Create Purchase', path: '/erp/purchases?tab=create_purchase' },
         { title: 'Receive Products', path: '/erp/purchases?tab=receive' },
         { title: 'Purchase History', path: '/erp/purchases?tab=history' }
       ]
@@ -164,7 +174,7 @@ export default function Sidebar() {
         </svg>
       ),
       subItems: [
-        { title: 'Cash & Banks', path: '/erp/accounts' },
+        { title: 'Cash & Banks', path: '/erp/accounts?tab=cash_bank' },
         { title: 'Money Transfers', path: '/erp/accounts?tab=transfers' }
       ]
     },
@@ -212,7 +222,7 @@ export default function Sidebar() {
         </svg>
       ),
       subItems: [
-        { title: 'Create Invoice', path: '/erp/sales' },
+        { title: 'Create Invoice', path: '/erp/sales?tab=create_invoice' },
         { title: 'Sales History', path: '/erp/sales?tab=history' },
         { title: 'Customer Payments', path: '/erp/sales?tab=payments' }
       ]
@@ -237,6 +247,9 @@ export default function Sidebar() {
   }
 
   const handleTabClick = (item, isMobile = false) => {
+    if (document.activeElement && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     if (item.subItems) {
       setOpenTab(openTab === item.id ? null : item.id);
       if (item.subItems.length > 0) {
@@ -255,7 +268,9 @@ export default function Sidebar() {
   };
 
   const isActive = (path) => {
-    return location.pathname === path || (path !== '/erp' && location.pathname.startsWith(path));
+    const normPath = path.replace(/\/$/, '');
+    const normLoc = location.pathname.replace(/\/$/, '');
+    return normLoc === normPath || (normPath !== '/erp' && normLoc.startsWith(normPath + '/'));
   };
 
   // Screen Title for Mobile App Bar
@@ -445,7 +460,7 @@ export default function Sidebar() {
           </Link>
 
           <Link
-            to="/erp/products"
+            to="/erp/products?tab=all_products"
             className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${location.pathname.startsWith('/erp/products') ? 'text-brand-blue' : 'text-text-secondary'
               }`}
           >
@@ -471,7 +486,7 @@ export default function Sidebar() {
           </Link>
 
           <Link
-            to="/erp/sales"
+            to="/erp/sales?tab=create_invoice"
             className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${location.pathname.startsWith('/erp/sales') ? 'text-brand-blue' : 'text-text-secondary'
               }`}
           >
@@ -507,9 +522,12 @@ export default function Sidebar() {
       <div className="flex justify-around items-center h-16">
 
         {itemsToShow.map((sub, idx) => {
-          const isSubActive = location.pathname + location.search === sub.path ||
-            (sub.path.includes('?') && (location.pathname + location.search).startsWith(sub.path)) ||
-            (!sub.path.includes('?') && location.pathname === sub.path && !location.search);
+          const subUrl = new URL(sub.path, window.location.origin);
+          const subTab = subUrl.searchParams.get('tab');
+          const currentTab = searchParams.get('tab');
+          const isSubActive = location.pathname === subUrl.pathname && (
+            subTab ? currentTab === subTab : (!currentTab && idx === 0)
+          );
           return (
             <Link
               key={idx}
@@ -617,9 +635,14 @@ export default function Sidebar() {
 
                 {/* Second-level Accordion Navigation */}
                 {!collapsed && hasSub && open && (
-                  <div className="mt-1 ml-6 pl-3 border-l border-surface-dim space-y-1">
+                  <div className="mt-1 ml-6 pl-3 border-l border-surface-dim space-y-1.5">
                     {item.subItems.map((sub, sIdx) => {
-                      const subActive = location.pathname + location.search === sub.path;
+                      const subUrl = new URL(sub.path, window.location.origin);
+                      const subTab = subUrl.searchParams.get('tab');
+                      const currentTab = searchParams.get('tab');
+                      const subActive = location.pathname === subUrl.pathname && (
+                        subTab ? currentTab === subTab : (!currentTab && sIdx === 0)
+                      );
                       if (sub.isExternal) {
                         return (
                           <a
@@ -685,7 +708,7 @@ export default function Sidebar() {
       {/* 2. MOBILE TOP APP BAR                                                     */}
       {/* ========================================================================= */}
       <header className="md:hidden sticky top-0 left-0 right-0 z-35 bg-white border-b border-surface-low shadow-sm safe-pt">
-        <div className="flex h-14 items-center justify-between px-4">
+        <div className="flex h-14 items-center justify-between px-1">
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setDrawerOpen(true)}
@@ -794,7 +817,7 @@ export default function Sidebar() {
       {/* ========================================================================= */}
       {/* 3. MOBILE BOTTOM NAVIGATION BAR                                           */}
       {/* ========================================================================= */}
-      {!['/erp', '/erp/'].includes(location.pathname) && !location.pathname.startsWith('/erp/employees') && !isKeyboardVisible && (
+      {!['/erp', '/erp/'].includes(location.pathname) && !location.pathname.startsWith('/erp/employees') && !isKeyboardVisible && !showMobileRail && (
         <nav
           className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-surface-low safe-pb"
           style={{ boxShadow: '0px -2px 10px rgba(0,0,0,0.06)' }}
@@ -835,15 +858,31 @@ export default function Sidebar() {
                     <span className="block text-[10px] font-semibold text-text-secondary">Enterprise Resource</span>
                   </div>
                 </div>
-                <button
-                  onClick={() => setDrawerOpen(false)}
-                  className="rounded-full p-1.5 text-text-secondary hover:bg-surface-low cursor-pointer"
-                  aria-label="Close drawer"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                <div className="flex items-center space-x-1.5">
+                  <button
+                    onClick={() => {
+                      setShowMobileRail(!showMobileRail);
+                      setDrawerOpen(false);
+                    }}
+                    className={`rounded-full p-1.5 transition-colors cursor-pointer ${showMobileRail
+                      ? 'text-brand-blue bg-accent-blue/15 hover:bg-accent-blue/25'
+                      : 'text-text-secondary hover:bg-surface-low'
+                      }`}
+                    title={showMobileRail ? "Hide sidebar rail" : "Show sidebar rail"}
+                    aria-label="Toggle sidebar rail"
+                  >
+                    <BarsArrowDownIcon height={20} width={20} />
+                  </button>
+                  <button
+                    onClick={() => setDrawerOpen(false)}
+                    className="rounded-full p-1.5 text-text-secondary hover:bg-surface-low cursor-pointer"
+                    aria-label="Close drawer"
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               {/* Scrollable Navigation List */}
@@ -907,7 +946,12 @@ export default function Sidebar() {
                       {hasSub && open && (
                         <div className="mt-1 ml-6 pl-4 border-l-2 border-surface-dim space-y-1.5 py-1">
                           {item.subItems.map((sub, sIdx) => {
-                            const subActive = location.pathname + location.search === sub.path;
+                            const subUrl = new URL(sub.path, window.location.origin);
+                            const subTab = subUrl.searchParams.get('tab');
+                            const currentTab = searchParams.get('tab');
+                            const subActive = location.pathname === subUrl.pathname && (
+                              subTab ? currentTab === subTab : (!currentTab && sIdx === 0)
+                            );
                             if (sub.isExternal) {
                               return (
                                 <a
@@ -977,6 +1021,179 @@ export default function Sidebar() {
           </>
         )}
       </AnimatePresence>
+
+      {/* ========================================================================= */}
+      {/* 5. MOBILE VERTICAL SIDEBAR RAIL                                           */}
+      {/* ========================================================================= */}
+      {showMobileRail && (
+        <>
+          <style>{`
+            @media (max-width: 767px) {
+              main {
+                padding-left: calc(3rem + 12px) !important;
+              }
+              header {
+                left: 3rem !important;
+              }
+            }
+          `}</style>
+          <div className="md:hidden fixed top-0 bottom-0 left-0 z-30 w-12 h-screen bg-white/90 backdrop-blur-md border-r border-surface-low flex flex-col items-center py-4 justify-between shadow-lg safe-pt safe-pb">
+            {/* Top Logo / Open Drawer */}
+            <div className="flex flex-col items-center space-y-4 w-full">
+              <button
+                onClick={() => setDrawerOpen(true)}
+                className="group flex h-10 w-10 items-center justify-center rounded-xl bg-accent-blue/10 text-brand-blue hover:bg-brand-blue hover:text-white transition-all duration-200 shadow-xs cursor-pointer"
+                title="Open Menu"
+              >
+                <img src="/icon_for_website-removebg-preview_no_border.png" alt="Logo" className="h-6 w-6 object-contain group-hover:scale-110 transition-transform" />
+              </button>
+              <div className="w-8 h-[1px] bg-surface-dim" />
+            </div>
+
+            {/* Navigation Icons */}
+            <div className="flex-1 w-full overflow-y-auto no-scrollbar py-4 flex flex-col items-center space-y-3">
+              {navItems.map((item) => {
+                const active = isActive(item.path);
+
+                const handleStart = (e) => {
+                  isLongPress.current = false;
+                  const target = e.currentTarget;
+                  timerRef.current = setTimeout(() => {
+                    isLongPress.current = true;
+                    if (item.subItems && item.subItems.length > 0) {
+                      const rect = target.getBoundingClientRect();
+                      setActivePopover({
+                        itemId: item.id,
+                        title: item.title,
+                        top: Math.min(rect.top, window.innerHeight - (item.subItems.length * 40 + 80)),
+                        subItems: item.subItems
+                      });
+                    }
+                  }, 400);
+                };
+
+                const handleEnd = (e) => {
+                  if (timerRef.current) {
+                    clearTimeout(timerRef.current);
+                  }
+                  if (!isLongPress.current) {
+                    handleTabClick(item, true);
+                  }
+                  e.currentTarget.blur();
+                };
+
+                return (
+                  <button
+                    key={item.id}
+                    onTouchStart={handleStart}
+                    onTouchEnd={handleEnd}
+                    onMouseDown={handleStart}
+                    onMouseUp={handleEnd}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className={`group relative flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 cursor-pointer select-none focus:outline-none ${active
+                      ? 'bg-brand-blue text-white shadow-md shadow-brand-blue/20 scale-105'
+                      : 'text-text-secondary active:bg-surface-low active:text-text-primary'
+                      }`}
+                    title={item.title}
+                  >
+                    <span className="transition-transform group-hover:scale-110 duration-200">
+                      {item.icon}
+                    </span>
+                    {active && (
+                      <span className="absolute left-0 top-3 w-1 h-3 rounded-r-full bg-white" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="flex flex-col items-center space-y-3 w-full">
+              <div className="w-8 h-[1px] bg-surface-dim" />
+
+              {/* POS Shortcut */}
+              <Link
+                to="/pos"
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-tertiary-container/10 text-tertiary active:bg-tertiary active:text-white transition-all duration-200"
+                title="Go to POS"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              </Link>
+
+              {/* Toggle Rail Off */}
+              <button
+                onClick={() => setShowMobileRail(false)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-text-secondary active:bg-error/10 active:text-error transition-all duration-200 cursor-pointer"
+                title="Disable Sidebar Rail"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Floating Submenu on Long Press */}
+          {activePopover && (
+            <>
+              <div
+                className="fixed inset-0 z-40 bg-black/5"
+                onClick={() => setActivePopover(null)}
+              />
+              <div
+                className="fixed left-14 z-50 min-w-[185px] bg-white/95 backdrop-blur-md border border-surface-low shadow-2xl rounded-2xl p-2 flex flex-col space-y-1 animate-in fade-in slide-in-from-left-2 duration-150"
+                style={{ top: `${Math.max(16, activePopover.top)}px` }}
+              >
+                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-text-secondary border-b border-surface-low mb-1">
+                  {activePopover.title} Options
+                </div>
+                {activePopover.subItems.map((sub, idx) => {
+                  const subUrl = new URL(sub.path, window.location.origin);
+                  const subTab = subUrl.searchParams.get('tab');
+                  const currentTab = searchParams.get('tab');
+                  const subActive = location.pathname === subUrl.pathname && (
+                    subTab ? currentTab === subTab : (!currentTab && idx === 0)
+                  );
+                  if (sub.isExternal) {
+                    return (
+                      <a
+                        key={idx}
+                        href={sub.path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setActivePopover(null)}
+                        className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-text-secondary hover:text-text-primary hover:bg-surface-low transition-colors"
+                      >
+                        <span>{sub.title}</span>
+                      </a>
+                    );
+                  }
+                  return (
+                    <Link
+                      key={idx}
+                      to={sub.path}
+                      onClick={() => setActivePopover(null)}
+                      className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-colors ${subActive
+                        ? 'text-brand-blue bg-accent-blue/10'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-surface-low'
+                        }`}
+                    >
+                      <span>{sub.title}</span>
+                      {subActive && (
+                        <svg className="h-3.5 w-3.5 text-brand-blue animate-in zoom-in duration-250" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </>
+      )}
     </>
   );
 }

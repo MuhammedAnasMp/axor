@@ -8,14 +8,21 @@ import MobileBottomSheet from '../components/MobileBottomSheet';
 import { SkeletonTable, Spinner } from '../components/Skeleton';
 
 export default function Expenses() {
-  const [searchParams, setSearchParams] = useSearchParams("all");
+  const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = searchParams.get('tab') || 'income';
-  const period = searchParams.get('period') || sessionStorage.getItem('period_expenses') || 'today';
+  const period = searchParams.get('period') || sessionStorage.getItem('period_expenses') || 'all';
 
   useEffect(() => {
+    let nextParams = null;
     if (!searchParams.has('period')) {
-      const nextParams = new URLSearchParams(searchParams);
+      nextParams = new URLSearchParams(nextParams || searchParams);
       nextParams.set('period', period);
+    }
+    if (!searchParams.has('tab')) {
+      nextParams = new URLSearchParams(nextParams || searchParams);
+      nextParams.set('tab', 'income');
+    }
+    if (nextParams) {
       setSearchParams(nextParams, { replace: true });
     }
   }, [searchParams, period, setSearchParams]);
@@ -249,7 +256,7 @@ export default function Expenses() {
         {/* Main Tabs (Horizontal) */}
         <div className="flex border-b border-surface-low space-x-6 text-sm font-semibold">
           <Link
-            to="/erp/expenses"
+            to="/erp/expenses?tab=income"
             className={`pb-2 transition ${mainTab === 'income' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary hover:text-text-primary'}`}
           >
             Incomes
@@ -265,7 +272,7 @@ export default function Expenses() {
         {/* Secondary Tabs (Sub-navigation) */}
         <div className="flex space-x-4 text-xs font-semibold bg-surface-low/60 p-1 rounded-lg w-fit shadow-inner">
           <Link
-            to={mainTab === 'income' ? '/erp/expenses' : '/erp/expenses?tab=expense'}
+            to={mainTab === 'income' ? '/erp/expenses?tab=income' : '/erp/expenses?tab=expense'}
             className={`px-4 py-1.5 rounded-md transition ${subTab === 'add' ? 'bg-white text-brand-blue shadow font-bold' : 'text-text-secondary hover:text-text-primary'}`}
           >
             {mainTab === 'income' ? 'Add Income' : 'Add Expense'}

@@ -8,8 +8,8 @@ import MobileBottomSheet from '../components/MobileBottomSheet';
 export default function Dashboard() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
-  const [searchParams, setSearchParams] = useSearchParams("all");
-  const period = searchParams.get('period') || sessionStorage.getItem('period_dashboard') || 'today';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const period = searchParams.get('period') || sessionStorage.getItem('period_dashboard') || 'all';
 
   useEffect(() => {
     if (!searchParams.has('period')) {

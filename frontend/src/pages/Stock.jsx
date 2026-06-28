@@ -8,14 +8,22 @@ import { SkeletonTable, Spinner } from '../components/Skeleton';
 import FloatingActionButton from '../components/FloatingActionButton';
 
 export default function Stock() {
-  const [searchParams, setSearchParams] = useSearchParams("all");
-  const currentTab = searchParams.get('tab') || 'current';
-  const period = searchParams.get('period') || sessionStorage.getItem('period_stock') || 'today';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get('tab') || 'current_stock';
+  const currentTab = (rawTab === 'current_stock' || rawTab === 'current') ? 'current' : rawTab;
+  const period = searchParams.get('period') || sessionStorage.getItem('period_stock') || 'all';
 
   useEffect(() => {
+    let nextParams = null;
     if (!searchParams.has('period')) {
-      const nextParams = new URLSearchParams(searchParams);
+      nextParams = new URLSearchParams(nextParams || searchParams);
       nextParams.set('period', period);
+    }
+    if (!searchParams.has('tab')) {
+      nextParams = new URLSearchParams(nextParams || searchParams);
+      nextParams.set('tab', 'current_stock');
+    }
+    if (nextParams) {
       setSearchParams(nextParams, { replace: true });
     }
   }, [searchParams, period, setSearchParams]);
@@ -491,7 +499,7 @@ export default function Stock() {
         <div className="hidden md:block tabs-container border-b border-surface-low">
           <div className="tabs-scrollable space-x-6 text-sm font-medium">
             <Link
-              to="/erp/stock"
+              to="/erp/stock?tab=current_stock"
               className={`pb-2 ${currentTab === 'current' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
             >
               Current Stock

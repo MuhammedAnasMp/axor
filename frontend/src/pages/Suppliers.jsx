@@ -90,14 +90,22 @@ function ContactNumber({ number, isWhatsapp }) {
 }
 
 export default function Suppliers() {
-  const [searchParams, setSearchParams] = useSearchParams("all");
-  const currentTab = searchParams.get('tab') || 'directory';
-  const period = searchParams.get('period') || sessionStorage.getItem('period_suppliers') || 'today';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get('tab') || 'all_supllier';
+  const currentTab = (rawTab === 'all_supllier' || rawTab === 'directory') ? 'directory' : rawTab;
+  const period = searchParams.get('period') || sessionStorage.getItem('period_suppliers') || 'all';
 
   useEffect(() => {
+    let nextParams = null;
     if (!searchParams.has('period')) {
-      const nextParams = new URLSearchParams(searchParams);
+      nextParams = new URLSearchParams(nextParams || searchParams);
       nextParams.set('period', period);
+    }
+    if (!searchParams.has('tab')) {
+      nextParams = new URLSearchParams(nextParams || searchParams);
+      nextParams.set('tab', 'all_supllier');
+    }
+    if (nextParams) {
       setSearchParams(nextParams, { replace: true });
     }
   }, [searchParams, period, setSearchParams]);
@@ -780,7 +788,7 @@ export default function Suppliers() {
         <div className="hidden md:block tabs-container border-b border-surface-low">
           <div className="tabs-scrollable space-x-6 text-sm font-medium">
             <Link
-              to="/erp/suppliers"
+              to="/erp/suppliers?tab=all_supllier"
               className={`pb-2 ${currentTab === 'directory' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'}`}
             >
               Supplier Directory
@@ -805,7 +813,7 @@ export default function Suppliers() {
       {isMobile && (
         <div className="flex border-b border-surface-low mb-4">
           <Link
-            to="/erp/suppliers"
+            to="/erp/suppliers?tab=all_supllier"
             className={`flex-1 text-center py-2.5 text-xs font-semibold transition ${currentTab === 'directory' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-text-secondary'
               }`}
           >
