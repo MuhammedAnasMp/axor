@@ -24,16 +24,16 @@ export default function MobileBottomSheet({ isOpen, onClose, title, children }) 
             className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex max-h-[85vh] flex-col rounded-t-3xl bg-white shadow-2xl border-t border-surface-low overflow-hidden safe-pb mb-0"
           >
             {/* Drag Handle Area */}
-            <div className="relative flex items-center justify-center py-3 border-b border-surface-low cursor-grab active:cursor-grabbing">
-              <div className="my-3 h-1.5 w-12 rounded-full bg-surface-highest" />
+            <div className="relative flex items-center justify-center py-1 border-b border-surface-low cursor-grab active:cursor-grabbing">
+              <div className="my-1 h-1.5 w-12 rounded-full bg-surface-highest" />
               {title && (
-                <span className="absolute left-6 text-sm font-bold text-text-primary">
+                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-sm font-bold text-text-primary">
                   {title}
                 </span>
               )}
               <button
                 onClick={onClose}
-                className="absolute right-4 p-1 rounded-full text-text-secondary hover:bg-surface-low"
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full text-text-secondary hover:bg-surface-low"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

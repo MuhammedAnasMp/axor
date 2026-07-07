@@ -224,7 +224,7 @@ export default function Sidebar() {
       subItems: [
         { title: 'Create Invoice', path: '/erp/sales?tab=create_invoice' },
         { title: 'Sales History', path: '/erp/sales?tab=history' },
-        { title: 'Customer Payments', path: '/erp/sales?tab=payments' }
+        // { title: 'Customer Payments', path: '/erp/sales?tab=payments' }
       ]
     }
   ];
@@ -332,7 +332,7 @@ export default function Sidebar() {
     }
     if (path.startsWith('/erp/sales')) {
       if (tab === 'history') return 'Sales History';
-      if (tab === 'payments') return 'Customer Payments';
+      // if (tab === 'payments') return 'Customer Payments';
       return 'Create Invoice';
     }
     return '';

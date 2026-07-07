@@ -7,6 +7,10 @@ import PaginationControls from '../components/PaginationControls';
 import { SkeletonTable, Spinner } from '../components/Skeleton';
 import MobileBottomSheet from '../components/MobileBottomSheet';
 import { TrashIcon } from "@heroicons/react/24/solid";
+import { toPng } from 'html-to-image';
+import { Share } from '@capacitor/share';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
 
 export default function Purchases() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,6 +39,14 @@ export default function Purchases() {
       sessionStorage.setItem('period_purchases', urlPeriod);
     }
   }, [searchParams]);
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Dropdown states (unpaginated list)
   const [suppliers, setSuppliers] = useState([]);
@@ -114,6 +126,7 @@ export default function Purchases() {
   // Details Modal State
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsPO, setDetailsPO] = useState(null);
+  const [isSharingImage, setIsSharingImage] = useState(false);
   const [expandedReturnRows, setExpandedReturnRows] = useState({});
   const [showMobileCart, setShowMobileCart] = useState(false);
   const [showMobileBilling, setShowMobileBilling] = useState(false);
@@ -124,10 +137,6 @@ export default function Purchases() {
   const [shareIncludeCost, setShareIncludeCost] = useState(() => {
     const saved = localStorage.getItem('shareIncludeCost');
     return saved !== null ? JSON.parse(saved) : true;
-  });
-  const [shareIncludeRsp, setShareIncludeRsp] = useState(() => {
-    const saved = localStorage.getItem('shareIncludeRsp');
-    return saved !== null ? JSON.parse(saved) : false;
   });
   const [shareBusinessInfo, setShareBusinessInfo] = useState('');
   const [supplierDetail, setSupplierDetail] = useState(null);
@@ -400,6 +409,201 @@ export default function Purchases() {
     }
   }, [supplier, suppliers, showSupplierDropdown]);
 
+  const renderBrandedPO = (po, scaleForMobile = false) => {
+    if (!po) return null;
+    return (
+      <div
+        className="bg-white p-6 md:p-8 border border-gray-200 rounded-lg shadow-xs text-left"
+        style={{
+          width: scaleForMobile ? '100%' : '600px',
+          margin: '0 auto',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+        }}
+      >
+        {/* Header */}
+        <div className="flex justify-between items-start mb-6">
+          <div className="flex items-center space-x-3">
+            <img
+              src="/icon_for_website-removebg-preview_no_border.png"
+              alt="Company Logo"
+              className="h-12 w-12 object-contain"
+            />
+            <div>
+              <h2 className="text-xl font-bold text-gray-850">
+                {currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}
+              </h2>
+              {currentUser?.phone && (
+                <p className="text-xs text-gray-500">Phone: {currentUser.phone}</p>
+              )}
+              {currentUser?.email && (
+                <p className="text-xs text-gray-500">Email: {currentUser.email}</p>
+              )}
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="inline-block px-2.5 py-1 text-xs font-semibold rounded bg-amber-100 text-amber-800 uppercase">
+              Purchase Order
+            </span>
+            <p className="text-xs font-mono text-gray-500 mt-2">
+              No: PO-{po.id}
+            </p>
+            <p className="text-xs text-gray-500">
+              Date: {new Date(po.timestamp).toLocaleDateString()}
+            </p>
+          </div>
+        </div>
+
+        <hr className="border-gray-100 my-4" />
+
+        {/* Supplier Info */}
+        <div className="mb-6 text-left">
+          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">
+            To (Supplier):
+          </span>
+          <span className="text-sm font-bold text-gray-800 block mt-0.5 font-sans">
+            {po.supplier_name}
+          </span>
+          {supplierDetail?.contact_number && (
+            <span className="text-xs text-gray-500 block mt-0.5">
+              Phone: {supplierDetail.contact_number}
+            </span>
+          )}
+          {po.invoice_number && (
+            <span className="text-xs text-gray-500 block mt-1">
+              Ref Invoice: {po.invoice_number}
+            </span>
+          )}
+        </div>
+
+        {/* Items Table */}
+        <div className="border border-gray-100 rounded-lg overflow-hidden mb-6">
+          <table className="min-w-full text-left text-xs">
+            <thead className="bg-gray-50 text-gray-500 font-semibold uppercase">
+              <tr>
+                <th className="px-4 py-2.5">Product</th>
+                <th className="px-4 py-2.5 text-right">Qty</th>
+                {shareIncludeCost && <th className="px-4 py-2.5 text-right">Cost</th>}
+                {shareIncludeCost && <th className="px-4 py-2.5 text-right">Total</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {po.items?.map((item, idx) => (
+                <tr key={idx}>
+                  <td className="px-4 py-3">
+                    <span className="font-semibold text-gray-800 block">{item.product_name}</span>
+                    {item.barcode && (
+                      <span className="text-[10px] text-gray-400 font-mono block mt-0.5">
+                        {item.barcode}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-800">{item.quantity}</td>
+                  {shareIncludeCost && (
+                    <td className="px-4 py-3 text-right text-gray-500">
+                      {formatCurrency(item.purchase_cost)}
+                    </td>
+                  )}
+                  {shareIncludeCost && (
+                    <td className="px-4 py-3 text-right font-bold text-gray-800">
+                      {formatCurrency(item.quantity * item.purchase_cost)}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Totals Summary */}
+        {shareIncludeCost && (
+          <div className="flex justify-end mb-6">
+            <div className="w-1/2 space-y-2 text-xs font-semibold text-gray-500">
+              <div className="flex justify-between font-bold text-sm text-gray-800 border-t border-gray-100 pt-2">
+                <span>Total Amount:</span>
+                <span className="text-brand-blue text-base">
+                  {formatCurrency(po.total_amount)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Footer Notes / Thank You */}
+        <div className="text-center pt-4 border-t border-dashed border-gray-100">
+          <p className="text-[10px] text-gray-400 text-center">Generated by Axon</p>
+        </div>
+      </div>
+    );
+  };
+
+  const handleSharePOAsImage = async (po) => {
+    if (!po) return;
+    setIsSharingImage(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const node = document.getElementById('po-share-card');
+      if (!node) {
+        throw new Error('PO template element not found');
+      }
+
+      const dataUrl = await toPng(node, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+      });
+
+      const fileName = `PO-${po.id}.png`;
+
+      if (Capacitor.isNativePlatform()) {
+        const base64Data = dataUrl.split(',')[1];
+
+        const writeResult = await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: Directory.Cache,
+        });
+
+        await Share.share({
+          title: `Purchase Order PO-${po.id}`,
+          text: `Purchase Order PO-${po.id} to ${po.supplier_name} from ${currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}`,
+          files: [writeResult.uri],
+        });
+      } else {
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], fileName, { type: 'image/png' });
+
+        const downloadFallback = () => {
+          const link = document.createElement('a');
+          link.download = fileName;
+          link.href = dataUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        };
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              title: `Purchase Order PO-${po.id}`,
+              text: `Purchase Order PO-${po.id} to ${po.supplier_name} from ${currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}`,
+              files: [file],
+            });
+          } catch (shareErr) {
+            console.warn('Navigator share blocked/cancelled, falling back to download:', shareErr);
+            downloadFallback();
+          }
+        } else {
+          downloadFallback();
+        }
+      }
+    } catch (err) {
+      console.error('Error sharing PO image:', err);
+      alert('Failed to share PO: ' + err.message);
+    } finally {
+      setIsSharingImage(false);
+    }
+  };
+
   const loadDropdowns = () => {
     setDropdownsLoading(true);
     Promise.all([
@@ -424,7 +628,7 @@ export default function Purchases() {
     api.auth.me()
       .then((user) => {
         setCurrentUser(user);
-        const bizName = user?.company_name || user?.business_name || 'Axor Accessories';
+        const bizName = user?.company_name || user?.business_name || 'Axon Accessories';
         const bizPhone = user?.phone || user?.contact_number || '';
         const firstName = user?.user?.first_name || user?.first_name || '';
         const lastName = user?.user?.last_name || user?.last_name || '';
@@ -436,7 +640,7 @@ export default function Purchases() {
       })
       .catch((err) => {
         console.error("Error fetching user profile:", err);
-        setShareBusinessInfo('Axor Accessories');
+        setShareBusinessInfo('Axon Accessories');
       });
   }, []);
 
@@ -2142,7 +2346,7 @@ export default function Purchases() {
                       <td className="px-4 py-4 text-text-secondary">{p.payment_type}</td>
                       <td className="px-4 py-4 text-right text-text-secondary">{formatCurrency(p.additional_costs)}</td>
                       <td className="px-4 py-4 text-right font-semibold text-text-primary">{formatCurrency(p.total_amount)}</td>
-                      <td className="px-4 py-4 text-center flex items-center justify-center space-x-2">
+                      <td className="px-4 py-4 text-center flex items-center justify-center space-x-2" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => { setDetailsPO(p); setShowShareModal(true); }}
                           className="rounded bg-brand-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-cobalt transition flex items-center space-x-1 cursor-pointer"
@@ -2191,55 +2395,24 @@ export default function Purchases() {
               ))
             ) : (
               receivePag.data.map((p) => (
-                <div key={p.id} className="border border-surface-low rounded-lg p-4 bg-gray-100 space-y-3 shadow-sm">
-                  <div className="flex justify-between items-start border-b border-surface-low pb-2">
+                <div
+                  key={p.id}
+                  onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}
+                  className="rounded-lg border border-surface-low bg-white p-3 shadow-sm active:bg-surface-low transition-colors cursor-pointer"
+                >
+                  <div className="flex justify-between items-start mb-1">
                     <div>
-                      <span
-                        onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}
-                        className="font-bold text-sm text-brand-blue cursor-pointer hover:underline"
-                      >
-                        PO-{p.id}
-                      </span>
-                      <span className="text-text-primary font-semibold block mt-1">{p.supplier_name}</span>
+                      <span className="font-semibold text-text-primary text-sm">PO-{p.id}</span> ({p.payment_type})
+                      <span className="text-text-secondary text-[10px] block mt-0.5">{p.supplier_name}</span>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] font-bold text-text-secondary uppercase block">Total</span>
-                      <span className="font-semibold text-sm text-brand-blue">{formatCurrency(p.total_amount)}</span>
+                      <span className="font-bold text-brand-blue text-sm">{formatCurrency(p.total_amount)}</span>
+                      <span className="font-semibold text-amber-600 text-[10px] block mt-0.5">Pending</span>
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs text-text-secondary">
-                    <div>
-                      <span className="block font-semibold">Ref Invoice #</span>
-                      <span className="text-text-primary font-mono">{p.invoice_number || '-'}</span>
-                    </div>
-                    <div>
-                      <span className="block font-semibold">Payment Type</span>
-                      <span className="text-text-primary font-medium">{p.payment_type}</span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="block font-semibold">Landed Cost</span>
-                      <span className="text-text-primary">{formatCurrency(p.additional_costs)}</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-surface-lowest flex justify-end space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => { setDetailsPO(p); setShowShareModal(true); }}
-                      className="rounded bg-brand-blue/10 p-2 text-brand-blue hover:bg-brand-blue hover:text-white transition cursor-pointer"
-                      title="Share PO"
-                    >
-                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.713-1.458L0 24zm6.275-3.66c1.66.986 3.292 1.503 4.887 1.504 5.485 0 9.948-4.468 9.95-9.953.002-2.656-1.026-5.153-2.896-7.027C16.399 3.018 13.9 1.99 11.231 1.99c-5.492 0-9.957 4.471-9.96 9.956-.001 1.778.48 3.5 1.393 5.006l-1.011 3.69 3.79-.994zM16.92 14.73c-.287-.143-1.697-.837-1.959-.933-.262-.095-.452-.143-.642.143-.19.286-.738.933-.905 1.124-.167.19-.333.214-.62.071-.286-.143-1.21-.446-2.305-1.424-.853-.76-1.429-1.7-1.597-1.986-.167-.286-.018-.44.125-.581.13-.127.287-.333.43-.5.143-.167.19-.286.286-.476.095-.19.048-.357-.024-.5-.071-.143-.642-1.547-.88-2.12-.23-.556-.464-.48-.642-.489l-.547-.01c-.19 0-.5.071-.762.357-.262.286-1.002.977-1.002 2.38s1.02 2.76 1.162 2.95c.143.19 2.007 3.064 4.862 4.297.68.293 1.21.468 1.62.598.683.217 1.305.187 1.796.114.548-.082 1.697-.69 1.936-1.357.24-.667.24-1.238.167-1.357-.072-.119-.262-.19-.548-.333z" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => handleOpenReceiveModal(p)}
-                      className="rounded bg-green-600 px-4 py-2 text-xs font-bold text-white hover:bg-green-700 transition flex-1 sm:w-auto"
-                    >
-                      Receive PO
-                    </button>
+                  <div className="flex justify-between items-center text-xs text-text-secondary mt-1">
+                    <span>Invoice Ref: {p.invoice_number || '-'}</span>
+                    <span>{new Date(p.timestamp).toLocaleDateString()}</span>
                   </div>
                 </div>
               ))
@@ -2393,7 +2566,7 @@ export default function Purchases() {
                           {p.status || (p.is_received ? 'Received' : 'Pending')}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-center flex items-center justify-center space-x-2">
+                      <td className="px-4 py-4 text-center flex items-center justify-center space-x-2" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => { setDetailsPO(p); setShowShareModal(true); }}
                           className="rounded bg-brand-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-cobalt transition flex items-center space-x-1 cursor-pointer"
@@ -2447,64 +2620,29 @@ export default function Purchases() {
               ))
             ) : (
               historyPag.data.map((p) => (
-                <div key={p.id} className="border border-surface-low rounded-lg p-4 bg-gray-100 space-y-3 shadow-sm">
-                  <div className="flex justify-between items-start border-b border-surface-low pb-2">
+                <div
+                  key={p.id}
+                  onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}
+                  className="rounded-lg border border-surface-low bg-white p-3 shadow-sm active:bg-surface-low transition-colors cursor-pointer"
+                >
+                  <div className="flex justify-between items-start mb-1">
                     <div>
-                      <span
-                        onClick={() => { setDetailsPO(p); setShowDetailsModal(true); }}
-                        className="font-bold text-sm text-brand-blue cursor-pointer hover:underline"
-                      >
-                        PO-{p.id}
-                      </span>
-                      <span className="text-text-secondary text-[10px] block font-mono mt-0.5">
-                        {new Date(p.timestamp).toLocaleString()}
-                      </span>
-                      <span className="text-text-primary font-semibold block mt-1">{p.supplier_name}</span>
+                      <span className="font-semibold text-text-primary text-sm">PO-{p.id}</span> ({p.payment_type})
+                      <span className="text-text-secondary text-[10px] block mt-0.5">{p.supplier_name}</span>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] font-bold text-text-secondary uppercase block">Total</span>
-                      <span className="font-semibold text-sm text-brand-blue">{formatCurrency(p.total_amount)}</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs text-text-secondary">
-                    <div>
-                      <span className="block font-semibold">Landed Cost</span>
-                      <span className="text-text-primary">{formatCurrency(p.additional_costs)}</span>
-                    </div>
-                    <div>
-                      <span className="block font-semibold">Status</span>
-                      <span className={`inline-block rounded px-1.5 py-0.5 text-[9px] font-bold mt-0.5 ${p.status === 'Returned' ? 'bg-red-100 text-red-800' :
-                        p.status === 'Partially Returned' ? 'bg-orange-100 text-orange-800' :
-                          p.status === 'Received' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                      <span className="font-bold text-brand-blue text-sm">{formatCurrency(p.total_amount)}</span>
+                      <span className={`font-semibold text-[10px] block mt-0.5 ${p.status === 'Returned' ? 'text-red-600' :
+                        p.status === 'Partially Returned' ? 'text-orange-600' :
+                          p.status === 'Received' ? 'text-green-600' : 'text-amber-600'
                         }`}>
                         {p.status || (p.is_received ? 'Received' : 'Pending')}
                       </span>
                     </div>
                   </div>
-
-                  <div className="pt-2 border-t border-surface-lowest flex justify-end space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => { setDetailsPO(p); setShowShareModal(true); }}
-                      className="rounded bg-brand-blue/10 p-2 text-brand-blue hover:bg-brand-blue hover:text-white transition cursor-pointer"
-                      title="Share PO"
-                    >
-                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.713-1.458L0 24zm6.275-3.66c1.66.986 3.292 1.503 4.887 1.504 5.485 0 9.948-4.468 9.95-9.953.002-2.656-1.026-5.153-2.896-7.027C16.399 3.018 13.9 1.99 11.231 1.99c-5.492 0-9.957 4.471-9.96 9.956-.001 1.778.48 3.5 1.393 5.006l-1.011 3.69 3.79-.994zM16.92 14.73c-.287-.143-1.697-.837-1.959-.933-.262-.095-.452-.143-.642.143-.19.286-.738.933-.905 1.124-.167.19-.333.214-.62.071-.286-.143-1.21-.446-2.305-1.424-.853-.76-1.429-1.7-1.597-1.986-.167-.286-.018-.44.125-.581.13-.127.287-.333.43-.5.143-.167.19-.286.286-.476.095-.19.048-.357-.024-.5-.071-.143-.642-1.547-.88-2.12-.23-.556-.464-.48-.642-.489l-.547-.01c-.19 0-.5.071-.762.357-.262.286-1.002.977-1.002 2.38s1.02 2.76 1.162 2.95c.143.19 2.007 3.064 4.862 4.297.68.293 1.21.468 1.62.598.683.217 1.305.187 1.796.114.548-.082 1.697-.69 1.936-1.357.24-.667.24-1.238.167-1.357-.072-.119-.262-.19-.548-.333z" />
-                      </svg>
-                    </button>
-                    {p.is_received && (
-                      <button
-                        onClick={() => handleOpenReturnModal(p)}
-                        className="inline-flex items-center justify-center rounded bg-red-600 hover:bg-red-700 px-3 py-2 text-xs font-bold text-white transition shadow-sm flex-1 sm:w-auto cursor-pointer"
-                      >
-                        <svg className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                        </svg>
-                        <span>Return Purchase</span>
-                      </button>
-                    )}
+                  <div className="flex justify-between items-center text-xs text-text-secondary mt-1">
+                    <span>Landed Cost: {formatCurrency(p.additional_costs)}</span>
+                    <span>{new Date(p.timestamp).toLocaleDateString()}</span>
                   </div>
                 </div>
               ))
@@ -3778,8 +3916,9 @@ export default function Purchases() {
         </div>
       )}
 
-      {showDetailsModal && detailsPO && (
-        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/45 px-4 py-6 overflow-y-auto">
+      {/* Selected Purchase Order Details Modal (Desktop only) */}
+      {!isMobile && showDetailsModal && detailsPO && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6 overflow-y-auto">
           <div className="w-full max-w-4xl rounded-lg bg-white shadow-xl flex flex-col max-h-[90vh] relative border border-surface-low animate-in fade-in duration-200">
             {/* Header */}
             <div className="flex justify-between items-center p-4 border-b border-surface-low bg-surface-lowest">
@@ -3849,7 +3988,7 @@ export default function Purchases() {
               <div>
                 <h4 className="text-xs font-bold text-text-primary mb-2 uppercase tracking-wider">Line Items</h4>
                 {/* Desktop items table */}
-                <div className="border border-surface-low rounded-lg hidden md:block overflow-hidden">
+                <div className="border border-surface-low rounded-lg overflow-hidden">
                   <table className="min-w-full text-left text-xs bg-white">
                     <thead className="bg-surface-low text-text-secondary font-semibold uppercase">
                       <tr>
@@ -3894,48 +4033,6 @@ export default function Purchases() {
                       ))}
                     </tbody>
                   </table>
-                </div>
-
-                {/* Mobile items cards */}
-                <div className="block md:hidden space-y-3">
-                  {(detailsPO.items || []).map((item, idx) => (
-                    <div key={idx} className="border border-surface-low rounded-lg p-3 bg-white space-y-2 shadow-sm text-xs">
-                      <div className="flex justify-between items-start border-b border-surface-lowest pb-1.5">
-                        <div>
-                          <div className="font-semibold text-text-primary">{item.product_name}</div>
-                          {item.suitable_models_details && item.suitable_models_details.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1 font-normal">
-                              {item.suitable_models_details.map((m) => (
-                                <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
-                                  {m.brand_name} {m.model_name}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          <div className="text-[10px] text-text-secondary font-mono">{item.barcode}</div>
-                        </div>
-                        <div className="text-right font-semibold text-brand-blue">
-                          {formatCurrency(item.quantity * item.purchase_cost)}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-text-secondary">
-                        <div>
-                          <span className="block text-[10px] font-semibold">Purchased Qty</span>
-                          <span className="text-text-primary font-medium">{item.quantity}</span>
-                        </div>
-                        <div>
-                          <span className="block text-[10px] font-semibold">Returned Qty</span>
-                          <span className={item.returned_qty > 0 ? "text-error font-bold" : "text-text-primary"}>
-                            {item.returned_qty || 0}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="block text-[10px] font-semibold">Unit Cost</span>
-                          <span className="text-text-primary">{formatCurrency(item.purchase_cost)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
 
@@ -4005,15 +4102,36 @@ export default function Purchases() {
 
             {/* Footer */}
             <div className="p-3 border-t border-surface-low bg-surface-lowest flex justify-end space-x-2">
+              {!detailsPO.is_received && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDetailsModal(false);
+                    handleOpenReceiveModal(detailsPO);
+                  }}
+                  className="rounded bg-green-50 text-green-700 border border-green-200 px-4 py-2 text-xs font-semibold hover:bg-green-100 transition cursor-pointer"
+                >
+                  Receive PO
+                </button>
+              )}
+              {detailsPO.is_received && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDetailsModal(false);
+                    handleOpenReturnModal(detailsPO);
+                  }}
+                  className="rounded bg-red-50 text-red-700 border border-red-200 px-4 py-2 text-xs font-semibold hover:bg-red-100 transition cursor-pointer"
+                >
+                  Return Purchase
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setShowShareModal(true)}
-                className="rounded bg-brand-blue px-4 py-2 text-xs font-bold text-white hover:bg-brand-cobalt transition-colors flex items-center space-x-1 cursor-pointer"
+                className="rounded bg-brand-blue/5 text-brand-blue border border-brand-blue/20 px-4 py-2 text-xs font-semibold hover:bg-brand-blue/10 transition cursor-pointer"
               >
-                <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.713-1.458L0 24zm6.275-3.66c1.66.986 3.292 1.503 4.887 1.504 5.485 0 9.948-4.468 9.95-9.953.002-2.656-1.026-5.153-2.896-7.027C16.399 3.018 13.9 1.99 11.231 1.99c-5.492 0-9.957 4.471-9.96 9.956-.001 1.778.48 3.5 1.393 5.006l-1.011 3.69 3.79-.994zM16.92 14.73c-.287-.143-1.697-.837-1.959-.933-.262-.095-.452-.143-.642.143-.19.286-.738.933-.905 1.124-.167.19-.333.214-.62.071-.286-.143-1.21-.446-2.305-1.424-.853-.76-1.429-1.7-1.597-1.986-.167-.286-.018-.44.125-.581.13-.127.287-.333.43-.5.143-.167.19-.286.286-.476.095-.19.048-.357-.024-.5-.071-.143-.642-1.547-.88-2.12-.23-.556-.464-.48-.642-.489l-.547-.01c-.19 0-.5.071-.762.357-.262.286-1.002.977-1.002 2.38s1.02 2.76 1.162 2.95c.143.19 2.007 3.064 4.862 4.297.68.293 1.21.468 1.62.598.683.217 1.305.187 1.796.114.548-.082 1.697-.69 1.936-1.357.24-.667.24-1.238.167-1.357-.072-.119-.262-.19-.548-.333z" />
-                </svg>
-                <span>Share PO</span>
+                Share PO
               </button>
               <button
                 type="button"
@@ -4030,15 +4148,187 @@ export default function Purchases() {
         </div>
       )}
 
+      {/* Mobile Bottom Sheet for PO Details */}
+      {isMobile && showDetailsModal && detailsPO && (
+        <MobileBottomSheet
+          isOpen={showDetailsModal}
+          onClose={() => {
+            setShowDetailsModal(false);
+            setDetailsPO(null);
+          }}
+          title={`PO Details: PO-${detailsPO.id}`}
+        >
+          <div className="space-y-6 pb-6 text-left">
+            {/* PO Info Grid */}
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-surface-lowest border border-surface-low text-xs">
+              <div>
+                <span className="block font-semibold text-text-secondary">Supplier</span>
+                <span className="text-text-primary font-bold">{detailsPO.supplier_name}</span>
+              </div>
+              <div>
+                <span className="block font-semibold text-text-secondary">Ref Invoice #</span>
+                <span className="text-text-primary font-mono">{detailsPO.invoice_number || '-'}</span>
+              </div>
+              <div>
+                <span className="block font-semibold text-text-secondary">Payment Method</span>
+                <span className="text-text-primary font-medium">{detailsPO.payment_type}</span>
+              </div>
+              <div>
+                <span className="block font-semibold text-text-secondary">Total Amount</span>
+                <span className="text-brand-blue font-bold">{formatCurrency(detailsPO.total_amount)}</span>
+              </div>
+              <div>
+                <span className="block font-semibold text-text-secondary">Landed Cost</span>
+                <span className="text-text-primary">{formatCurrency(detailsPO.additional_costs)}</span>
+              </div>
+              <div>
+                <span className="block font-semibold text-text-secondary">Rounding / Discount</span>
+                <span className="text-text-primary">{formatCurrency(detailsPO.rounding || 0)}</span>
+              </div>
+              <div>
+                <span className="block font-semibold text-text-secondary">Deducted Credit</span>
+                <span className="text-text-primary">{formatCurrency(detailsPO.deducted_credit || 0)}</span>
+              </div>
+              <div>
+                <span className="block font-semibold text-text-secondary">Paid From Account</span>
+                <span className="text-text-primary">{detailsPO.paid_from_name || '-'}</span>
+              </div>
+            </div>
+
+            {/* Line Items */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">Line Items</h4>
+              <div className="space-y-3">
+                {(detailsPO.items || []).map((item, idx) => (
+                  <div key={idx} className="border border-surface-low rounded-lg p-3 bg-white space-y-2 shadow-xs text-xs">
+                    <div className="flex justify-between items-start border-b border-surface-lowest pb-1.5">
+                      <div>
+                        <div className="font-semibold text-text-primary">{item.product_name}</div>
+                        {item.suitable_models_details && item.suitable_models_details.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1 font-normal">
+                            {item.suitable_models_details.map((m) => (
+                              <span key={m.id} className="inline-block px-1.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-semibold border border-brand-blue/15">
+                                {m.brand_name} {m.model_name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="text-[10px] text-text-secondary font-mono">{item.barcode}</div>
+                      </div>
+                      <div className="text-right font-semibold text-brand-blue">
+                        {formatCurrency(item.quantity * item.purchase_cost)}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-text-secondary">
+                      <div>
+                        <span className="block text-[10px] font-semibold">Purchased Qty</span>
+                        <span className="text-text-primary font-medium">{item.quantity}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-semibold">Returned Qty</span>
+                        <span className={item.returned_qty > 0 ? "text-error font-bold" : "text-text-primary"}>
+                          {item.returned_qty || 0}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-semibold">Unit Cost</span>
+                        <span className="text-text-primary">{formatCurrency(item.purchase_cost)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Chronological Return Log History */}
+            {detailsPO.returns && detailsPO.returns.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-error uppercase tracking-wider flex items-center space-x-2">
+                  <svg className="h-4 w-4 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
+                  </svg>
+                  <span>Return Log History</span>
+                </h4>
+                <div className="relative border-l border-error/20 pl-4 ml-2 space-y-4">
+                  {detailsPO.returns.map((ret) => (
+                    <div key={ret.id} className="relative text-xs">
+                      <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-error border border-white" />
+                      <div className="bg-red-50/30 border border-error/15 rounded-lg p-3 space-y-2">
+                        <div className="flex justify-between items-center border-b border-error/10 pb-1.5">
+                          <div>
+                            <span className="font-bold text-error">Return ID: #{ret.id}</span>
+                            <span className="text-[10px] text-text-secondary block mt-0.5">{new Date(ret.timestamp).toLocaleString()}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] text-text-secondary block">Refund</span>
+                            <span className="font-bold text-error">{formatCurrency(ret.refund_amount)}</span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-text-secondary text-[11px]">
+                          <div><span className="font-semibold">Account:</span> {ret.credit_account_name || 'N/A'}</div>
+                          <div><span className="font-semibold">Fee:</span> {formatCurrency(ret.adjustment)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="pt-2 flex flex-col gap-2">
+              {!detailsPO.is_received && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDetailsModal(false);
+                    handleOpenReceiveModal(detailsPO);
+                  }}
+                  className="w-full py-2.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 font-bold text-xs transition flex items-center justify-center"
+                >
+                  Receive PO
+                </button>
+              )}
+              {detailsPO.is_received && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDetailsModal(false);
+                    handleOpenReturnModal(detailsPO);
+                  }}
+                  className="w-full py-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs transition flex items-center justify-center"
+                >
+                  Return Purchase
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowShareModal(true)}
+                className="w-full py-2.5 rounded-lg bg-brand-blue/5 border border-brand-blue/20 hover:bg-brand-blue/10 text-brand-blue font-semibold text-xs transition flex items-center justify-center"
+              >
+                Share PO
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDetailsModal(false);
+                  setDetailsPO(null);
+                }}
+                className="w-full py-2.5 rounded-lg border border-surface-dim text-text-secondary font-medium text-xs hover:bg-surface-low transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </MobileBottomSheet>
+      )}
+
       {showShareModal && detailsPO && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-lg rounded-2xl bg-white border border-surface-low shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
             {/* Header */}
             <div className="flex justify-between items-center p-4 border-b border-surface-low bg-surface-lowest">
               <h3 className="text-sm font-bold text-text-primary flex items-center space-x-2">
-                <svg className="h-5 w-5 text-[#25D366] fill-current" viewBox="0 0 24 24">
-                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.713-1.458L0 24zm6.275-3.66c1.66.986 3.292 1.503 4.887 1.504 5.485 0 9.948-4.468 9.95-9.953.002-2.656-1.026-5.153-2.896-7.027C16.399 3.018 13.9 1.99 11.231 1.99c-5.492 0-9.957 4.471-9.96 9.956-.001 1.778.48 3.5 1.393 5.006l-1.011 3.69 3.79-.994zM16.92 14.73c-.287-.143-1.697-.837-1.959-.933-.262-.095-.452-.143-.642.143-.19.286-.738.933-.905 1.124-.167.19-.333.214-.62.071-.286-.143-1.21-.446-2.305-1.424-.853-.76-1.429-1.7-1.597-1.986-.167-.286-.018-.44.125-.581.13-.127.287-.333.43-.5.143-.167.19-.286.286-.476.095-.19.048-.357-.024-.5-.071-.143-.642-1.547-.88-2.12-.23-.556-.464-.48-.642-.489l-.547-.01c-.19 0-.5.071-.762.357-.262.286-1.002.977-1.002 2.38s1.02 2.76 1.162 2.95c.143.19 2.007 3.064 4.862 4.297.68.293 1.21.468 1.62.598.683.217 1.305.187 1.796.114.548-.082 1.697-.69 1.936-1.357.24-.667.24-1.238.167-1.357-.072-.119-.262-.19-.548-.333z" />
-                </svg>
                 <span>Share PO (PO-{detailsPO.id})</span>
               </h3>
               <button
@@ -4053,7 +4343,7 @@ export default function Purchases() {
             {/* Body */}
             <div className="p-5 space-y-4 overflow-y-auto text-left">
               {/* Option checkboxes styled as capsules */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="w-full">
                 <button
                   type="button"
                   onClick={() => {
@@ -4061,7 +4351,7 @@ export default function Purchases() {
                     setShareIncludeCost(val);
                     localStorage.setItem('shareIncludeCost', JSON.stringify(val));
                   }}
-                  className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition ${shareIncludeCost
+                  className={`flex items-center justify-between w-full p-3 rounded-xl border text-xs font-semibold transition ${shareIncludeCost
                     ? 'bg-brand-blue/5 border-brand-blue text-brand-blue'
                     : 'bg-white border-surface-dim text-text-secondary hover:bg-surface-lowest'
                     }`}
@@ -4071,26 +4361,7 @@ export default function Purchases() {
                     {shareIncludeCost && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
                   </div>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const val = !shareIncludeRsp;
-                    setShareIncludeRsp(val);
-                    localStorage.setItem('shareIncludeRsp', JSON.stringify(val));
-                  }}
-                  className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition ${shareIncludeRsp
-                    ? 'bg-brand-blue/5 border-brand-blue text-brand-blue'
-                    : 'bg-white border-surface-dim text-text-secondary hover:bg-surface-lowest'
-                    }`}
-                >
-                  <span>Include RSP (Price)</span>
-                  <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${shareIncludeRsp ? 'border-brand-blue bg-brand-blue' : 'border-surface-dim'}`}>
-                    {shareIncludeRsp && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
-                  </div>
-                </button>
               </div>
-
-
 
               {/* Preview Box styled as WhatsApp chat bubble */}
               <div className="space-y-1">
@@ -4115,15 +4386,8 @@ export default function Purchases() {
                       text += `\n*Items:*\n`;
                       (detailsPO.items || []).forEach((item) => {
                         let line = `- ${item.product_name} x ${item.quantity}`;
-                        const details = [];
                         if (shareIncludeCost) {
-                          details.push(`Cost: ₹${item.purchase_cost}`);
-                        }
-                        if (shareIncludeRsp) {
-                          details.push(`RSP: ₹${item.selling_price || 0}`);
-                        }
-                        if (details.length > 0) {
-                          line += ` (${details.join(', ')})`;
+                          line += ` (Cost: ₹${item.purchase_cost})`;
                         }
                         text += line + `\n`;
                       });
@@ -4163,15 +4427,8 @@ export default function Purchases() {
                   text += `\n*Items:*\n`;
                   (detailsPO.items || []).forEach((item) => {
                     let line = `- ${item.product_name} x ${item.quantity}`;
-                    const details = [];
                     if (shareIncludeCost) {
-                      details.push(`Cost: ₹${item.purchase_cost}`);
-                    }
-                    if (shareIncludeRsp) {
-                      details.push(`RSP: ₹${item.selling_price || 0}`);
-                    }
-                    if (details.length > 0) {
-                      line += ` (${details.join(', ')})`;
+                      line += ` (Cost: ₹${item.purchase_cost})`;
                     }
                     text += line + `\n`;
                   });
@@ -4187,64 +4444,21 @@ export default function Purchases() {
                     : `https://wa.me/?text=${encodedText}`;
                   window.open(url, '_blank');
                 }}
-                className="flex items-center justify-center space-x-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition shadow hover:shadow-md cursor-pointer flex-1"
+                className="flex items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2.5 text-xs font-bold hover:bg-emerald-100 transition cursor-pointer flex-1"
               >
-                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.713-1.458L0 24zm6.275-3.66c1.66.986 3.292 1.503 4.887 1.504 5.485 0 9.948-4.468 9.95-9.953.002-2.656-1.026-5.153-2.896-7.027C16.399 3.018 13.9 1.99 11.231 1.99c-5.492 0-9.957 4.471-9.96 9.956-.001 1.778.48 3.5 1.393 5.006l-1.011 3.69 3.79-.994zM16.92 14.73c-.287-.143-1.697-.837-1.959-.933-.262-.095-.452-.143-.642.143-.19.286-.738.933-.905 1.124-.167.19-.333.214-.62.071-.286-.143-1.21-.446-2.305-1.424-.853-.76-1.429-1.7-1.597-1.986-.167-.286-.018-.44.125-.581.13-.127.287-.333.43-.5.143-.167.19-.286.286-.476.095-.19.048-.357-.024-.5-.071-.143-.642-1.547-.88-2.12-.23-.556-.464-.48-.642-.489l-.547-.01c-.19 0-.5.071-.762.357-.262.286-1.002.977-1.002 2.38s1.02 2.76 1.162 2.95c.143.19 2.007 3.064 4.862 4.297.68.293 1.21.468 1.62.598.683.217 1.305.187 1.796.114.548-.082 1.697-.69 1.936-1.357.24-.667.24-1.238.167-1.357-.072-.119-.262-.19-.548-.333z" />
-                </svg>
-                <span>Send to WhatsApp</span>
+                <span>WhatsApp Text</span>
               </button>
 
-              {/* Copy Text Button */}
+              {/* Share as Image Button */}
               <button
                 type="button"
-                onClick={() => {
-                  const dateStr = new Date(detailsPO.timestamp).toLocaleDateString();
-                  let text = `*PURCHASE ORDER*\n`;
-                  text += `*PO ID:* PO-${detailsPO.id}\n`;
-                  text += `*Supplier:* ${detailsPO.supplier_name}\n`;
-                  if (supplierDetail?.contact_number || supplierDetail?.whatsapp_number) {
-                    text += `*Contact:* ${supplierDetail.whatsapp_number || supplierDetail.contact_number}\n`;
-                  }
-                  text += `*Date:* ${dateStr}\n`;
-                  if (detailsPO.invoice_number) {
-                    text += `*Ref Invoice:* ${detailsPO.invoice_number}\n`;
-                  }
-                  if (shareBusinessInfo) {
-                    text += `\n*Business Info:*\n${shareBusinessInfo}\n`;
-                  }
-                  text += `\n*Items:*\n`;
-                  (detailsPO.items || []).forEach((item) => {
-                    let line = `- ${item.product_name} x ${item.quantity}`;
-                    const details = [];
-                    if (shareIncludeCost) {
-                      details.push(`Cost: ₹${item.purchase_cost}`);
-                    }
-                    if (shareIncludeRsp) {
-                      details.push(`RSP: ₹${item.selling_price || 0}`);
-                    }
-                    if (details.length > 0) {
-                      line += ` (${details.join(', ')})`;
-                    }
-                    text += line + `\n`;
-                  });
-                  if (shareIncludeCost) {
-                    text += `\n*Total Amount:* ₹${detailsPO.total_amount}`;
-                  }
-
-                  navigator.clipboard.writeText(text)
-                    .then(() => alert("PO details copied to clipboard!"))
-                    .catch((err) => console.error("Clipboard copy failed:", err));
-                }}
-                className="flex items-center justify-center space-x-2 rounded-xl bg-surface-low hover:bg-surface-dim border border-surface-low text-text-primary px-4 py-2.5 text-xs font-semibold transition flex-1 cursor-pointer"
+                onClick={() => handleSharePOAsImage(detailsPO)}
+                disabled={isSharingImage}
+                className="flex items-center justify-center rounded-xl bg-brand-blue/5 text-brand-blue border border-brand-blue/20 px-4 py-2.5 text-xs font-semibold hover:bg-brand-blue/10 transition flex-1 cursor-pointer disabled:opacity-50"
               >
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                </svg>
-                <span>Copy Text</span>
+                {isSharingImage && <Spinner size="sm" className="mr-1.5" />}
+                <span>Share as Image</span>
               </button>
-
-
             </div>
           </div>
         </div>
@@ -4438,6 +4652,15 @@ export default function Purchases() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Off-screen Branded PO Generator */}
+      {detailsPO && (
+        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+          <div id="po-share-card">
+            {renderBrandedPO(detailsPO, false)}
           </div>
         </div>
       )}
