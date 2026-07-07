@@ -141,6 +141,7 @@ export const api = {
   },
   suppliers: {
     list: (params) => request('/suppliers/', { params }),
+    get: (id) => request(`/suppliers/${id}/`),
     create: (data) => request('/suppliers/', { method: 'POST', body: data }),
     update: (id, data) => request(`/suppliers/${id}/`, { method: 'PATCH', body: data }),
     receivePayment: (id, data) => request(`/suppliers/${id}/receive_payment/`, { method: 'POST', body: data }),

@@ -427,117 +427,143 @@ export default function Purchases() {
     if (!po) return null;
     return (
       <div
-        className="bg-white p-6 md:p-8 border border-gray-200 rounded-lg shadow-xs text-left"
+        className="bg-white p-10 border border-gray-200 rounded-lg shadow-xl text-left"
         style={{
-          width: scaleForMobile ? '100%' : '600px',
+          width: scaleForMobile ? '100%' : '750px',
           margin: '0 auto',
           fontFamily: 'system-ui, -apple-system, sans-serif',
         }}
       >
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center space-x-3">
+        <div className="flex justify-between items-start border-b border-gray-200 pb-6 mb-6">
+          <div className="flex items-center gap-4">
             <img
               src={logoBase64 || "/icon_for_website-removebg-preview_no_border.png"}
-              alt="Company Logo"
-              className="h-12 w-12 object-contain"
+              alt="Logo"
+              className="w-16 h-16 object-contain"
             />
             <div>
-              <span className="inline-block px-2.5 py-1 text-xs font-semibold rounded bg-amber-100 text-amber-800 uppercase tracking-wider">
+              <h1 className="text-2xl font-bold text-gray-800">
+                {currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}
+              </h1>
+              <p className="text-gray-500 text-sm">
                 Purchase Order
-              </span>
+              </p>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-xs font-mono text-gray-500">
-              No: PO-{po.id}
-            </p>
-            <p className="text-xs text-gray-500">
-              Date: {new Date(po.timestamp).toLocaleDateString()}
-            </p>
+
+          <div>
+            <table className="text-xs">
+              <tbody>
+                <tr>
+                  <td className="font-semibold pr-6 py-1 text-gray-500">Document Type</td>
+                  <td className="text-right font-bold text-gray-800">PURCHASE ORDER</td>
+                </tr>
+                <tr>
+                  <td className="font-semibold py-1 text-gray-500">Status</td>
+                  <td className="text-right">
+                    <span className={`inline-block rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase ${
+                      po.status === 'Returned' ? 'bg-red-100 text-red-700' :
+                      po.status === 'Partially Returned' ? 'bg-orange-100 text-orange-700' :
+                      po.status === 'Received' || po.is_received ? 'bg-green-100 text-green-700' : 
+                      'bg-amber-100 text-amber-700'
+                    }`}>
+                      {po.status || (po.is_received ? 'Received' : 'Pending')}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="font-semibold py-1 text-gray-500">PO Number</td>
+                  <td className="text-right font-mono font-bold text-gray-800">PO-{po.id}</td>
+                </tr>
+                <tr>
+                  <td className="font-semibold py-1 text-gray-500">Date</td>
+                  <td className="text-right text-gray-700">
+                    {new Date(po.timestamp).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <hr className="border-gray-100 my-4" />
-
-        {/* FROM/TO Billing Info Grid */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          {/* Left Column: From Supplier */}
+        {/* Buyer / Supplier Grid */}
+        <div className="grid grid-cols-2 gap-12 mt-8 mb-8">
+          {/* Buyer */}
           <div>
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-              FROM (Supplier):
-            </span>
-            <span className="text-xs font-bold text-gray-850 block mt-1">
-              {po.supplier_name}
-            </span>
-            {supplierDetail?.place && (
-              <span className="text-xs text-gray-500 block mt-0.5">
-                {supplierDetail.place}
-              </span>
-            )}
-            {supplierDetail?.contact_number && (
-              <span className="text-xs text-gray-500 block mt-0.5">
-                Phone: {supplierDetail.contact_number}
-              </span>
-            )}
-            {po.invoice_number && (
-              <span className="text-xs text-gray-500 block mt-1">
-                Ref Invoice: {po.invoice_number}
-              </span>
-            )}
+            <h3 className="font-bold text-blue-600 uppercase tracking-wider text-xs mb-3">
+              Buyer
+            </h3>
+            <p className="font-bold text-sm text-gray-850">
+              {currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}
+            </p>
+            <div className="text-xs text-gray-500 leading-relaxed mt-2">
+              {/* Authorized User name */}
+              {(() => {
+                const fName = currentUser?.user?.first_name || currentUser?.first_name || '';
+                const lName = currentUser?.user?.last_name || currentUser?.last_name || '';
+                const empName = [fName, lName].filter(Boolean).join(' ');
+                return empName ? (
+                  <p className="font-semibold text-gray-750">Buyer Representative: {empName}</p>
+                ) : null;
+              })()}
+              {(() => {
+                const phone = currentUser?.phone || currentUser?.contact_number || currentUser?.whatsapp_number || '';
+                return phone ? <p>Phone: {phone}</p> : null;
+              })()}
+              {currentUser?.email && <p>Email: {currentUser.email}</p>}
+            </div>
           </div>
 
-          {/* Right Column: To Me */}
-          <div className="text-right">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-              TO :
-            </span>
-            <span className="text-xs font-bold text-gray-850 block mt-1">
-              {currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}
-            </span>
-            {currentUser?.phone && (
-              <span className="text-xs text-gray-500 block mt-0.5">
-                Phone: {currentUser.phone}
-              </span>
-            )}
-            {currentUser?.email && (
-              <span className="text-xs text-gray-500 block mt-0.5">
-                Email: {currentUser.email}
-              </span>
-            )}
+          {/* Supplier */}
+          <div>
+            <h3 className="font-bold text-blue-600 uppercase tracking-wider text-xs mb-3">
+              Supplier
+            </h3>
+            <p className="font-bold text-sm text-gray-850">
+              {po.supplier_name}
+            </p>
+            <div className="text-xs text-gray-500 leading-relaxed mt-2">
+              {supplierDetail?.place && <p>{supplierDetail.place}</p>}
+              {(() => {
+                const supPhone = supplierDetail?.contact_number || supplierDetail?.whatsapp_number || '';
+                return supPhone ? <p>Phone: {supPhone}</p> : null;
+              })()}
+              {supplierDetail?.email && <p>Email: {supplierDetail.email}</p>}
+              {po.invoice_number && <p className="font-semibold text-gray-700">Ref Invoice: {po.invoice_number}</p>}
+            </div>
           </div>
         </div>
 
         {/* Items Table */}
-        <div className="border border-gray-100 rounded-lg overflow-hidden mb-6">
-          <table className="min-w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-500 font-semibold uppercase">
+        <div className="mt-8 overflow-x-auto border border-gray-200 rounded-lg">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-gray-800 text-white font-semibold">
               <tr>
-                <th className="px-4 py-2.5">Product</th>
-                <th className="px-4 py-2.5 text-right">Qty</th>
-                {shareIncludeCost && <th className="px-4 py-2.5 text-right">Cost</th>}
-                {shareIncludeCost && <th className="px-4 py-2.5 text-right">Total</th>}
+                <th className="p-3">Sl No</th>
+                <th className="p-3">Item</th>
+                <th className="p-3">Code</th>
+                <th className="p-3 text-center">Qty</th>
+                {shareIncludeCost && <th className="p-3 text-right">Unit Cost</th>}
+                <th className="p-3 text-center">Tax %</th>
+                {shareIncludeCost && <th className="p-3 text-right">Total</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
+            <tbody>
               {po.items?.map((item, idx) => (
-                <tr key={idx}>
-                  <td className="px-4 py-3">
-                    <span className="font-semibold text-gray-800 block">{item.product_name}</span>
-                    {item.barcode && (
-                      <span className="text-[10px] text-gray-400 font-mono block mt-0.5">
-                        {item.barcode}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-800">{item.quantity}</td>
+                <tr key={idx} className="border-t border-gray-200 hover:bg-gray-50">
+                  <td className="p-3 text-gray-500">{idx + 1}</td>
+                  <td className="p-3 font-semibold text-gray-800">{item.product_name}</td>
+                  <td className="p-3 font-mono text-gray-500">{item.barcode || '-'}</td>
+                  <td className="p-3 text-center font-bold text-gray-800">{item.quantity}</td>
                   {shareIncludeCost && (
-                    <td className="px-4 py-3 text-right text-gray-500">
+                    <td className="p-3 text-right text-gray-600">
                       {formatCurrency(item.purchase_cost)}
                     </td>
                   )}
+                  <td className="p-3 text-center text-gray-500">0%</td>
                   {shareIncludeCost && (
-                    <td className="px-4 py-3 text-right font-bold text-gray-800">
+                    <td className="p-3 text-right font-bold text-gray-855">
                       {formatCurrency(item.quantity * item.purchase_cost)}
                     </td>
                   )}
@@ -547,34 +573,83 @@ export default function Purchases() {
           </table>
         </div>
 
-        {/* Totals Summary */}
+        {/* Summary Table */}
         {shareIncludeCost && (
-          <div className="flex justify-end mb-6">
-            <div className="w-1/2 space-y-2 text-xs font-semibold text-gray-500">
-              <div className="flex justify-between font-bold text-sm text-gray-800 border-t border-gray-100 pt-2">
-                <span>Total Amount:</span>
-                <span className="text-brand-blue text-base">
-                  {formatCurrency(po.total_amount)}
-                </span>
-              </div>
-            </div>
+          <div className="flex justify-end mt-8 mb-8">
+            <table className="w-64 text-xs">
+              <tbody>
+                <tr>
+                  <td className="py-2 text-gray-500">Subtotal</td>
+                  <td className="text-right py-2 font-bold text-gray-800">
+                    {formatCurrency(po.total_amount + (po.deducted_credit || 0) + (po.rounding || 0))}
+                  </td>
+                </tr>
+                {po.deducted_credit > 0 && (
+                  <tr>
+                    <td className="py-2 text-gray-500">Discount / Returns</td>
+                    <td className="text-right text-red-600 py-2 font-bold">
+                      -{formatCurrency(po.deducted_credit)}
+                    </td>
+                  </tr>
+                )}
+                {po.rounding !== 0 && (
+                  <tr>
+                    <td className="py-2 text-gray-500">Rounding</td>
+                    <td className={`text-right py-2 font-bold ${po.rounding > 0 ? 'text-gray-805' : 'text-red-605'}`}>
+                      {po.rounding > 0 ? '+' : ''}{formatCurrency(po.rounding)}
+                    </td>
+                  </tr>
+                )}
+                <tr>
+                  <td className="py-2 text-gray-500">Tax</td>
+                  <td className="text-right py-2 font-bold text-gray-800">₹0.00</td>
+                </tr>
+                <tr className="border-t border-gray-200">
+                  <td className="font-bold text-sm py-3 text-gray-850">Final Amount</td>
+                  <td className="text-right font-bold text-base text-blue-700 py-3">
+                    {formatCurrency(po.total_amount)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         )}
 
-        {/* Footer Notes / Thank You */}
-        <div className="text-center pt-4 border-t border-dashed border-gray-100 space-y-1">
-          <p className="text-[10px] text-gray-400 text-center">Generated by Axon</p>
-          <p className="text-[10px] text-gray-400 text-center">
-            Generated on{" "}
-            {new Date().toLocaleString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })}
-          </p>
+        {/* Notes */}
+        <div className="mt-10 border-t border-gray-200 pt-6">
+          <h3 className="font-bold text-sm text-gray-850 mb-3">
+            Purchase Order Notes
+          </h3>
+          <ul className="list-disc ml-5 space-y-1.5 text-xs text-gray-500">
+            <li>Please supply the above items as per the agreed quotation.</li>
+            <li>Goods should be delivered in good condition.</li>
+            <li>Invoice should mention the Purchase Order Number.</li>
+            <li>Payment will be processed after successful delivery.</li>
+          </ul>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-gray-200 mt-8 pt-6 flex justify-between text-xs text-gray-500">
+          <div>
+            <p className="font-semibold text-gray-700">Payment Terms</p>
+            <p className="uppercase">{po.payment_type || 'NET 30 Days'}</p>
+          </div>
+          <div className="text-right">
+            <p>
+              Generated by <span className="font-semibold text-gray-700">Axon Digital System</span>
+            </p>
+            <p>
+              Processed on{" "}
+              {new Date().toLocaleString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+              })}
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -694,14 +769,9 @@ export default function Purchases() {
       if (localSup) {
         setSupplierDetail(localSup);
       } else {
-        api.suppliers.list({ id: detailsPO.supplier })
+        api.suppliers.get(detailsPO.supplier)
           .then(res => {
-            const list = (res && res.results) || (Array.isArray(res) && res) || [];
-            if (list.length > 0) {
-              setSupplierDetail(list[0]);
-            } else {
-              setSupplierDetail(null);
-            }
+            setSupplierDetail(res || null);
           })
           .catch(err => {
             console.error("Error fetching supplier info:", err);
