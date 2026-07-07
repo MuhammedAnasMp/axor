@@ -141,6 +141,20 @@ export default function Purchases() {
   const [shareBusinessInfo, setShareBusinessInfo] = useState('');
   const [supplierDetail, setSupplierDetail] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [logoBase64, setLogoBase64] = useState('');
+
+  useEffect(() => {
+    fetch('/icon_for_website-removebg-preview_no_border.png')
+      .then((res) => res.blob())
+      .then((blob) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLogoBase64(reader.result);
+        };
+        reader.readAsDataURL(blob);
+      })
+      .catch((err) => console.error('Error loading logo as base64:', err));
+  }, []);
 
 
   // Auto-complete inside receiving modal
@@ -421,30 +435,21 @@ export default function Purchases() {
         }}
       >
         {/* Header */}
-        <div className="flex justify-between items-start mb-6">
+        <div className="flex justify-between items-center mb-6">
           <div className="flex items-center space-x-3">
             <img
-              src="/icon_for_website-removebg-preview_no_border.png"
+              src={logoBase64 || "/icon_for_website-removebg-preview_no_border.png"}
               alt="Company Logo"
               className="h-12 w-12 object-contain"
             />
             <div>
-              <h2 className="text-xl font-bold text-gray-850">
-                {currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}
-              </h2>
-              {currentUser?.phone && (
-                <p className="text-xs text-gray-500">Phone: {currentUser.phone}</p>
-              )}
-              {currentUser?.email && (
-                <p className="text-xs text-gray-500">Email: {currentUser.email}</p>
-              )}
+              <span className="inline-block px-2.5 py-1 text-xs font-semibold rounded bg-amber-100 text-amber-800 uppercase tracking-wider">
+                Purchase Order
+              </span>
             </div>
           </div>
           <div className="text-right">
-            <span className="inline-block px-2.5 py-1 text-xs font-semibold rounded bg-amber-100 text-amber-800 uppercase">
-              Purchase Order
-            </span>
-            <p className="text-xs font-mono text-gray-500 mt-2">
+            <p className="text-xs font-mono text-gray-500">
               No: PO-{po.id}
             </p>
             <p className="text-xs text-gray-500">
@@ -455,24 +460,52 @@ export default function Purchases() {
 
         <hr className="border-gray-100 my-4" />
 
-        {/* Supplier Info */}
-        <div className="mb-6 text-left">
-          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">
-            To (Supplier):
-          </span>
-          <span className="text-sm font-bold text-gray-800 block mt-0.5 font-sans">
-            {po.supplier_name}
-          </span>
-          {supplierDetail?.contact_number && (
-            <span className="text-xs text-gray-500 block mt-0.5">
-              Phone: {supplierDetail.contact_number}
+        {/* FROM/TO Billing Info Grid */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {/* Left Column: From Supplier */}
+          <div>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+              FROM (Supplier):
             </span>
-          )}
-          {po.invoice_number && (
-            <span className="text-xs text-gray-500 block mt-1">
-              Ref Invoice: {po.invoice_number}
+            <span className="text-xs font-bold text-gray-850 block mt-1">
+              {po.supplier_name}
             </span>
-          )}
+            {supplierDetail?.place && (
+              <span className="text-xs text-gray-500 block mt-0.5">
+                {supplierDetail.place}
+              </span>
+            )}
+            {supplierDetail?.contact_number && (
+              <span className="text-xs text-gray-500 block mt-0.5">
+                Phone: {supplierDetail.contact_number}
+              </span>
+            )}
+            {po.invoice_number && (
+              <span className="text-xs text-gray-500 block mt-1">
+                Ref Invoice: {po.invoice_number}
+              </span>
+            )}
+          </div>
+
+          {/* Right Column: To Me */}
+          <div className="text-right">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+              TO :
+            </span>
+            <span className="text-xs font-bold text-gray-850 block mt-1">
+              {currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}
+            </span>
+            {currentUser?.phone && (
+              <span className="text-xs text-gray-500 block mt-0.5">
+                Phone: {currentUser.phone}
+              </span>
+            )}
+            {currentUser?.email && (
+              <span className="text-xs text-gray-500 block mt-0.5">
+                Email: {currentUser.email}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Items Table */}
@@ -529,8 +562,19 @@ export default function Purchases() {
         )}
 
         {/* Footer Notes / Thank You */}
-        <div className="text-center pt-4 border-t border-dashed border-gray-100">
+        <div className="text-center pt-4 border-t border-dashed border-gray-100 space-y-1">
           <p className="text-[10px] text-gray-400 text-center">Generated by Axon</p>
+          <p className="text-[10px] text-gray-400 text-center">
+            Generated on{" "}
+            {new Date().toLocaleString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })}
+          </p>
         </div>
       </div>
     );

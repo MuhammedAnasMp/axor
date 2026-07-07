@@ -46,11 +46,26 @@ export default function Sales() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [logoBase64, setLogoBase64] = useState('');
+
+  useEffect(() => {
+    fetch('/icon_for_website-removebg-preview_no_border.png')
+      .then((res) => res.blob())
+      .then((blob) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLogoBase64(reader.result);
+        };
+        reader.readAsDataURL(blob);
+      })
+      .catch((err) => console.error('Error loading logo as base64:', err));
+  }, []);
 
   useEffect(() => {
     api.auth.me()
       .then((user) => {
         setCurrentUser(user);
+        cons
       })
       .catch((err) => {
         console.error("Error fetching user profile:", err);
@@ -492,7 +507,7 @@ export default function Sales() {
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center space-x-3">
             <img
-              src="/icon_for_website-removebg-preview_no_border.png"
+              src={logoBase64 || "/icon_for_website-removebg-preview_no_border.png"}
               alt="Company Logo"
               className="h-12 w-12 object-contain"
             />
@@ -500,12 +515,23 @@ export default function Sales() {
               <h2 className="text-xl font-bold text-gray-850">
                 {currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}
               </h2>
-              {currentUser?.phone && (
-                <p className="text-xs text-gray-500">Phone: {currentUser.phone}</p>
-              )}
+              {(() => {
+                const phone = currentUser?.phone || currentUser?.contact_number || currentUser?.whatsapp_number || '';
+                return phone ? (
+                  <p className="text-xs text-gray-500">Phone: {phone}</p>
+                ) : null;
+              })()}
               {currentUser?.email && (
                 <p className="text-xs text-gray-500">Email: {currentUser.email}</p>
               )}
+              {(() => {
+                const fName = currentUser?.user?.first_name || currentUser?.first_name || '';
+                const lName = currentUser?.user?.last_name || currentUser?.last_name || '';
+                const empName = [fName, lName].filter(Boolean).join(' ') || sale.employee_name;
+                return empName ? (
+                  <p className="text-xs text-gray-500"> {empName}</p>
+                ) : null;
+              })()}
             </div>
           </div>
           <div className="text-right">
@@ -1595,8 +1621,8 @@ export default function Sales() {
               <button
                 onClick={() => setDetailsTab('staff')}
                 className={`pb-2 px-4 text-xs font-semibold border-b-2 transition-all ${detailsTab === 'staff'
-                    ? 'border-brand-blue text-brand-blue font-bold'
-                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                  ? 'border-brand-blue text-brand-blue font-bold'
+                  : 'border-transparent text-text-secondary hover:text-text-primary'
                   }`}
               >
                 Staff View (Internal)
@@ -1604,8 +1630,8 @@ export default function Sales() {
               <button
                 onClick={() => setDetailsTab('customer')}
                 className={`pb-2 px-4 text-xs font-semibold border-b-2 transition-all ${detailsTab === 'customer'
-                    ? 'border-brand-blue text-brand-blue font-bold'
-                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                  ? 'border-brand-blue text-brand-blue font-bold'
+                  : 'border-transparent text-text-secondary hover:text-text-primary'
                   }`}
               >
                 Customer View (Receipt)
@@ -1667,8 +1693,8 @@ export default function Sales() {
               <button
                 onClick={() => setDetailsTab('staff')}
                 className={`pb-2 px-4 text-xs font-semibold border-b-2 transition-all ${detailsTab === 'staff'
-                    ? 'border-brand-blue text-brand-blue font-bold'
-                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                  ? 'border-brand-blue text-brand-blue font-bold'
+                  : 'border-transparent text-text-secondary hover:text-text-primary'
                   }`}
               >
                 Staff View
@@ -1676,8 +1702,8 @@ export default function Sales() {
               <button
                 onClick={() => setDetailsTab('customer')}
                 className={`pb-2 px-4 text-xs font-semibold border-b-2 transition-all ${detailsTab === 'customer'
-                    ? 'border-brand-blue text-brand-blue font-bold'
-                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                  ? 'border-brand-blue text-brand-blue font-bold'
+                  : 'border-transparent text-text-secondary hover:text-text-primary'
                   }`}
               >
                 Customer View
