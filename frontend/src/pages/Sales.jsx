@@ -6,6 +6,10 @@ import PaginationControls from '../components/PaginationControls';
 import { SkeletonTable, Spinner } from '../components/Skeleton';
 import MobileBottomSheet from '../components/MobileBottomSheet';
 import FloatingActionButton from '../components/FloatingActionButton';
+import { toPng } from 'html-to-image';
+import { Share } from '@capacitor/share';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
 
 export default function Sales() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -40,6 +44,18 @@ export default function Sales() {
   const [employees, setEmployees] = useState([]);
   const [bankAccounts, setBankAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isSharing, setIsSharing] = useState(false);
+
+  useEffect(() => {
+    api.auth.me()
+      .then((user) => {
+        setCurrentUser(user);
+      })
+      .catch((err) => {
+        console.error("Error fetching user profile:", err);
+      });
+  }, []);
 
   // Action loading states
   const [isSubmittingSale, setIsSubmittingSale] = useState(false);
@@ -370,6 +386,65 @@ export default function Sales() {
         })
         .catch((err) => alert(err.message))
         .finally(() => setReturningSaleId(null));
+    }
+  };
+
+  const handleShareWithCustomer = async (sale) => {
+    if (!sale) return;
+    setIsSharing(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const node = document.getElementById('invoice-share-card');
+      if (!node) {
+        throw new Error('Invoice template element not found');
+      }
+
+      const dataUrl = await toPng(node, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+      });
+
+      const fileName = `Invoice-${sale.invoice_number || sale.id}.png`;
+
+      if (Capacitor.isNativePlatform()) {
+        const base64Data = dataUrl.split(',')[1];
+        
+        const writeResult = await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: Directory.Cache,
+        });
+
+        await Share.share({
+          title: `Invoice ${sale.invoice_number}`,
+          text: `Here is your invoice ${sale.invoice_number} from ${currentUser?.company_name || currentUser?.business_name || 'Axor Accessories'}`,
+          files: [writeResult.uri],
+        });
+      } else {
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], fileName, { type: 'image/png' });
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `Invoice ${sale.invoice_number}`,
+            text: `Invoice ${sale.invoice_number} from ${currentUser?.company_name || currentUser?.business_name || 'Axor Accessories'}`,
+            files: [file],
+          });
+        } else {
+          const link = document.createElement('a');
+          link.download = fileName;
+          link.href = dataUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      }
+    } catch (err) {
+      console.error('Error sharing invoice:', err);
+      alert('Failed to share invoice: ' + err.message);
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -1322,6 +1397,18 @@ export default function Sales() {
 
             <div className="flex justify-end space-x-2">
               <button
+                onClick={() => handleShareWithCustomer(selectedSale)}
+                disabled={isSharing}
+                className="rounded bg-brand-blue/10 px-4 py-2 text-xs font-semibold text-brand-blue hover:bg-brand-blue/20 disabled:opacity-50 flex items-center space-x-1.5 cursor-pointer transition-colors"
+              >
+                {isSharing ? <Spinner size="sm" /> : (
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 10.742l4.684-2.342m0 0l-4.684-2.342m4.684 2.342a3 3 0 110-4.684 3 3 0 010 4.684zm0 0l-4.684 2.342m0 0a3 3 0 110-4.684 3 3 0 010 4.684zm0 0l4.684 2.342m0 0a3 3 0 110-4.684 3 3 0 010 4.684z" />
+                  </svg>
+                )}
+                <span>Share with Customer</span>
+              </button>
+              <button
                 onClick={() => {
                   returnSale(selectedSale.id);
                   setSelectedSale(null);
@@ -1412,6 +1499,18 @@ export default function Sales() {
             </div>
 
             <div className="pt-4 flex flex-col gap-2">
+              <button
+                onClick={() => handleShareWithCustomer(selectedSale)}
+                disabled={isSharing}
+                className="w-full py-2.5 rounded-lg bg-brand-blue/10 hover:bg-brand-blue/15 text-brand-blue font-semibold text-xs transition flex items-center justify-center space-x-1.5 disabled:opacity-50"
+              >
+                {isSharing ? <Spinner size="sm" /> : (
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 10.742l4.684-2.342m0 0l-4.684-2.342m4.684 2.342a3 3 0 110-4.684 3 3 0 010 4.684zm0 0l-4.684 2.342m0 0a3 3 0 110-4.684 3 3 0 010 4.684zm0 0l4.684 2.342m0 0a3 3 0 110-4.684 3 3 0 010 4.684z" />
+                  </svg>
+                )}
+                <span>Share with Customer</span>
+              </button>
               <button
                 onClick={() => {
                   returnSale(selectedSale.id);
@@ -1542,6 +1641,138 @@ export default function Sales() {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Off-screen Branded Invoice Generator */}
+      {selectedSale && (
+        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+          <div
+            id="invoice-share-card"
+            className="bg-white p-8 border border-gray-200 rounded-lg shadow-sm"
+            style={{ width: '600px', fontFamily: 'system-ui, -apple-system, sans-serif' }}
+          >
+            {/* Header */}
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex items-center space-x-3">
+                <img
+                  src="/icon_for_website-removebg-preview_no_border.png"
+                  alt="Company Logo"
+                  className="h-12 w-12 object-contain"
+                />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-850">
+                    {currentUser?.company_name || currentUser?.business_name || 'Axor Accessories'}
+                  </h2>
+                  {currentUser?.phone && (
+                    <p className="text-xs text-gray-500">Phone: {currentUser.phone}</p>
+                  )}
+                  {currentUser?.email && (
+                    <p className="text-xs text-gray-500">Email: {currentUser.email}</p>
+                  )}
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="inline-block px-2.5 py-1 text-xs font-semibold rounded bg-brand-blue/10 text-brand-blue uppercase">
+                  Invoice / Receipt
+                </span>
+                <p className="text-xs font-mono text-gray-500 mt-2">
+                  No: {selectedSale.invoice_number}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Date: {new Date(selectedSale.timestamp).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+
+            <hr className="border-gray-100 my-4" />
+
+            {/* Customer Info */}
+            <div className="mb-6">
+              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">
+                Bill To:
+              </span>
+              <span className="text-sm font-bold text-gray-800 block mt-0.5">
+                {selectedSale.customer_name || 'Walk-In Customer'}
+              </span>
+              <span className="text-xs text-gray-500 block mt-1">
+                Payment Method: {selectedSale.payment_type}
+              </span>
+            </div>
+
+            {/* Items Table */}
+            <div className="border border-gray-100 rounded-lg overflow-hidden mb-6">
+              <table className="min-w-full text-left text-xs">
+                <thead className="bg-gray-50 text-gray-500 font-semibold uppercase">
+                  <tr>
+                    <th className="px-4 py-2.5">Product</th>
+                    <th className="px-4 py-2.5 text-right">Qty</th>
+                    <th className="px-4 py-2.5 text-right">Price</th>
+                    <th className="px-4 py-2.5 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {selectedSale.items?.map((item, idx) => (
+                    <tr key={idx}>
+                      <td className="px-4 py-3">
+                        <span className="font-semibold text-gray-800 block">{item.product_name}</span>
+                        {item.barcode && (
+                          <span className="text-[10px] text-gray-400 font-mono block mt-0.5">
+                            {item.barcode}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-800">{item.quantity}</td>
+                      <td className="px-4 py-3 text-right text-gray-500">
+                        {formatCurrency(item.unit_price)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-gray-800">
+                        {formatCurrency(item.quantity * item.unit_price)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Totals Summary */}
+            <div className="flex justify-end mb-6">
+              <div className="w-1/2 space-y-2 text-xs font-semibold text-gray-500">
+                {parseFloat(selectedSale.discount || 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span>Discount:</span>
+                    <span className="text-red-500">-{formatCurrency(selectedSale.discount)}</span>
+                  </div>
+                )}
+                {parseFloat(selectedSale.tax || 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span>Tax:</span>
+                    <span className="text-gray-800">+{formatCurrency(selectedSale.tax)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-sm text-gray-800 border-t border-gray-100 pt-2">
+                  <span>Total Amount:</span>
+                  <span className="text-brand-blue text-base">
+                    {formatCurrency(selectedSale.total_amount)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes if available */}
+            {selectedSale.notes && (
+              <div className="mb-6 p-3 bg-gray-50 rounded-lg border border-gray-100 text-xs">
+                <span className="font-bold text-gray-700 block mb-1">Notes:</span>
+                <p className="text-gray-600 leading-relaxed">{selectedSale.notes}</p>
+              </div>
+            )}
+
+            {/* Footer Notes / Thank You */}
+            <div className="text-center pt-4 border-t border-dashed border-gray-100">
+              <p className="text-xs font-medium text-gray-500 text-center">Thank you for your business!</p>
+              <p className="text-[10px] text-gray-400 mt-1 text-center">Generated by Axon POS</p>
             </div>
           </div>
         </div>
