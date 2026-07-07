@@ -895,7 +895,7 @@ export default function Products() {
                     <button
                       type="button"
                       onClick={() => setImageUrls(prev => prev.filter((_, i) => i !== idx))}
-                      className="absolute top-0.5 right-0.5 bg-red-600 text-white rounded-full p-0.5 text-[8px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-4 w-4"
+                      className="absolute top-0.5 right-0.5 bg-red-600 text-white rounded-full p-0.5 text-[8px] opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center justify-center h-4 w-4"
                       title="Remove image"
                     >
                       ✕
