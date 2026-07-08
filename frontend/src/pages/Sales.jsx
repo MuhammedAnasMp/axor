@@ -772,7 +772,7 @@ export default function Sales() {
               <div>
                 <h1>{currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}</h1>
                 <p>
-                  {currentUser?.address || 'Metro City, Kerala'}<br />
+                  {/* {currentUser?.address || 'Metro City, Kerala'}<br /> */}
                   {phone && <span>Phone: {phone}<br /></span>}
                   {email && <span>Email: {email}</span>}
                 </p>
@@ -805,7 +805,7 @@ export default function Sales() {
               <div className="invoice-section-title">From</div>
               <b>{currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}</b>
               <p>
-                {currentUser?.address || 'Metro City, Kerala'}<br />
+                {/* {currentUser?.address || 'Metro City, Kerala'}<br /> */}
                 {phone && <span>Phone: {phone}<br /></span>}
                 {email && <span>Email: {email}</span>}
               </p>
@@ -906,7 +906,8 @@ export default function Sales() {
     const invoiceHeight = 950;
     return (
       <div className="flex flex-col items-center w-full">
-        <style dangerouslySetInnerHTML={{ __html: `
+        <style dangerouslySetInnerHTML={{
+          __html: `
           .no-scrollbar::-webkit-scrollbar {
             display: none !important;
           }
@@ -917,7 +918,7 @@ export default function Sales() {
         ` }} />
         {/* Frame with native scrolling but hidden scrollbar handles */}
         <div className="w-full overflow-auto no-scrollbar border border-surface-low rounded-lg bg-surface-lowest p-2 flex justify-start relative min-h-[250px] max-h-[70vh]">
-          <div 
+          <div
             className="origin-top-left"
             style={{
               transform: 'scale(0.7)',
