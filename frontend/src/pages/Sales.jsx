@@ -84,7 +84,12 @@ export default function Sales() {
   const [selectedItemIndex, setSelectedItemIndex] = useState(null);
   const [selectedSale, setSelectedSale] = useState(null);
   const [detailsTab, setDetailsTab] = useState('staff');
+  const [keepA4, setKeepA4] = useState(() => localStorage.getItem('keepA4') === 'true');
   const [shouldShareAfterSubmit, setShouldShareAfterSubmit] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('keepA4', keepA4);
+  }, [keepA4]);
 
   useEffect(() => {
     if (selectedSale) {
@@ -492,162 +497,438 @@ export default function Sales() {
     }).format(val);
   };
 
-  const renderBrandedInvoice = (sale, scaleForMobile = false) => {
+  const renderBrandedInvoice = (sale, scaleForMobile = false, forceKeepA4 = false) => {
     if (!sale) return null;
+    const phone = currentUser?.phone || currentUser?.contact_number || currentUser?.whatsapp_number || '';
+    const email = currentUser?.email || '';
+    const fName = currentUser?.user?.first_name || currentUser?.first_name || '';
+    const lName = currentUser?.user?.last_name || currentUser?.last_name || '';
+    const empName = [fName, lName].filter(Boolean).join(' ') || sale.employee_name || 'System Admin';
+
+    const subtotalVal = (sale.items || []).reduce((acc, item) => acc + (item.quantity * item.unit_price), 0);
+    const discountVal = parseFloat(sale.discount || 0);
+    const finalAmountVal = parseFloat(sale.total_amount || 0);
+
     return (
-      <div
-        className="bg-white p-6 md:p-8 border border-gray-200 rounded-lg shadow-xs text-left"
-        style={{
-          width: scaleForMobile ? '100%' : '600px',
-          margin: '0 auto',
-          fontFamily: 'system-ui, -apple-system, sans-serif',
-        }}
-      >
-        {/* Header */}
-        <div className="flex justify-between items-start mb-6">
-          <div className="flex items-center space-x-3">
-            <img
-              src={logoBase64 || "/icon_for_website-removebg-preview_no_border.png"}
-              alt="Company Logo"
-              className="h-12 w-12 object-contain"
-            />
-            <div>
-              <h2 className="text-xl font-bold text-gray-850">
-                {currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}
-              </h2>
-              {(() => {
-                const phone = currentUser?.phone || currentUser?.contact_number || currentUser?.whatsapp_number || '';
-                return phone ? (
-                  <p className="text-xs text-gray-500">Phone: {phone}</p>
-                ) : null;
-              })()}
-              {currentUser?.email && (
-                <p className="text-xs text-gray-500">Email: {currentUser.email}</p>
-              )}
-              {(() => {
-                const fName = currentUser?.user?.first_name || currentUser?.first_name || '';
-                const lName = currentUser?.user?.last_name || currentUser?.last_name || '';
-                const empName = [fName, lName].filter(Boolean).join(' ') || sale.employee_name;
-                return empName ? (
-                  <p className="text-xs text-gray-500"> {empName}</p>
-                ) : null;
-              })()}
+      <div id="invoice-share-card-container" style={{ width: scaleForMobile ? '100%' : (forceKeepA4 ? '794px' : '850px'), margin: '0 auto' }}>
+        <style dangerouslySetInnerHTML={{
+          __html: `
+          .invoice-share-card {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.02), 0 4px 6px -4px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(0, 0, 0, 0.04);
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            color: #334155;
+            line-height: 1.5;
+            box-sizing: border-box;
+            width: 100%;
+            min-height: ${forceKeepA4 ? '1123px' : 'auto'};
+            flex-grow: 1;
+          }
+          .invoice-share-card * {
+            box-sizing: border-box;
+          }
+          .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 24px;
+          }
+          .invoice-company {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+          }
+          .invoice-logo {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            padding: 2px;
+          }
+          .invoice-company h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+            letter-spacing: -0.03em;
+          }
+          .invoice-company p {
+            margin-top: 4px;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.4;
+          }
+          .invoice-meta {
+            text-align: right;
+          }
+          .invoice-meta h2 {
+            font-size: 26px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.03em;
+            margin: 0 0 8px 0;
+          }
+          .invoice-meta-table {
+            border-collapse: collapse;
+            margin-left: auto;
+          }
+          .invoice-meta-table td {
+            padding: 2px 0 2px 16px;
+            font-size: 13px;
+            border: none;
+            text-align: right;
+          }
+          .invoice-meta-table td:first-child {
+            color: #64748b;
+            font-weight: 400;
+          }
+          .invoice-meta-table td:last-child {
+            color: #0f172a;
+            font-weight: 600;
+          }
+          .invoice-status-badge {
+            background-color: #dcfce7;
+            color: #15803d;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            display: inline-block;
+          }
+          .invoice-info-grid {
+            margin-top: 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+          }
+          .invoice-section-title {
+            font-weight: 600;
+            font-size: 11px;
+            color: #64748b;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+          }
+          .invoice-address-block b {
+            color: #0f172a;
+            font-size: 15px;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 4px;
+          }
+          .invoice-address-block p {
+            font-size: 13px;
+            color: #334155;
+            line-height: 1.4;
+          }
+          .invoice-address-block.customer {
+            text-align: right;
+          }
+          .invoice-items-container {
+            margin-top: 30px;
+            flex-grow: 1;
+          }
+          .invoice-items-table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .invoice-items-table th {
+            background: #0f172a;
+            color: white;
+            text-transform: uppercase;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            padding: 10px 14px;
+            border: none;
+          }
+          .invoice-items-table th:first-child { border-radius: 6px 0 0 6px; }
+          .invoice-items-table th:last-child { border-radius: 0 6px 6px 0; }
+          .invoice-items-table td {
+            padding: 10px 14px;
+            font-size: 13px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+          }
+          .invoice-items-table tr td b {
+            font-weight: 600;
+            color: #0f172a;
+          }
+          .invoice-summary-container {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 14px;
+            border-top: 1px solid #e2e8f0;
+          }
+          .invoice-payment-method {
+            font-size: 13px;
+          }
+          .invoice-payment-method .label {
+            color: #64748b;
+            font-weight: 400;
+          }
+          .invoice-payment-method .value {
+            color: #0f172a;
+            font-weight: 600;
+            background: #f8fafc;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+          }
+          .invoice-summary-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 13px;
+          }
+          .invoice-summary-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+          }
+          .invoice-summary-item .label {
+            color: #64748b;
+            font-weight: 400;
+          }
+          .invoice-summary-item .value {
+            color: #0f172a;
+            font-weight: 600;
+          }
+          .invoice-summary-item.discount .value {
+            color: #c2410c; 
+          }
+          .invoice-summary-item.total-due {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 5px 12px;
+            border-radius: 6px;
+            margin-left: 6px;
+          }
+          .invoice-summary-item.total-due .label {
+            color: #0f172a;
+            font-weight: 600;
+          }
+          .invoice-summary-item.total-due .value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+          }
+          .invoice-summary-separator {
+            color: #e2e8f0;
+            font-weight: 400;
+          }
+          .invoice-notes {
+            margin-top: 30px;
+            background: #fffcf8; 
+            border: 1px solid #fdf4e9;
+            border-left: 4px solid #dd9c58;
+            padding: 12px;
+            border-radius: 4px 8px 8px 4px;
+          }
+          .invoice-notes b {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #0f172a;
+            display: block;
+            margin-bottom: 2px;
+          }
+          .invoice-notes p {
+            font-size: 11px;
+            color: #64748b;
+            line-height: 1.4;
+          }
+          .invoice-footer {
+            margin-top: 30px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 16px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 400;
+          }
+          .invoice-footer b {
+            color: #334155;
+            font-weight: 600;
+          }
+        ` }} />
+
+        <div className="invoice-share-card">
+          <div className="invoice-header">
+            <div className="invoice-company">
+              <img src={logoBase64 || "/icon_for_website-removebg-preview_no_border.png"} className="invoice-logo" alt="Logo" />
+              <div>
+                <h1>{currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}</h1>
+                <p>
+                  {currentUser?.address || 'Metro City, Kerala'}<br />
+                  {phone && <span>Phone: {phone}<br /></span>}
+                  {email && <span>Email: {email}</span>}
+                </p>
+              </div>
+            </div>
+
+            <div className="invoice-meta">
+              <h2>INVOICE</h2>
+              <table className="invoice-meta-table">
+                <tbody>
+                  <tr>
+                    <td>Invoice No:</td>
+                    <td>{sale.invoice_number}</td>
+                  </tr>
+                  <tr>
+                    <td>Date:</td>
+                    <td>{new Date(sale.timestamp).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                  </tr>
+                  <tr>
+                    <td>Status:</td>
+                    <td><span className="invoice-status-badge">PAID</span></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
-          <div className="text-right">
-            <span className="inline-block px-2.5 py-1 text-xs font-semibold rounded bg-brand-blue/10 text-brand-blue uppercase">
-              Invoice / Receipt
-            </span>
-            <p className="text-xs font-mono text-gray-500 mt-2">
-              No: {sale.invoice_number}
-            </p>
-            <p className="text-xs text-gray-500">
-              Date: {new Date(sale.timestamp).toLocaleDateString()}
-            </p>
+
+          <div className="invoice-info-grid">
+            <div className="invoice-address-block">
+              <div className="invoice-section-title">From</div>
+              <b>{currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}</b>
+              <p>
+                {currentUser?.address || 'Metro City, Kerala'}<br />
+                {phone && <span>Phone: {phone}<br /></span>}
+                {email && <span>Email: {email}</span>}
+              </p>
+            </div>
+
+            <div className="invoice-address-block customer">
+              <div className="invoice-section-title">Bill To</div>
+              <b>{sale.customer_name || 'Walk-In Customer'}</b>
+              <p>
+                {sale.customer_address || 'Customer Address'}<br />
+                {sale.customer_phone && <span>Phone: {sale.customer_phone}<br /></span>}
+                {sale.customer_email && <span>Email: {sale.customer_email}</span>}
+              </p>
+            </div>
           </div>
-        </div>
 
-        <hr className="border-gray-100 my-4" />
-
-        {/* Customer Info */}
-        <div className="mb-6">
-          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">
-            Bill To:
-          </span>
-          <span className="text-sm font-bold text-gray-800 block mt-0.5">
-            {sale.customer_name || 'Walk-In Customer'}
-          </span>
-          <span className="text-xs text-gray-500 block mt-1">
-            Payment Method: {sale.payment_type}
-          </span>
-        </div>
-
-        {/* Items Table */}
-        <div className="border border-gray-100 rounded-lg overflow-hidden mb-6">
-          <table className="min-w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-500 font-semibold uppercase">
-              <tr>
-                <th className="px-4 py-2.5">Product</th>
-                <th className="px-4 py-2.5 text-right">Qty</th>
-                <th className="px-4 py-2.5 text-right">Price</th>
-                <th className="px-4 py-2.5 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {sale.items?.map((item, idx) => (
-                <tr key={idx}>
-                  <td className="px-4 py-3">
-                    <span className="font-semibold text-gray-800 block">{item.product_name}</span>
-                    {item.barcode && (
-                      <span className="text-[10px] text-gray-400 font-mono block mt-0.5">
-                        {item.barcode}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-800">{item.quantity}</td>
-                  <td className="px-4 py-3 text-right text-gray-500">
-                    {formatCurrency(item.unit_price)}
-                  </td>
-                  <td className="px-4 py-3 text-right font-bold text-gray-800">
-                    {formatCurrency(item.quantity * item.unit_price)}
-                  </td>
+          <div className="invoice-items-container">
+            <table className="invoice-items-table">
+              <thead>
+                <tr>
+                  <th className="text-center" style={{ width: '8%' }}>Sl</th>
+                  <th className="text-left" style={{ width: '40%' }}>Description</th>
+                  <th className="text-center" style={{ width: '15%' }}>Code</th>
+                  <th className="text-center" style={{ width: '10%' }}>Qty</th>
+                  <th className="text-right" style={{ width: '12%' }}>Price</th>
+                  <th className="text-right" style={{ width: '10%' }}>Tax</th>
+                  <th className="text-right" style={{ width: '15%' }}>Total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {(sale.items || []).map((item, idx) => (
+                  <tr key={idx}>
+                    <td className="text-center">{idx + 1}</td>
+                    <td className="text-left"><b>{item.product_name}</b></td>
+                    <td className="text-center">{item.barcode || '-'}</td>
+                    <td className="text-center">{item.quantity}</td>
+                    <td className="text-right">{formatCurrency(item.unit_price)}</td>
+                    <td className="text-right">₹0.00</td>
+                    <td className="text-right"><b>{formatCurrency(item.quantity * item.unit_price)}</b></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        {/* Totals Summary */}
-        <div className="flex justify-end mb-6">
-          <div className="w-1/2 space-y-2 text-xs font-semibold text-gray-500">
-            {parseFloat(sale.discount || 0) > 0 && (
-              <div className="flex justify-between">
-                <span>Discount:</span>
-                <span className="text-red-500">-{formatCurrency(sale.discount)}</span>
+          <div className="invoice-summary-container">
+            <div className="invoice-payment-method">
+              <span className="label">Payment Method: </span>
+              <span className="value">{sale.payment_type}</span>
+            </div>
+
+            <div className="invoice-summary-row">
+              <div className="invoice-summary-item">
+                <span className="label">Subtotal:</span>
+                <span className="value">{formatCurrency(subtotalVal)}</span>
               </div>
-            )}
-            {parseFloat(sale.tax || 0) > 0 && (
-              <div className="flex justify-between">
-                <span>Tax:</span>
-                <span className="text-gray-800">+{formatCurrency(sale.tax)}</span>
+              <span className="invoice-summary-separator">•</span>
+              <div className="invoice-summary-item discount">
+                <span className="label">Discount:</span>
+                <span className="value">-{formatCurrency(discountVal)}</span>
               </div>
-            )}
-            <div className="flex justify-between font-bold text-sm text-gray-800 border-t border-gray-100 pt-2">
-              <span>Total Amount:</span>
-              <span className="text-brand-blue text-base">
-                {formatCurrency(sale.total_amount)}
-              </span>
+              <span className="invoice-summary-separator">•</span>
+              <div className="invoice-summary-item">
+                <span className="label">Tax:</span>
+                <span className="value">₹0.00</span>
+              </div>
+              <div className="invoice-summary-item total-due">
+                <span className="label">Total Due:</span>
+                <span className="value">{formatCurrency(finalAmountVal)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="invoice-notes">
+            <b>Notes & Terms:</b>
+            <p>{sale.notes || "Thank you for your business. Goods once sold cannot be returned without prior approval."}</p>
+          </div>
+
+          <div className="invoice-footer">
+            <div>Generated by <b>{currentUser?.company_name || currentUser?.business_name || 'Axon Accessories'}</b> ({empName})</div>
+            <div>
+              {new Date().toLocaleString("en-US", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+              })}
             </div>
           </div>
         </div>
+      </div>
+    );
+  };
 
-        {/* Notes if available */}
-        {sale.notes && (
-          <div className="mb-6 p-3 bg-gray-50 rounded-lg border border-gray-100 text-xs">
-            <span className="font-bold text-gray-700 block mb-1">Notes:</span>
-            <p className="text-gray-600 leading-relaxed">{sale.notes}</p>
+  const renderBrandedInvoiceWithZoom = (sale) => {
+    const invoiceHeight = 950;
+    return (
+      <div className="flex flex-col items-center w-full">
+        <style dangerouslySetInnerHTML={{ __html: `
+          .no-scrollbar::-webkit-scrollbar {
+            display: none !important;
+          }
+          .no-scrollbar {
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+          }
+        ` }} />
+        {/* Frame with native scrolling but hidden scrollbar handles */}
+        <div className="w-full overflow-auto no-scrollbar border border-surface-low rounded-lg bg-surface-lowest p-2 flex justify-start relative min-h-[250px] max-h-[70vh]">
+          <div 
+            className="origin-top-left"
+            style={{
+              transform: 'scale(0.7)',
+              transformOrigin: 'top left',
+              width: '850px',
+              minWidth: '850px',
+              marginBottom: `calc(0.3 * -${invoiceHeight}px)`,
+            }}
+          >
+            {renderBrandedInvoice(sale, false, false)}
           </div>
-        )}
-
-        {/* Footer Notes / Thank You */}
-        <div className="text-center pt-4 border-t border-dashed border-gray-100">
-          <p className="text-xs font-medium text-gray-500">
-            Thank you for your business!
-          </p>
-          <p className="text-[10px] text-gray-400 mt-1">
-            Generated by Axon
-          </p>
-          <p className="text-[10px] text-gray-400">
-            Generated on{" "}
-            {new Date().toLocaleString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })}
-          </p>
         </div>
       </div>
     );
@@ -1617,31 +1898,44 @@ export default function Sales() {
             </div>
 
             {/* Tab Switcher */}
-            <div className="flex border-b border-surface-low mb-4">
-              <button
-                onClick={() => setDetailsTab('staff')}
-                className={`pb-2 px-4 text-xs font-semibold border-b-2 transition-all ${detailsTab === 'staff'
-                  ? 'border-brand-blue text-brand-blue font-bold'
-                  : 'border-transparent text-text-secondary hover:text-text-primary'
-                  }`}
-              >
-                Staff View (Internal)
-              </button>
-              <button
-                onClick={() => setDetailsTab('customer')}
-                className={`pb-2 px-4 text-xs font-semibold border-b-2 transition-all ${detailsTab === 'customer'
-                  ? 'border-brand-blue text-brand-blue font-bold'
-                  : 'border-transparent text-text-secondary hover:text-text-primary'
-                  }`}
-              >
-                Customer View (Receipt)
-              </button>
+            <div className="flex justify-between items-center border-b border-surface-low mb-4">
+              <div className="flex">
+                <button
+                  onClick={() => setDetailsTab('staff')}
+                  className={`pb-2 px-4 text-xs font-semibold border-b-2 transition-all ${detailsTab === 'staff'
+                    ? 'border-brand-blue text-brand-blue font-bold'
+                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                    }`}
+                >
+                  Staff View (Internal)
+                </button>
+                <button
+                  onClick={() => setDetailsTab('customer')}
+                  className={`pb-2 px-4 text-xs font-semibold border-b-2 transition-all ${detailsTab === 'customer'
+                    ? 'border-brand-blue text-brand-blue font-bold'
+                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                    }`}
+                >
+                  Customer View (Receipt)
+                </button>
+              </div>
+              {/* {detailsTab === 'customer' && ( */}
+              <label className="flex items-center space-x-2 pb-2 text-xs font-semibold text-text-secondary cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={keepA4}
+                  onChange={(e) => setKeepA4(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-surface-dim text-brand-blue focus:ring-brand-blue cursor-pointer"
+                />
+                <span>Keep A4 Size</span>
+              </label>
+              {/* )} */}
             </div>
 
             <div className="mb-6">
               {detailsTab === 'staff'
                 ? renderStaffInvoice(selectedSale)
-                : renderBrandedInvoice(selectedSale, false)
+                : renderBrandedInvoiceWithZoom(selectedSale)
               }
             </div>
 
@@ -1689,31 +1983,44 @@ export default function Sales() {
         >
           <div className="space-y-4 pb-6 text-sm">
             {/* Tab Switcher */}
-            <div className="flex border-b border-surface-low mb-2">
-              <button
-                onClick={() => setDetailsTab('staff')}
-                className={`pb-2 px-4 text-xs font-semibold border-b-2 transition-all ${detailsTab === 'staff'
-                  ? 'border-brand-blue text-brand-blue font-bold'
-                  : 'border-transparent text-text-secondary hover:text-text-primary'
-                  }`}
-              >
-                Staff View
-              </button>
-              <button
-                onClick={() => setDetailsTab('customer')}
-                className={`pb-2 px-4 text-xs font-semibold border-b-2 transition-all ${detailsTab === 'customer'
-                  ? 'border-brand-blue text-brand-blue font-bold'
-                  : 'border-transparent text-text-secondary hover:text-text-primary'
-                  }`}
-              >
-                Customer View
-              </button>
+            <div className="flex justify-between items-center border-b border-surface-low mb-2">
+              <div className="flex">
+                <button
+                  onClick={() => setDetailsTab('staff')}
+                  className={`pb-2 px-4 text-xs font-semibold border-b-2 transition-all ${detailsTab === 'staff'
+                    ? 'border-brand-blue text-brand-blue font-bold'
+                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                    }`}
+                >
+                  Staff View
+                </button>
+                <button
+                  onClick={() => setDetailsTab('customer')}
+                  className={`pb-2 px-4 text-xs font-semibold border-b-2 transition-all ${detailsTab === 'customer'
+                    ? 'border-brand-blue text-brand-blue font-bold'
+                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                    }`}
+                >
+                  Customer View
+                </button>
+              </div>
+              {detailsTab === 'customer' && (
+                <label className="flex items-center space-x-1.5 pb-2 text-xs font-semibold text-text-secondary cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={keepA4}
+                    onChange={(e) => setKeepA4(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-surface-dim text-brand-blue focus:ring-brand-blue cursor-pointer"
+                  />
+                  <span>Keep A4</span>
+                </label>
+              )}
             </div>
 
             <div className="mb-4">
               {detailsTab === 'staff'
                 ? renderStaffInvoice(selectedSale)
-                : renderBrandedInvoice(selectedSale, true)
+                : renderBrandedInvoiceWithZoom(selectedSale)
               }
             </div>
 
@@ -1869,7 +2176,7 @@ export default function Sales() {
       {selectedSale && (
         <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
           <div id="invoice-share-card">
-            {renderBrandedInvoice(selectedSale, false)}
+            {renderBrandedInvoice(selectedSale, false, keepA4)}
           </div>
         </div>
       )}

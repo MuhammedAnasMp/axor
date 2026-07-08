@@ -462,12 +462,11 @@ export default function Purchases() {
                 <tr>
                   <td className="font-semibold py-1 text-gray-500">Status</td>
                   <td className="text-right">
-                    <span className={`inline-block rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase ${
-                      po.status === 'Returned' ? 'bg-red-100 text-red-700' :
+                    <span className={`inline-block rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase ${po.status === 'Returned' ? 'bg-red-100 text-red-700' :
                       po.status === 'Partially Returned' ? 'bg-orange-100 text-orange-700' :
-                      po.status === 'Received' || po.is_received ? 'bg-green-100 text-green-700' : 
-                      'bg-amber-100 text-amber-700'
-                    }`}>
+                        po.status === 'Received' || po.is_received ? 'bg-green-100 text-green-700' :
+                          'bg-amber-100 text-amber-700'
+                      }`}>
                       {po.status || (po.is_received ? 'Received' : 'Pending')}
                     </span>
                   </td>
@@ -504,7 +503,7 @@ export default function Purchases() {
                 const lName = currentUser?.user?.last_name || currentUser?.last_name || '';
                 const empName = [fName, lName].filter(Boolean).join(' ');
                 return empName ? (
-                  <p className="font-semibold text-gray-750">Buyer Representative: {empName}</p>
+                  <p className="font-semibold text-gray-750">{empName}</p>
                 ) : null;
               })()}
               {(() => {
@@ -575,39 +574,43 @@ export default function Purchases() {
 
         {/* Summary Table */}
         {shareIncludeCost && (
-          <div className="flex justify-end mt-8 mb-8">
-            <table className="w-64 text-xs">
+          <div className="mt-8 mb-8">
+            <table className="w-full text-xs">
               <tbody>
                 <tr>
-                  <td className="py-2 text-gray-500">Subtotal</td>
+                  <td className="py-2 text-gray-500 text-left">Subtotal</td>
                   <td className="text-right py-2 font-bold text-gray-800">
-                    {formatCurrency(po.total_amount + (po.deducted_credit || 0) + (po.rounding || 0))}
+                    {formatCurrency(
+                      parseFloat(po.total_amount || 0) +
+                      parseFloat(po.deducted_credit || 0) +
+                      parseFloat(po.rounding || 0)
+                    )}
                   </td>
                 </tr>
-                {po.deducted_credit > 0 && (
+                {parseFloat(po.deducted_credit || 0) > 0 && (
                   <tr>
-                    <td className="py-2 text-gray-500">Discount / Returns</td>
+                    <td className="py-2 text-gray-500 text-left">Discount / Returns</td>
                     <td className="text-right text-red-600 py-2 font-bold">
-                      -{formatCurrency(po.deducted_credit)}
+                      -{formatCurrency(parseFloat(po.deducted_credit))}
                     </td>
                   </tr>
                 )}
-                {po.rounding !== 0 && (
+                {parseFloat(po.rounding || 0) !== 0 && (
                   <tr>
-                    <td className="py-2 text-gray-500">Rounding</td>
-                    <td className={`text-right py-2 font-bold ${po.rounding > 0 ? 'text-gray-805' : 'text-red-605'}`}>
-                      {po.rounding > 0 ? '+' : ''}{formatCurrency(po.rounding)}
+                    <td className="py-2 text-gray-500 text-left">Rounding</td>
+                    <td className={`text-right py-2 font-bold ${parseFloat(po.rounding || 0) > 0 ? 'text-gray-850' : 'text-red-600'}`}>
+                      {parseFloat(po.rounding || 0) > 0 ? '+' : ''}{formatCurrency(parseFloat(po.rounding))}
                     </td>
                   </tr>
                 )}
                 <tr>
-                  <td className="py-2 text-gray-500">Tax</td>
+                  <td className="py-2 text-gray-500 text-left">Tax</td>
                   <td className="text-right py-2 font-bold text-gray-800">₹0.00</td>
                 </tr>
                 <tr className="border-t border-gray-200">
-                  <td className="font-bold text-sm py-3 text-gray-850">Final Amount</td>
+                  <td className="font-bold text-sm py-3 text-gray-850 text-left">Final Amount</td>
                   <td className="text-right font-bold text-base text-blue-700 py-3">
-                    {formatCurrency(po.total_amount)}
+                    {formatCurrency(parseFloat(po.total_amount || 0))}
                   </td>
                 </tr>
               </tbody>
@@ -2465,9 +2468,9 @@ export default function Purchases() {
                           onClick={() => { setDetailsPO(p); setShowShareModal(true); }}
                           className="rounded bg-brand-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-cobalt transition flex items-center space-x-1 cursor-pointer"
                         >
-                          <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+                          {/* <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.713-1.458L0 24zm6.275-3.66c1.66.986 3.292 1.503 4.887 1.504 5.485 0 9.948-4.468 9.95-9.953.002-2.656-1.026-5.153-2.896-7.027C16.399 3.018 13.9 1.99 11.231 1.99c-5.492 0-9.957 4.471-9.96 9.956-.001 1.778.48 3.5 1.393 5.006l-1.011 3.69 3.79-.994zM16.92 14.73c-.287-.143-1.697-.837-1.959-.933-.262-.095-.452-.143-.642.143-.19.286-.738.933-.905 1.124-.167.19-.333.214-.62.071-.286-.143-1.21-.446-2.305-1.424-.853-.76-1.429-1.7-1.597-1.986-.167-.286-.018-.44.125-.581.13-.127.287-.333.43-.5.143-.167.19-.286.286-.476.095-.19.048-.357-.024-.5-.071-.143-.642-1.547-.88-2.12-.23-.556-.464-.48-.642-.489l-.547-.01c-.19 0-.5.071-.762.357-.262.286-1.002.977-1.002 2.38s1.02 2.76 1.162 2.95c.143.19 2.007 3.064 4.862 4.297.68.293 1.21.468 1.62.598.683.217 1.305.187 1.796.114.548-.082 1.697-.69 1.936-1.357.24-.667.24-1.238.167-1.357-.072-.119-.262-.19-.548-.333z" />
-                          </svg>
+                          </svg> */}
                           <span>Share PO</span>
                         </button>
                         <button
