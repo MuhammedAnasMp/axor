@@ -853,7 +853,7 @@ export default function Sales() {
 
           <div className="invoice-summary-container">
             <div className="invoice-payment-method">
-              <span className="label">Payment Method: </span>
+              <span className="label">Payment: </span>
               <span className="value">{sale.payment_type}</span>
             </div>
 
@@ -868,12 +868,12 @@ export default function Sales() {
                 <span className="value">-{formatCurrency(discountVal)}</span>
               </div>
               <span className="invoice-summary-separator">•</span>
-              <div className="invoice-summary-item">
+              {/* <div className="invoice-summary-item">
                 <span className="label">Tax:</span>
                 <span className="value">₹0.00</span>
-              </div>
+              </div> */}
               <div className="invoice-summary-item total-due">
-                <span className="label">Total Due:</span>
+                <span className="label">Total:</span>
                 <span className="value">{formatCurrency(finalAmountVal)}</span>
               </div>
             </div>
